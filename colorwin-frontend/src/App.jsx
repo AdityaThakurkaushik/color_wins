@@ -431,9 +431,9 @@ function App() {
 <section className="rounded-2xl border border-purple-700 bg-gradient-to-r from-purple-950 via-fuchsia-950 to-[#080817] px-3 py-2">                <p className="text-xs font-bold uppercase tracking-[0.25em] text-yellow-300">
                   ColorWin presents
                 </p>
-                <h2 className="mt-2 text-2xl font-black">PREDICT COLORSS</h2>
-                <p className="font-bold text-fuchsia-300">FREE-TO-PLAY</p>
-                <p className="mt-2 text-xs text-slate-300">
+                <h2 className="mt-1 text-xl font-black">PREDICT COLORSS</h2>
+                <p className="text-sm font-bold text-fuchsia-300">FREE-TO-PLAY</p>
+                <p className="mt-1 text-xs text-slate-300">
                   Virtual points only · No real-money betting
                 </p>
               </section>
@@ -474,7 +474,7 @@ function App() {
                     <button
                       key={color.value}
                       onClick={() => setSelectedColor(color.value)}
-                      className={`${color.style} rounded-xl p-1.5 text-center font-black ${
+                      className={`${color.style} rounded-xl p-0.5 text-center font-black ${
                         selectedColor === color.value
                           ? 'ring-2 ring-white ring-offset-2 ring-offset-[#03030c]'
                           : 'opacity-90'
@@ -494,20 +494,20 @@ function App() {
                 </div>
               </section>
 
-              <section className="rounded-xl border border-purple-900 bg-[#0d0d1c] p-2">
-                <div className="mb-3 flex items-center justify-between gap-2">
+              <section className="rounded-xl border border-purple-900 bg-[#0d0d1c] p-1.5">
+                <div className="mb-1 flex items-center justify-between gap-2">
                   <h3 className="font-bold">Virtual Points</h3>
                   <span className="text-sm text-yellow-300">
                     {amount} points
                   </span>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-1">
                   {amounts.map((value) => (
                     <button
                       key={value}
                       onClick={() => setAmount(value)}
-                      className={`rounded-lg border px-2 py-1.5 font-bold ${
+                      className={`rounded-lg border px-2 py-1 font-bold ${
                         amount === value
                           ? 'border-fuchsia-400 bg-fuchsia-600'
                           : 'border-slate-700 bg-slate-900'
@@ -518,7 +518,7 @@ function App() {
                   ))}
                 </div>
 
-                <label className="mt-3 block text-sm text-slate-300">
+                <label className="mt-1 block text-sm text-slate-300">
                   Custom amount
                   <input
                     type="number"
@@ -532,10 +532,10 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
                 </label>
               </section>
 
-              <section className="rounded-xl border border-purple-900 bg-[#0d0d1c] p-3">
+              <section className="rounded-xl border border-purple-900 bg-[#0d0d1c] p-2">
                 <h3 className="font-bold">Recent Results</h3>
 
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-2 flex flex-wrap gap-2">
                   {results.slice(0, 10).map((result) => (
                     <div
                       key={result.periodNumber}
@@ -576,7 +576,7 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
                   currentRound.status !== 'OPEN' ||
                   secondsLeft <= 0
                 }
-                className="w-full rounded-xl bg-fuchsia-600 py-4 font-black disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-300"
+                className="w-full rounded-xl bg-fuchsia-600 py-2 font-black disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-300"
               >
                 {submittingBet
                   ? 'PLACING BET...'
