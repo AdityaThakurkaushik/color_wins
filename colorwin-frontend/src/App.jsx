@@ -423,13 +423,12 @@ function App() {
           )}
         </header>
 
-        <main className="mx-auto w-full max-w-5xl space-y-4 p-3 pb-8">
+        <main className="mx-auto w-full max-w-5xl space-y-2 p-2 pb-4">
           {page === 'Login' && <Auth onLogin={handleLogin} />}
 
           {page === 'Home' && (
             <>
-              <section className="rounded-2xl border border-purple-700 bg-gradient-to-r from-purple-950 via-fuchsia-950 to-[#080817] p-5">
-                <p className="text-xs font-bold uppercase tracking-[0.25em] text-yellow-300">
+<section className="rounded-2xl border border-purple-700 bg-gradient-to-r from-purple-950 via-fuchsia-950 to-[#080817] px-3 py-2">                <p className="text-xs font-bold uppercase tracking-[0.25em] text-yellow-300">
                   ColorWin presents
                 </p>
                 <h2 className="mt-2 text-2xl font-black">PREDICT COLORS</h2>
@@ -446,21 +445,21 @@ function App() {
               )}
 
               <section className="grid grid-cols-3 gap-2 text-center">
-                <div className="min-w-0 rounded-xl border border-purple-900 bg-[#101020] p-2">
+                <div className="min-w-0 rounded-xl border border-purple-900 bg-[#101020] p-1">
                   <p className="text-xs text-slate-400">Current Period</p>
                   <p className="mt-2 break-all text-xs font-bold">
                     {currentRound?.periodNumber ?? 'Loading...'}
                   </p>
                 </div>
 
-                <div className="rounded-xl border border-fuchsia-700 bg-[#151027] p-2">
+                <div className="rounded-xl border border-fuchsia-700 bg-[#151027] p-1.5">
                   <p className="text-xs text-slate-400">Time Left</p>
-                  <p className="mt-2 text-2xl font-black text-fuchsia-300">
+                  <p className="mt-1 text-xl font-black text-fuchsia-300">
                     {formatTime(secondsLeft)}
                   </p>
                 </div>
 
-                <div className="rounded-xl border border-purple-900 bg-[#101020] p-2">
+                <div className="rounded-xl border border-purple-900 bg-[#101020] p-1.5">
                   <p className="text-xs text-slate-400">Round Status</p>
                   <p className="mt-2 text-sm font-bold text-emerald-400">
                     {currentRound?.status ?? 'Loading...'}
@@ -475,7 +474,7 @@ function App() {
                     <button
                       key={color.value}
                       onClick={() => setSelectedColor(color.value)}
-                      className={`${color.style} rounded-xl p-3 text-center font-black ${
+                      className={`${color.style} rounded-xl p-1.5 text-center font-black ${
                         selectedColor === color.value
                           ? 'ring-2 ring-white ring-offset-2 ring-offset-[#03030c]'
                           : 'opacity-90'
@@ -495,7 +494,7 @@ function App() {
                 </div>
               </section>
 
-              <section className="rounded-xl border border-purple-900 bg-[#0d0d1c] p-3">
+              <section className="rounded-xl border border-purple-900 bg-[#0d0d1c] p-2">
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <h3 className="font-bold">Virtual Points</h3>
                   <span className="text-sm text-yellow-300">
@@ -508,7 +507,7 @@ function App() {
                     <button
                       key={value}
                       onClick={() => setAmount(value)}
-                      className={`rounded-lg border px-2 py-3 font-bold ${
+                      className={`rounded-lg border px-2 py-1.5 font-bold ${
                         amount === value
                           ? 'border-fuchsia-400 bg-fuchsia-600'
                           : 'border-slate-700 bg-slate-900'
@@ -529,8 +528,7 @@ function App() {
                     onChange={(event) =>
                       setAmount(Math.max(1, Number(event.target.value) || 1))
                     }
-                    className="mt-2 w-full rounded-lg border border-purple-900 bg-[#050510] p-3 text-white outline-none focus:border-fuchsia-500"
-                  />
+className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text-white outline-none focus:border-fuchsia-500"                  />
                 </label>
               </section>
 
