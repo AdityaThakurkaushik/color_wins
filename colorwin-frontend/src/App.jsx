@@ -431,7 +431,7 @@ function App() {
 <section className="rounded-2xl border border-purple-700 bg-gradient-to-r from-purple-950 via-fuchsia-950 to-[#080817] px-3 py-2">                <p className="text-xs font-bold uppercase tracking-[0.25em] text-yellow-300">
                   ColorWin presents
                 </p>
-                <h2 className="mt-2 text-2xl font-black">PREDICT COLORS</h2>
+                <h2 className="mt-2 text-2xl font-black">PREDICT COLORSS</h2>
                 <p className="font-bold text-fuchsia-300">FREE-TO-PLAY</p>
                 <p className="mt-2 text-xs text-slate-300">
                   Virtual points only · No real-money betting
