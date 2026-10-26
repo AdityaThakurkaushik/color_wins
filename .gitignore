@@ -1,0 +1,50 @@
+# Java / Maven
+HELP.md
+target/
+bin/
+*.class
+
+!.mvn/wrapper/maven-wrapper.jar
+
+# IDE settings
+.apt_generated/
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache/
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# Other build files
+build/
+
+# Frontend dependencies and builds
+colorwin-frontend/node_modules/
+colorwin-frontend/dist/
+colorwin-frontend/.vite/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+application-local.properties
+application-local.yml
+application-dev.properties
+application-dev.yml
+
+# Logs
+*.log
+npm-debug.log*
+src/main/resources/application.properties
