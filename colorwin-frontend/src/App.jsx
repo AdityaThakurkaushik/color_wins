@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Auth from './Auth.jsx'
 
-const API = 'http://localhost:8080/api'
+const API = 'https://color-wins.onrender.com/api'
 
 const colors = [
   { name: 'RED', value: 'RED', style: 'bg-red-600' },

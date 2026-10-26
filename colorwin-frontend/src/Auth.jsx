@@ -41,7 +41,7 @@ export default function Auth({ onLogin }) {
 
       try {
         const response = await fetch(
-          'http://localhost:8080/api/auth/register',
+          'https://color-wins.onrender.com/api/auth/register',
           {
             method: 'POST',
             headers: {
@@ -78,7 +78,7 @@ export default function Auth({ onLogin }) {
 
         try {
       const response = await fetch(
-        'http://localhost:8080/api/auth/login',
+        'https://color-wins.onrender.com/api/auth/login',
         {
           method: 'POST',
           headers: {
