@@ -31,7 +31,9 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(
                 List.of(
                         "http://localhost:5173",
-                        "http://localhost:5174"
+                        "http://localhost:5174",
+                        "https://color-wins.vercel.app",
+                        "https://color-wins-hl92hw923-colorwin.vercel.app"
                 )
         );
 
