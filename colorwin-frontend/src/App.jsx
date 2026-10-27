@@ -200,7 +200,11 @@ function ReferralPage({ currentUser }) {
 function App() {
   const [selectedColor, setSelectedColor] = useState('')
   const [amount, setAmount] = useState(50)
-  const [page, setPage] = useState('Home')
+  const [page, setPage] = useState(() =>
+  new URLSearchParams(window.location.search).get('ref')
+    ? 'Login'
+    : 'Home'
+)
   const [currentUser, setCurrentUser] = useState(null)
   const [currentRound, setCurrentRound] = useState(null)
   const [results, setResults] = useState([])
