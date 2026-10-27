@@ -41,7 +41,7 @@ function ReferralPage({ currentUser }) {
       setStatsError('')
 
       try {
-        const token = localStorage.getItem('token')
+        const token = localStorage.getItem('colorwin_token')
 
         if (!token) {
           throw new Error('Login session nahi mila. Dobara login karein.')
