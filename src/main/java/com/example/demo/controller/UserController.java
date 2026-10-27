@@ -34,7 +34,10 @@ public class UserController {
                 "username", user.getUsername(),
                 "email", user.getEmail(),
                 "virtualPoints", user.getVirtualPoints(),
-                "role", user.getRole()
+                "role", user.getRole(),
+                "referralCode", user.getReferralCode() == null
+                        ? ""
+                        : user.getReferralCode()
         ));
     }
 }
