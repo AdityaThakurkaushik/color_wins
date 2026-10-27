@@ -950,25 +950,25 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
 
           
 {page === 'Profile' && (
-  <section className="space-y-4 pb-4">
-    <div className="rounded-2xl border border-purple-700 bg-gradient-to-b from-[#17102d] to-[#0d0d1c] p-5 text-center">
-      <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full border-4 border-yellow-400 bg-purple-950 text-5xl text-yellow-300">
+  <section className="space-y-2 pb-2">
+    <div className="rounded-2xl border border-purple-700 bg-gradient-to-b from-[#17102d] to-[#0d0d1c] p-3 text-center">
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border-4 border-yellow-400 bg-purple-950 text-3xl text-yellow-300">
         ♛
       </div>
 
-      <h2 className="mt-3 text-2xl font-black text-white">
+      <h2 className="mt-2 text-xl font-black text-white">
         {currentUser?.username || 'Guest user'}
       </h2>
 
-      <div className="mt-5 rounded-xl border border-purple-600 bg-[#101020] p-4 text-left">
+      <div className="mt-2 rounded-xl border border-purple-600 bg-[#101020] p-3 text-left">
         <p className="text-sm text-slate-400">Virtual Points Balance</p>
-        <p className="mt-1 text-3xl font-black text-yellow-300">
+        <p className="mt-1 text-xl font-black text-yellow-300">
           {(currentUser?.virtualPoints ?? 0).toLocaleString('en-IN')} points
         </p>
       </div>
 
-      <div className="mt-4 divide-y divide-purple-900 overflow-hidden rounded-xl border border-purple-900 bg-[#0b0b19] text-left">
-        <div className="p-4">
+      <div className="mt-3 divide-y divide-purple-900 overflow-hidden rounded-xl border border-purple-900 bg-[#0b0b19] text-left">
+        <div className="p-3">
           <p className="text-sm text-slate-400">Name</p>
           <p className="font-semibold text-white">
             {currentUser?.username || 'Guest user'}
@@ -1032,7 +1032,7 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
 
 
 {page === 'Help & Support' && (
-  <section className="space-y-4 rounded-2xl border border-purple-800 bg-[#0d0d1c] p-5">
+  <section className="space-y-3 rounded-xl border border-purple-800 bg-[#0d0d1c] p-3">
     <button
       onClick={() => setPage('Profile')}
       className="text-sm font-semibold text-purple-300"
@@ -1040,14 +1040,14 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
       ← Back to Profile
     </button>
 
-    <h2 className="text-2xl font-black text-white">Help &amp; Support</h2>
+    <h2 className="text-xl font-black text-white">Help &amp; Support</h2>
     <p className="text-sm text-slate-400">
       Need help with ColorWin? Contact our support team.
     </p>
 
-    <div className="rounded-xl border border-slate-700 bg-[#101020] p-4">
+    <div className="rounded-xl border border-slate-700 bg-[#101020] p-3">
       <p className="font-bold text-white">Email Support</p>
-      <p className="mt-2 break-all text-purple-300">
+      <p className="mt-1 break-all text-purple-300">
         YOUR_SUPPORT_EMAIL
       </p>
       <p className="mt-1 text-xs text-slate-400">
@@ -1055,7 +1055,7 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
       </p>
     </div>
 
-    <div className="rounded-xl border border-slate-700 bg-[#101020] p-4">
+    <div className="rounded-xl border border-slate-700 bg-[#101020] p-3">
       <p className="font-bold text-white">Phone Support</p>
       <p className="mt-2 text-purple-300">YOUR_SUPPORT_PHONE</p>
       <p className="mt-1 text-xs text-slate-400">
@@ -1063,7 +1063,7 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
       </p>
     </div>
 
-    <div className="rounded-xl border border-slate-700 bg-[#101020] p-4">
+    <div className="rounded-xl border border-slate-700 bg-[#101020] p-3">
       <p className="font-bold text-white">Frequently Asked Questions</p>
       <p className="mt-2 text-sm text-slate-300">
         For account or game-related issues, contact our support team.
@@ -1073,7 +1073,7 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
 )}
 
 {page === 'Terms & Conditions' && (
-  <section className="space-y-4 rounded-2xl border border-purple-800 bg-[#0d0d1c] p-5">
+  <section className="space-y-4 rounded-2xl border border-purple-800 bg-[#0d0d1c] p-4">
     <button
       onClick={() => setPage('Profile')}
       className="text-sm font-semibold text-purple-300"
