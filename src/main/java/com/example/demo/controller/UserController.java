@@ -37,6 +37,7 @@ public class UserController {
         return ResponseEntity.ok(Map.of(
                 "username", user.getUsername(),
                 "email", user.getEmail(),
+                "phoneNumber",user.getMobileNumber(),
                 "virtualPoints", user.getVirtualPoints(),
                 "role", user.getRole(),
                 "referralCode", user.getReferralCode() == null
