@@ -14,16 +14,13 @@ const amounts = [10, 50, 100, 500, 1000]
 
 
 
-const REFERRAL_CODE = 'ADITYA123'
-const REFERRAL_LINK = `https://color-wins.vercel.app/register?ref=${REFERRAL_CODE}`
 const REFERRAL_REWARD = 20
 
 function ReferralPage({ currentUser }) {
   const [copied, setCopied] = useState('')
   const [shareMessage, setShareMessage] = useState('')
 
-  const referralCode =
-    currentUser?.referralCode || REFERRAL_CODE
+ const referralCode = currentUser?.referralCode || ''
 
  const referralLink =
   `https://color-wins.vercel.app/register?ref=${referralCode}`
