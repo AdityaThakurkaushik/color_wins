@@ -24,6 +24,13 @@ public class User {
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
+    // Referral fields
+    @Column(name = "referral_code", unique = true, length = 30)
+    private String referralCode;
+
+    @Column(name = "referred_by_code", length = 30)
+    private String referredByCode;
+
     @Column(name = "virtual_points", nullable = false)
     private Long virtualPoints = 1000L;
 
@@ -32,9 +39,10 @@ public class User {
 
     @Column(name = "is_active", nullable = false)
     private Boolean active = true;
+
     public boolean isActive() {
-    return active;
-}
+        return active;
+    }
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
@@ -43,7 +51,7 @@ public class User {
     private OffsetDateTime updatedAt;
 
     public User() {
-}
+    }
 
     @PrePersist
     protected void onCreate() {
@@ -93,16 +101,32 @@ public class User {
         this.passwordHash = passwordHash;
     }
 
-    public Long getVirtualPoints() {
-    return virtualPoints;
-}
-
-public void setVirtualPoints(Long virtualPoints) {
-    if (virtualPoints == null || virtualPoints < 0) {
-        throw new IllegalArgumentException("Invalid virtual points balance");
+    public String getReferralCode() {
+        return referralCode;
     }
-    this.virtualPoints = virtualPoints;
-}
+
+    public void setReferralCode(String referralCode) {
+        this.referralCode = referralCode;
+    }
+
+    public String getReferredByCode() {
+        return referredByCode;
+    }
+
+    public void setReferredByCode(String referredByCode) {
+        this.referredByCode = referredByCode;
+    }
+
+    public Long getVirtualPoints() {
+        return virtualPoints;
+    }
+
+    public void setVirtualPoints(Long virtualPoints) {
+        if (virtualPoints == null || virtualPoints < 0) {
+            throw new IllegalArgumentException("Invalid virtual points balance");
+        }
+        this.virtualPoints = virtualPoints;
+    }
 
     public String getRole() {
         return role;

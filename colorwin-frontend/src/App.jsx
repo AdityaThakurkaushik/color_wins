@@ -11,6 +11,192 @@ const colors = [
 
 const amounts = [10, 50, 100, 500, 1000]
 
+
+
+
+const REFERRAL_CODE = 'ADITYA123'
+const REFERRAL_LINK = `https://color-wins.vercel.app/register?ref=${REFERRAL_CODE}`
+const REFERRAL_REWARD = 20
+
+function ReferralPage({ currentUser }) {
+  const [copied, setCopied] = useState('')
+  const [shareMessage, setShareMessage] = useState('')
+
+  const referralCode =
+    currentUser?.referralCode || REFERRAL_CODE
+
+ const referralLink =
+  `https://color-wins.vercel.app/register?ref=${referralCode}`
+
+  async function copyText(value, type) {
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopied(type)
+      setShareMessage('')
+    } catch {
+      setShareMessage('Copy nahi hua. Link ko manually copy karein.')
+    }
+  }
+
+  async function shareReferral() {
+    const text = `ColorWin join karein! Mere referral link se signup karein: ${referralLink}`
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Join ColorWin',
+          text,
+          url: referralLink,
+        })
+      } catch {
+        // User share sheet band kar sakta hai.
+      }
+    } else {
+      await copyText(referralLink, 'link')
+      setShareMessage('Referral link copy ho gaya. Ab share kar sakte hain.')
+    }
+  }
+
+  return (
+    <div className="space-y-3 pb-4">
+      <section className="overflow-hidden rounded-2xl border border-purple-700 bg-gradient-to-r from-purple-950 via-[#180b38] to-[#080817] p-4">
+        <p className="text-xs font-bold uppercase tracking-widest text-purple-300">
+          Rewards · Referral
+        </p>
+        <h2 className="mt-2 text-2xl font-black">
+          Invite Friends &amp;
+          <span className="block text-yellow-300">Earn Coins</span>
+        </h2>
+        <p className="mt-2 text-sm text-slate-300">
+          Apna referral link share karein aur eligible signup par
+          coins earn karein.
+        </p>
+      </section>
+
+      <section className="space-y-3 rounded-2xl border border-purple-900 bg-[#0d0d1c] p-3">
+        <div>
+          <label className="mb-1 block text-sm text-slate-300">
+            Your Referral Code
+          </label>
+          <div className="flex gap-2">
+            <div className="min-w-0 flex-1 break-all rounded-lg border border-slate-700 bg-[#080817] p-3 font-bold">
+              {referralCode}
+            </div>
+            <button
+              onClick={() => copyText(referralCode, 'code')}
+              className="rounded-lg bg-purple-600 px-4 font-bold"
+            >
+              {copied === 'code' ? 'Copied' : 'Copy'}
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm text-slate-300">
+            Your Referral Link
+          </label>
+          <div className="flex gap-2">
+            <div className="min-w-0 flex-1 break-all rounded-lg border border-slate-700 bg-[#080817] p-3 text-xs">
+              {referralLink}
+            </div>
+            <button
+              onClick={() => copyText(referralLink, 'link')}
+              className="rounded-lg bg-purple-600 px-4 font-bold"
+            >
+              {copied === 'link' ? 'Copied' : 'Copy'}
+            </button>
+          </div>
+        </div>
+
+        <button
+          onClick={shareReferral}
+          className="w-full rounded-xl bg-gradient-to-r from-purple-700 to-fuchsia-600 p-3 font-bold"
+        >
+          Share Referral Link
+        </button>
+
+        {shareMessage && (
+          <p role="status" className="text-sm text-yellow-300">
+            {shareMessage}
+          </p>
+        )}
+      </section>
+
+      <section className="rounded-2xl border border-yellow-600 bg-gradient-to-br from-[#211333] to-[#0d0d1c] p-3">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-lg font-black">Referral Reward</h3>
+          <span className="rounded-full bg-purple-800 px-3 py-1 text-xs">
+            Per successful referral
+          </span>
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <div className="rounded-xl border border-purple-800 bg-[#101020] p-3">
+            <p className="text-sm text-slate-300">You Get</p>
+            <p className="mt-1 text-xl font-black text-yellow-300">
+              {REFERRAL_REWARD} Coins
+            </p>
+            <p className="mt-1 text-xs text-slate-400">
+              Eligible friend signup par.
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-purple-800 bg-[#101020] p-3">
+            <p className="text-sm text-slate-300">Your Friend Gets</p>
+            <p className="mt-1 text-xl font-black text-yellow-300">
+              {REFERRAL_REWARD} Coins
+            </p>
+            <p className="mt-1 text-xs text-slate-400">
+              Referral code se eligible signup par.
+            </p>
+          </div>
+        </div>
+        <p className="mt-3 text-xs text-slate-400">
+          Reward amounts are design examples until backend reward
+          settings are connected.
+        </p>
+      </section>
+
+      <section className="rounded-2xl border border-purple-900 bg-[#0d0d1c] p-3">
+        <h3 className="text-lg font-black">Your Referral Stats</h3>
+        <p className="mt-2 text-sm text-slate-400">
+          Referral statistics backend connect hone ke baad yahan dikhenge.
+        </p>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {['Total Referrals', 'Successful', 'Pending', 'Total Earned Coins'].map(
+            (label) => (
+              <div
+                key={label}
+                className="rounded-lg border border-slate-800 bg-[#101020] p-3"
+              >
+                <p className="text-xs text-slate-400">{label}</p>
+                <p className="mt-1 text-lg font-bold">—</p>
+              </div>
+            )
+          )}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-purple-900 bg-[#0d0d1c] p-3">
+        <h3 className="text-lg font-black">How It Works</h3>
+        <ol className="mt-3 space-y-3 text-sm text-slate-300">
+          <li>1. Apna referral code ya link share karein.</li>
+          <li>2. Friend aapke link se account banaye.</li>
+          <li>3. Eligibility verify hone par applicable rewards credit hon.</li>
+        </ol>
+      </section>
+    </div>
+  )
+}
+
+
+
+
+
+
+
+
+
 function App() {
   const [selectedColor, setSelectedColor] = useState('')
   const [amount, setAmount] = useState(50)
@@ -678,13 +864,8 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
           )}
 
           {page === 'Rewards' && (
-            <section className="rounded-xl border border-purple-900 bg-[#0d0d1c] p-4">
-              <h2 className="text-xl font-black">Virtual Points</h2>
-              <p className="mt-2 text-sm text-slate-400">
-                Points are for free-to-play use only.
-              </p>
-            </section>
-          )}
+  <ReferralPage currentUser={currentUser} />
+)}
 
           {page === 'Profile' && (
             <section className="rounded-xl border border-purple-900 bg-[#0d0d1c] p-4">

@@ -1,8 +1,13 @@
+
 import { useState } from 'react'
 
-
 export default function Auth({ onLogin }) {
-  const [mode, setMode] = useState('login')
+  const [mode, setMode] = useState(() =>
+    new URLSearchParams(window.location.search).get('ref')
+      ? 'register'
+      : 'login'
+  )
+
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [mobile, setMobile] = useState('')
@@ -10,11 +15,14 @@ export default function Auth({ onLogin }) {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [error, setError] = useState('')
-  
+
+  const [referralCode, setReferralCode] = useState(() => {
+    return new URLSearchParams(window.location.search).get('ref') || ''
+  })
 
   const isRegister = mode === 'register'
 
-   async function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
     setError('')
 
@@ -52,6 +60,7 @@ export default function Auth({ onLogin }) {
               email: email.trim(),
               mobileNumber: mobile.trim(),
               password: password,
+              referralCode: referralCode.trim(),
             }),
           }
         )
@@ -65,7 +74,9 @@ export default function Auth({ onLogin }) {
 
         setError(data.message || 'Registration successful. Please log in.')
       } catch {
-        setError('Cannot connect to the server. Check that Spring Boot is running.')
+        setError(
+          'Cannot connect to the server. Check that Spring Boot is running.'
+        )
       }
 
       return
@@ -76,7 +87,7 @@ export default function Auth({ onLogin }) {
       return
     }
 
-        try {
+    try {
       const response = await fetch(
         'https://color-wins.onrender.com/api/auth/login',
         {
@@ -102,7 +113,9 @@ export default function Auth({ onLogin }) {
       setError('')
       onLogin(data.token)
     } catch {
-      setError('Cannot connect to the server. Check that Spring Boot is running.')
+      setError(
+        'Cannot connect to the server. Check that Spring Boot is running.'
+      )
     }
   }
 
@@ -111,14 +124,17 @@ export default function Auth({ onLogin }) {
       <section className="w-full max-w-md rounded-2xl border border-purple-800 bg-[#0d0d1c] p-5 shadow-xl shadow-purple-950/30 sm:p-7">
         <div className="mb-6 text-center">
           <div className="mb-3 text-4xl">👑</div>
+
           <h2 className="text-2xl font-black">
             {isRegister ? 'Create Account' : 'Welcome Back'}
           </h2>
+
           <p className="mt-2 text-sm text-slate-400">
             {isRegister
               ? 'Create your ColorWin account'
               : 'Login to your ColorWin account'}
           </p>
+
           <p className="mt-2 text-xs text-yellow-300">
             Free-to-play · Virtual points only
           </p>
@@ -183,6 +199,17 @@ export default function Auth({ onLogin }) {
                   className="mt-2 w-full rounded-lg border border-purple-900 bg-[#050510] p-3 text-white outline-none focus:border-fuchsia-500"
                 />
               </label>
+
+              <label className="block text-sm text-slate-300">
+                Referral Code (Optional)
+                <input
+                  value={referralCode}
+                  onChange={(event) => setReferralCode(event.target.value)}
+                  placeholder="Enter referral code"
+                  autoComplete="off"
+                  className="mt-2 w-full rounded-lg border border-purple-900 bg-[#050510] p-3 text-white outline-none focus:border-fuchsia-500"
+                />
+              </label>
             </>
           )}
 
@@ -233,18 +260,21 @@ export default function Auth({ onLogin }) {
                 <input
                   type="checkbox"
                   checked={acceptedTerms}
-                  onChange={(event) => setAcceptedTerms(event.target.checked)}
+                  onChange={(event) =>
+                    setAcceptedTerms(event.target.checked)
+                  }
                   className="mt-1 accent-fuchsia-500"
                 />
-                <span>
-                  I agree to the Terms and Conditions.
-                </span>
+                <span>I agree to the Terms and Conditions.</span>
               </label>
             </>
           )}
 
           {error && (
-            <p role="alert" className="rounded-lg border border-red-800 bg-red-950/40 p-3 text-sm text-red-300">
+            <p
+              role="alert"
+              className="rounded-lg border border-red-800 bg-red-950/40 p-3 text-sm text-red-300"
+            >
               {error}
             </p>
           )}

@@ -27,6 +27,8 @@ public class RegisterRequest {
     @Size(min = 8, max = 72, message = "Password must be 8 to 72 characters")
     private String password;
 
+    private String referralCode;
+
     public String getUsername() {
         return username;
     }
@@ -58,5 +60,12 @@ public class RegisterRequest {
     public void setPassword(String password) {
         this.password = password;
     }
-}
 
+    public String getReferralCode() {
+        return referralCode;
+    }
+
+    public void setReferralCode(String referralCode) {
+        this.referralCode = referralCode;
+    }
+}
