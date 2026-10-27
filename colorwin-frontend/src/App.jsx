@@ -948,38 +948,186 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
   <ReferralPage currentUser={currentUser} />
 )}
 
-          {page === 'Profile' && (
-            <section className="rounded-xl border border-purple-900 bg-[#0d0d1c] p-4">
-              <h2 className="text-xl font-black">Profile</h2>
-              <p className="mt-2 text-sm text-slate-400">
-                {currentUser?.username || 'Guest user'}
-              </p>
+          
+{page === 'Profile' && (
+  <section className="space-y-4 pb-4">
+    <div className="rounded-2xl border border-purple-700 bg-gradient-to-b from-[#17102d] to-[#0d0d1c] p-5 text-center">
+      <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full border-4 border-yellow-400 bg-purple-950 text-5xl text-yellow-300">
+        ♛
+      </div>
 
-              {currentUser?.email && (
-                <p className="mt-1 text-sm text-slate-400">
-                  {currentUser.email}
-                </p>
-              )}
+      <h2 className="mt-3 text-2xl font-black text-white">
+        {currentUser?.username || 'Guest user'}
+      </h2>
 
-              <div className="mt-4 rounded-lg bg-[#101020] p-3">
-                <p className="text-sm text-slate-400">
-                  Virtual points balance
-                </p>
-                <p className="mt-1 text-xl font-bold text-yellow-300">
-                  {(currentUser?.virtualPoints ?? 0).toLocaleString('en-IN')} points
-                </p>
-              </div>
+      <div className="mt-5 rounded-xl border border-purple-600 bg-[#101020] p-4 text-left">
+        <p className="text-sm text-slate-400">Virtual Points Balance</p>
+        <p className="mt-1 text-3xl font-black text-yellow-300">
+          {(currentUser?.virtualPoints ?? 0).toLocaleString('en-IN')} points
+        </p>
+      </div>
 
-              {isAuthenticated && (
-                <button
-                  onClick={handleLogout}
-                  className="mt-5 w-full rounded-xl border border-red-700 bg-red-950/40 py-3 font-bold text-red-300"
-                >
-                  Logout
-                </button>
-              )}
-            </section>
-          )}
+      <div className="mt-4 divide-y divide-purple-900 overflow-hidden rounded-xl border border-purple-900 bg-[#0b0b19] text-left">
+        <div className="p-4">
+          <p className="text-sm text-slate-400">Name</p>
+          <p className="font-semibold text-white">
+            {currentUser?.username || 'Guest user'}
+          </p>
+        </div>
+
+        <div className="p-4">
+          <p className="text-sm text-slate-400">Email ID</p>
+          <p className="break-all font-semibold text-white">
+            {currentUser?.email || 'Not available'}
+          </p>
+        </div>
+
+        <div className="p-4">
+          <p className="text-sm text-slate-400">Phone Number</p>
+          <p className="font-semibold text-white">
+            {currentUser?.phoneNumber || currentUser?.phone || 'Not available'}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <button
+      onClick={() => setPage('Help & Support')}
+      className="flex w-full items-center gap-4 rounded-2xl border border-slate-700 bg-[#0d0d1c] p-4 text-left"
+    >
+      <span className="text-2xl text-blue-300">☏</span>
+      <span className="flex-1">
+        <span className="block font-bold text-white">Help &amp; Support</span>
+        <span className="text-sm text-slate-400">Get help and contact us</span>
+      </span>
+      <span className="text-xl text-slate-300">›</span>
+    </button>
+
+    <button
+      onClick={() => setPage('Terms & Conditions')}
+      className="flex w-full items-center gap-4 rounded-2xl border border-slate-700 bg-[#0d0d1c] p-4 text-left"
+    >
+      <span className="text-2xl text-purple-300">▤</span>
+      <span className="flex-1">
+        <span className="block font-bold text-white">Terms &amp; Conditions</span>
+        <span className="text-sm text-slate-400">Read rules and conditions</span>
+      </span>
+      <span className="text-xl text-slate-300">›</span>
+    </button>
+
+    {isAuthenticated && (
+      <button
+        onClick={handleLogout}
+        className="w-full rounded-xl border border-red-700 bg-red-950/40 py-3 font-bold text-red-300"
+      >
+        ⇥ Logout
+      </button>
+    )}
+  </section>
+)}
+
+
+
+
+
+
+{page === 'Help & Support' && (
+  <section className="space-y-4 rounded-2xl border border-purple-800 bg-[#0d0d1c] p-5">
+    <button
+      onClick={() => setPage('Profile')}
+      className="text-sm font-semibold text-purple-300"
+    >
+      ← Back to Profile
+    </button>
+
+    <h2 className="text-2xl font-black text-white">Help &amp; Support</h2>
+    <p className="text-sm text-slate-400">
+      Need help with ColorWin? Contact our support team.
+    </p>
+
+    <div className="rounded-xl border border-slate-700 bg-[#101020] p-4">
+      <p className="font-bold text-white">Email Support</p>
+      <p className="mt-2 break-all text-purple-300">
+        YOUR_SUPPORT_EMAIL
+      </p>
+      <p className="mt-1 text-xs text-slate-400">
+        Replace this with your official support email.
+      </p>
+    </div>
+
+    <div className="rounded-xl border border-slate-700 bg-[#101020] p-4">
+      <p className="font-bold text-white">Phone Support</p>
+      <p className="mt-2 text-purple-300">YOUR_SUPPORT_PHONE</p>
+      <p className="mt-1 text-xs text-slate-400">
+        Replace this with your official support number.
+      </p>
+    </div>
+
+    <div className="rounded-xl border border-slate-700 bg-[#101020] p-4">
+      <p className="font-bold text-white">Frequently Asked Questions</p>
+      <p className="mt-2 text-sm text-slate-300">
+        For account or game-related issues, contact our support team.
+      </p>
+    </div>
+  </section>
+)}
+
+{page === 'Terms & Conditions' && (
+  <section className="space-y-4 rounded-2xl border border-purple-800 bg-[#0d0d1c] p-5">
+    <button
+      onClick={() => setPage('Profile')}
+      className="text-sm font-semibold text-purple-300"
+    >
+      ← Back to Profile
+    </button>
+
+    <h2 className="text-2xl font-black text-white">
+      Terms &amp; Conditions
+    </h2>
+
+    <p className="text-sm text-slate-400">
+      Please read the rules for using ColorWin.
+    </p>
+
+    <div className="space-y-4 text-sm leading-6 text-slate-300">
+      <div>
+        <h3 className="font-bold text-white">1. Use of the App</h3>
+        <p>Users must follow the applicable rules and instructions of ColorWin.</p>
+      </div>
+
+      <div>
+        <h3 className="font-bold text-white">2. Account Responsibility</h3>
+        <p>Keep your account credentials private and report unauthorized access.</p>
+      </div>
+
+      <div>
+        <h3 className="font-bold text-white">3. Virtual Points</h3>
+        <p>Virtual points are displayed according to the app's account records. Their use is subject to the applicable game rules.</p>
+      </div>
+
+      <div>
+        <h3 className="font-bold text-white">4. Fair Use</h3>
+        <p>Do not exploit bugs, manipulate results, or interfere with other users.</p>
+      </div>
+
+      <div>
+        <h3 className="font-bold text-white">5. Updates</h3>
+        <p>Applicable terms may be updated. Review this page for the latest version.</p>
+      </div>
+    </div>
+  </section>
+)}
+
+
+
+
+
+
+
+
+
+
+
         </main>
 
         <nav className="fixed bottom-0 left-0 z-20 grid w-full grid-cols-4 border-t border-purple-900 bg-[#080817]">
