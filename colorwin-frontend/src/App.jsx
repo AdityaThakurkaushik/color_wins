@@ -19,11 +19,78 @@ const REFERRAL_REWARD = 20
 function ReferralPage({ currentUser }) {
   const [copied, setCopied] = useState('')
   const [shareMessage, setShareMessage] = useState('')
+  const [referralStats, setReferralStats] = useState({
+    totalReferrals: 0,
+    successful: 0,
+    pending: 0,
+    totalEarnedCoins: 0,
+  })
+  const [statsLoading, setStatsLoading] = useState(true)
+  const [statsError, setStatsError] = useState('')
 
- const referralCode = currentUser?.referralCode || ''
+  const referralCode = currentUser?.referralCode || ''
 
- const referralLink =
-  `https://color-wins.vercel.app/register?ref=${referralCode}`
+  const referralLink =
+    `https://color-wins.vercel.app/register?ref=${referralCode}`
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadReferralStats() {
+      setStatsLoading(true)
+      setStatsError('')
+
+      try {
+        const token = localStorage.getItem('token')
+
+        if (!token) {
+          throw new Error('Login session nahi mila. Dobara login karein.')
+        }
+
+        const response = await fetch(
+          'https://color-wins.onrender.com/api/user/referral-stats',
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        )
+
+        if (!response.ok) {
+          throw new Error(
+            `Referral stats load nahi hue (HTTP ${response.status}).`
+          )
+        }
+
+        const data = await response.json()
+
+        if (!cancelled) {
+          setReferralStats({
+            totalReferrals: Number(data.totalReferrals ?? 0),
+            successful: Number(data.successful ?? 0),
+            pending: Number(data.pending ?? 0),
+            totalEarnedCoins: Number(data.totalEarnedCoins ?? 0),
+          })
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setStatsError(
+            error.message || 'Referral stats load nahi ho sake.'
+          )
+        }
+      } finally {
+        if (!cancelled) {
+          setStatsLoading(false)
+        }
+      }
+    }
+
+    loadReferralStats()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   async function copyText(value, type) {
     try {
@@ -36,7 +103,8 @@ function ReferralPage({ currentUser }) {
   }
 
   async function shareReferral() {
-    const text = `ColorWin join karein! Mere referral link se signup karein: ${referralLink}`
+    const text =
+      `ColorWin join karein! Mere referral link se signup karein: ${referralLink}`
 
     if (navigator.share) {
       try {
@@ -53,6 +121,13 @@ function ReferralPage({ currentUser }) {
       setShareMessage('Referral link copy ho gaya. Ab share kar sakte hain.')
     }
   }
+
+  const statCards = [
+    { label: 'Total Referrals', value: referralStats.totalReferrals },
+    { label: 'Successful', value: referralStats.successful },
+    { label: 'Pending', value: referralStats.pending },
+    { label: 'Total Earned Coins', value: referralStats.totalEarnedCoins },
+  ]
 
   return (
     <div className="space-y-3 pb-4">
@@ -131,46 +206,52 @@ function ReferralPage({ currentUser }) {
           <div className="rounded-xl border border-purple-800 bg-[#101020] p-3">
             <p className="text-sm text-slate-300">You Get</p>
             <p className="mt-1 text-xl font-black text-yellow-300">
-              {REFERRAL_REWARD} Coins
+              20 Coins
             </p>
             <p className="mt-1 text-xs text-slate-400">
-              Eligible friend signup par.
+              Referrer reward per eligible signup.
             </p>
           </div>
 
           <div className="rounded-xl border border-purple-800 bg-[#101020] p-3">
             <p className="text-sm text-slate-300">Your Friend Gets</p>
             <p className="mt-1 text-xl font-black text-yellow-300">
-              {REFERRAL_REWARD} Coins
+              10 Coins
             </p>
             <p className="mt-1 text-xs text-slate-400">
-              Referral code se eligible signup par.
+              New user referral reward.
             </p>
           </div>
         </div>
-        <p className="mt-3 text-xs text-slate-400">
-          Reward amounts are design examples until backend reward
-          settings are connected.
-        </p>
       </section>
 
       <section className="rounded-2xl border border-purple-900 bg-[#0d0d1c] p-3">
         <h3 className="text-lg font-black">Your Referral Stats</h3>
-        <p className="mt-2 text-sm text-slate-400">
-          Referral statistics backend connect hone ke baad yahan dikhenge.
-        </p>
+
+        {statsLoading && (
+          <p className="mt-2 text-sm text-slate-400">
+            Referral stats load ho rahe hain...
+          </p>
+        )}
+
+        {statsError && (
+          <p role="alert" className="mt-2 text-sm text-red-400">
+            {statsError}
+          </p>
+        )}
+
         <div className="mt-3 grid grid-cols-2 gap-2">
-          {['Total Referrals', 'Successful', 'Pending', 'Total Earned Coins'].map(
-            (label) => (
-              <div
-                key={label}
-                className="rounded-lg border border-slate-800 bg-[#101020] p-3"
-              >
-                <p className="text-xs text-slate-400">{label}</p>
-                <p className="mt-1 text-lg font-bold">—</p>
-              </div>
-            )
-          )}
+          {statCards.map(({ label, value }) => (
+            <div
+              key={label}
+              className="rounded-lg border border-slate-800 bg-[#101020] p-3"
+            >
+              <p className="text-xs text-slate-400">{label}</p>
+              <p className="mt-1 text-lg font-bold">
+                {statsLoading ? '...' : value.toLocaleString('en-IN')}
+              </p>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -179,13 +260,12 @@ function ReferralPage({ currentUser }) {
         <ol className="mt-3 space-y-3 text-sm text-slate-300">
           <li>1. Apna referral code ya link share karein.</li>
           <li>2. Friend aapke link se account banaye.</li>
-          <li>3. Eligibility verify hone par applicable rewards credit hon.</li>
+          <li>3. Referral reward record hone par stats update honge.</li>
         </ol>
       </section>
     </div>
   )
 }
-
 
 
 

@@ -1,7 +1,7 @@
-
 package com.example.demo.controller;
 
 import com.example.demo.entity.User;
+import com.example.demo.repository.PointsTransactionRepository;
 import com.example.demo.repository.UserRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -16,9 +16,13 @@ import java.util.Map;
 public class UserController {
 
     private final UserRepository userRepository;
+    private final PointsTransactionRepository pointsTransactionRepository;
 
-    public UserController(UserRepository userRepository) {
+    public UserController(
+            UserRepository userRepository,
+            PointsTransactionRepository pointsTransactionRepository) {
         this.userRepository = userRepository;
+        this.pointsTransactionRepository = pointsTransactionRepository;
     }
 
     @GetMapping("/me")
@@ -38,6 +42,37 @@ public class UserController {
                 "referralCode", user.getReferralCode() == null
                         ? ""
                         : user.getReferralCode()
+        ));
+    }
+
+    @GetMapping("/referral-stats")
+    public ResponseEntity<?> getReferralStats(
+            Authentication authentication) {
+
+        String username = authentication.getName();
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("User not found"));
+
+        String referralCode = user.getReferralCode();
+
+        long totalReferrals = referralCode == null
+                ? 0
+                : userRepository.countByReferredByCode(referralCode);
+
+        Long earnedCoins = pointsTransactionRepository
+                .sumReferralRewardsByUserId(user.getId());
+
+        if (earnedCoins == null) {
+            earnedCoins = 0L;
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "totalReferrals", totalReferrals,
+                "successful", totalReferrals,
+                "pending", 0L,
+                "totalEarnedCoins", earnedCoins
         ));
     }
 }
