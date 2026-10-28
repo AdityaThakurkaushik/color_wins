@@ -1,4 +1,3 @@
-
 package com.example.demo;
 
 import com.example.demo.repository.UserRepository;
@@ -31,8 +30,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     public JwtAuthenticationFilter(
             @Value("${app.jwt.secret}") String secret,
             UserRepository userRepository) {
+
         this.secretKey = Keys.hmacShaKeyFor(
                 secret.getBytes(StandardCharsets.UTF_8));
+
         this.userRepository = userRepository;
     }
 
@@ -46,6 +47,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String header = request.getHeader("Authorization");
 
         if (header == null || !header.startsWith("Bearer ")) {
+            System.err.println(
+                    "JWT: Missing or invalid Authorization header for "
+                            + request.getRequestURI());
+
             filterChain.doFilter(request, response);
             return;
         }
@@ -61,30 +66,73 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             String username = claims.getSubject();
 
-            var userOptional = userRepository.findByUsername(username);
+            System.err.println("JWT: Token validated successfully");
+            System.err.println("JWT: Subject present = "
+                    + (username != null && !username.isBlank()));
 
-            if (userOptional.isPresent()
-                    && userOptional.get().isActive()) {
-
-                var user = userOptional.get();
-
-                var authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                user.getUsername(),
-                                null,
-                                List.of(new SimpleGrantedAuthority(
-                                        "ROLE_" + user.getRole())));
-
-                SecurityContextHolder.getContext()
-                        .setAuthentication(authentication);
+            if (username == null || username.isBlank()) {
+                SecurityContextHolder.clearContext();
+                response.sendError(
+                        HttpServletResponse.SC_UNAUTHORIZED,
+                        "Invalid token subject");
+                return;
             }
+
+            var userOptional =
+                    userRepository.findByUsername(username);
+
+            System.err.println(
+                    "JWT: User found = " + userOptional.isPresent());
+
+            if (userOptional.isEmpty()) {
+                SecurityContextHolder.clearContext();
+                response.sendError(
+                        HttpServletResponse.SC_UNAUTHORIZED,
+                        "User not found");
+                return;
+            }
+
+            var user = userOptional.get();
+
+            System.err.println(
+                    "JWT: Account active = " + user.isActive());
+
+            if (!user.isActive()) {
+                SecurityContextHolder.clearContext();
+                response.sendError(
+                        HttpServletResponse.SC_UNAUTHORIZED,
+                        "Account inactive");
+                return;
+            }
+
+            var authentication =
+                    new UsernamePasswordAuthenticationToken(
+                            user.getUsername(),
+                            null,
+                            List.of(new SimpleGrantedAuthority(
+                                    "ROLE_" + user.getRole())));
+
+            SecurityContextHolder.getContext()
+                    .setAuthentication(authentication);
+
+            System.err.println(
+                    "JWT: Authentication established; role = "
+                            + user.getRole());
 
         } catch (JwtException | IllegalArgumentException ex) {
             SecurityContextHolder.clearContext();
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+
+            // Log exception type only; never log the token.
+            System.err.println(
+                    "JWT: Validation failed = "
+                            + ex.getClass().getSimpleName());
+
+            response.setStatus(
+                    HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
             response.getWriter().write(
-                    "{\"status\":\"ERROR\",\"message\":\"Invalid or expired token\"}");
+                    "{\"status\":\"ERROR\","
+                            + "\"message\":\"Invalid or expired token\"}");
             return;
         }
 
