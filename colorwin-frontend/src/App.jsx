@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import Auth from './Auth.jsx'
+import AdminDashboard from './admin/AdminDashboard.jsx'
 
 const API = 'https://color-wins.onrender.com/api'
 
@@ -274,7 +275,8 @@ function ReferralPage({ currentUser }) {
 
 
 
-function App() {
+function GameApp() {
+
   const [selectedColor, setSelectedColor] = useState('')
   const [amount, setAmount] = useState(50)
   const [page, setPage] = useState(() =>
@@ -1278,6 +1280,14 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
       )}
     </div>
   )
+}
+
+function App() {
+  if (window.location.pathname === '/admin') {
+    return <AdminDashboard />
+  }
+
+  return <GameApp />
 }
 
 export default App
