@@ -37,6 +37,7 @@ function StatCard({ item }) {
 export default function AdminDashboard() {
   const [activeRound, setActiveRound] = React.useState(null)
   const [roundLoading, setRoundLoading] = React.useState(true)
+  const [totalUsers, setTotalUsers] = React.useState(null)
   const [roundError, setRoundError] = React.useState(false)
   const [lastUpdated, setLastUpdated] = React.useState(null)
 
@@ -67,14 +68,39 @@ export default function AdminDashboard() {
     }
   }, [])
 
+  const loadTotalUsers = React.useCallback(async () => {
+    try {
+     const token = localStorage.getItem('colorwin_token')
+
+const response = await fetch(
+  'https://color-wins.onrender.com/api/admin/stats/users',
+  {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }
+)
+      if (!response.ok) {
+        throw new Error(`Request failed: ${response.status}`)
+      }
+
+      const data = await response.json()
+      setTotalUsers(data.totalUsers)
+    } catch (error) {
+      console.error('Total users API error:', error)
+      setTotalUsers(null)
+    }
+  }, [])
+
   React.useEffect(() => {
     loadActiveRound()
-  }, [loadActiveRound])
+    loadTotalUsers()
+  }, [loadActiveRound, loadTotalUsers])
 
   const stats = [
     {
       label: 'Total Users',
-      value: '—',
+      value: totalUsers === null ? '—' : totalUsers,
       icon: '♟',
       color: 'purple',
     },
@@ -103,7 +129,6 @@ export default function AdminDashboard() {
       color: 'pink',
     },
   ]
-
   return (
     <div className="min-h-screen bg-[#050817] text-white md:flex">
       <aside className="border-b border-purple-900 bg-[#080d20] p-4 md:min-h-screen md:w-64 md:border-b-0 md:border-r">
