@@ -1,4 +1,3 @@
-
 package com.example.demo.controller;
 
 import com.example.demo.repository.UserRepository;
@@ -30,6 +29,18 @@ public class AdminController {
     public Map<String, Long> getTotalUsers() {
         return Map.of(
             "totalUsers", userRepository.count()
+        );
+    }
+
+    @GetMapping("/stats/virtual-points")
+    public Map<String, Long> getTotalVirtualPoints() {
+        long totalVirtualPoints = userRepository.findAll()
+            .stream()
+            .mapToLong(user -> user.getVirtualPoints())
+            .sum();
+
+        return Map.of(
+            "totalVirtualPoints", totalVirtualPoints
         );
     }
 }

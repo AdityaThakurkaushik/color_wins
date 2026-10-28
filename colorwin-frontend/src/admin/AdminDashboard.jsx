@@ -1,4 +1,3 @@
-
 import React from 'react'
 
 const menuItems = [
@@ -37,8 +36,11 @@ function StatCard({ item }) {
 export default function AdminDashboard() {
   const [activeRound, setActiveRound] = React.useState(null)
   const [roundLoading, setRoundLoading] = React.useState(true)
-  const [totalUsers, setTotalUsers] = React.useState(null)
   const [roundError, setRoundError] = React.useState(false)
+  const [totalUsers, setTotalUsers] = React.useState(null)
+  const [totalVirtualPoints, setTotalVirtualPoints] = React.useState(null)
+  const [statsLoading, setStatsLoading] = React.useState(false)
+  const [statsError, setStatsError] = React.useState(false)
   const [lastUpdated, setLastUpdated] = React.useState(null)
 
   const loadActiveRound = React.useCallback(async () => {
@@ -68,45 +70,86 @@ export default function AdminDashboard() {
     }
   }, [])
 
-  const loadTotalUsers = React.useCallback(async () => {
-    try {
-     const token = localStorage.getItem('colorwin_token')
+  const loadDashboardStats = React.useCallback(async () => {
+    setStatsLoading(true)
+    setStatsError(false)
 
-const response = await fetch(
-  'https://color-wins.onrender.com/api/admin/stats/users',
-  {
-    headers: {
+    const token = localStorage.getItem('colorwin_token')
+
+    if (!token) {
+      console.error('Admin token not found')
+      setTotalUsers(null)
+      setTotalVirtualPoints(null)
+      setStatsError(true)
+      setStatsLoading(false)
+      return
+    }
+
+    const headers = {
       Authorization: `Bearer ${token}`,
-    },
-  }
-)
-      if (!response.ok) {
-        throw new Error(`Request failed: ${response.status}`)
+    }
+
+    try {
+      const [usersResponse, pointsResponse] = await Promise.all([
+        fetch('https://color-wins.onrender.com/api/admin/stats/users', {
+          headers,
+        }),
+        fetch(
+          'https://color-wins.onrender.com/api/admin/stats/virtual-points',
+          { headers }
+        ),
+      ])
+
+      if (!usersResponse.ok) {
+        throw new Error(`Users API failed: ${usersResponse.status}`)
       }
 
-      const data = await response.json()
-      setTotalUsers(data.totalUsers)
+      if (!pointsResponse.ok) {
+        throw new Error(`Virtual points API failed: ${pointsResponse.status}`)
+      }
+
+      const usersData = await usersResponse.json()
+      const pointsData = await pointsResponse.json()
+
+      setTotalUsers(usersData.totalUsers)
+      setTotalVirtualPoints(pointsData.totalVirtualPoints)
     } catch (error) {
-      console.error('Total users API error:', error)
-      setTotalUsers(null)
+      console.error('Dashboard stats API error:', error)
+      setStatsError(true)
+    } finally {
+      setStatsLoading(false)
     }
   }, [])
 
-  React.useEffect(() => {
+  const refreshDashboard = React.useCallback(() => {
     loadActiveRound()
-    loadTotalUsers()
-  }, [loadActiveRound, loadTotalUsers])
+    loadDashboardStats()
+  }, [loadActiveRound, loadDashboardStats])
+
+  React.useEffect(() => {
+    refreshDashboard()
+  }, [refreshDashboard])
 
   const stats = [
     {
       label: 'Total Users',
-      value: totalUsers === null ? '—' : totalUsers,
+      value:
+        totalUsers === null
+          ? statsLoading
+            ? 'Loading...'
+            : '—'
+          : totalUsers.toLocaleString('en-IN'),
       icon: '♟',
       color: 'purple',
     },
     {
       label: 'Total Virtual Points',
-      value: '—',
+      value:
+        totalVirtualPoints === null
+          ? statsLoading
+            ? 'Loading...'
+            : '—'
+          : totalVirtualPoints.toLocaleString('en-IN'),
       icon: '◉',
       color: 'gold',
     },
@@ -129,6 +172,7 @@ const response = await fetch(
       color: 'pink',
     },
   ]
+
   return (
     <div className="min-h-screen bg-[#050817] text-white md:flex">
       <aside className="border-b border-purple-900 bg-[#080d20] p-4 md:min-h-screen md:w-64 md:border-b-0 md:border-r">
@@ -167,11 +211,11 @@ const response = await fetch(
 
           <div className="flex items-center gap-2">
             <button
-              onClick={loadActiveRound}
-              disabled={roundLoading}
+              onClick={refreshDashboard}
+              disabled={roundLoading || statsLoading}
               className="rounded-lg border border-purple-700 px-3 py-2 text-sm hover:bg-purple-900/50 disabled:opacity-50"
             >
-              {roundLoading ? 'Loading...' : '↻ Refresh'}
+              {roundLoading || statsLoading ? 'Loading...' : '↻ Refresh'}
             </button>
 
             <div className="rounded-lg border border-purple-700 px-3 py-2 text-sm">
@@ -184,6 +228,13 @@ const response = await fetch(
           Last refreshed:{' '}
           {lastUpdated ? lastUpdated.toLocaleTimeString() : 'Not yet'}
         </p>
+
+        {statsError && (
+          <p className="mb-4 rounded-lg border border-amber-700 bg-amber-950/30 p-3 text-sm text-amber-200">
+            Dashboard statistics could not be fully loaded. Check admin
+            authorization and the backend API.
+          </p>
+        )}
 
         <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           {stats.map((item) => (
@@ -292,9 +343,11 @@ const response = await fetch(
                 <span className="text-slate-400">Backend API</span>
                 <span
                   className={
-                    roundError ? 'text-red-300' : roundLoading
-                      ? 'text-amber-300'
-                      : 'text-emerald-300'
+                    roundError
+                      ? 'text-red-300'
+                      : roundLoading
+                        ? 'text-amber-300'
+                        : 'text-emerald-300'
                   }
                 >
                   {roundLoading
@@ -312,14 +365,20 @@ const response = await fetch(
 
               <div className="flex justify-between gap-3">
                 <span className="text-slate-400">Admin authorization</span>
-                <span className="text-amber-300">Pending</span>
+                <span
+                  className={
+                    statsError ? 'text-red-300' : 'text-emerald-300'
+                  }
+                >
+                  {statsError ? 'Check required' : 'Statistics loaded'}
+                </span>
               </div>
             </div>
           </div>
         </section>
 
         <p className="mt-6 text-center text-xs text-slate-500">
-          ColorWin Admin • Live round API connected • Other statistics not connected
+          ColorWin Admin • Live round, user count and virtual points statistics
         </p>
       </main>
     </div>
