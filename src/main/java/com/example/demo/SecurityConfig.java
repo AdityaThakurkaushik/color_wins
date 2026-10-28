@@ -77,6 +77,7 @@ public class SecurityConfig {
                                 "/api/game/current",
                                 "/api/game/results"
                         ).permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex
