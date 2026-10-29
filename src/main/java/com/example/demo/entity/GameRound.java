@@ -1,4 +1,3 @@
-
 package com.example.demo.entity;
 
 import jakarta.persistence.*;
@@ -36,8 +35,10 @@ public class GameRound {
     protected GameRound() {
     }
 
-    public GameRound(String periodNumber, OffsetDateTime startsAt,
-                     OffsetDateTime endsAt) {
+    public GameRound(
+            String periodNumber,
+            OffsetDateTime startsAt,
+            OffsetDateTime endsAt) {
         this.periodNumber = periodNumber;
         this.startsAt = startsAt;
         this.endsAt = endsAt;
@@ -48,13 +49,37 @@ public class GameRound {
         createdAt = OffsetDateTime.now();
     }
 
-    public Long getId() { return id; }
-    public String getPeriodNumber() { return periodNumber; }
-    public String getStatus() { return status; }
-    public OffsetDateTime getStartsAt() { return startsAt; }
-    public OffsetDateTime getEndsAt() { return endsAt; }
-    public Short getResultNumber() { return resultNumber; }
-    public String getResultColor() { return resultColor; }
+    public Long getId() {
+        return id;
+    }
+
+    public String getPeriodNumber() {
+        return periodNumber;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public OffsetDateTime getStartsAt() {
+        return startsAt;
+    }
+
+    public OffsetDateTime getEndsAt() {
+        return endsAt;
+    }
+
+    public Short getResultNumber() {
+        return resultNumber;
+    }
+
+    public String getResultColor() {
+        return resultColor;
+    }
+
+    public void setEndsAt(OffsetDateTime endsAt) {
+        this.endsAt = endsAt;
+    }
 
     public void close() {
         this.status = "CLOSED";

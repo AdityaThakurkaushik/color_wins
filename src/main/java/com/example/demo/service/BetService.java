@@ -1,10 +1,12 @@
 package com.example.demo.service;
 
 import com.example.demo.entity.Bet;
+import com.example.demo.entity.GameControl;
 import com.example.demo.entity.GameRound;
 import com.example.demo.entity.PointsTransaction;
 import com.example.demo.entity.User;
 import com.example.demo.repository.BetRepository;
+import com.example.demo.repository.GameControlRepository;
 import com.example.demo.repository.GameRoundRepository;
 import com.example.demo.repository.PointsTransactionRepository;
 import com.example.demo.repository.UserRepository;
@@ -25,16 +27,19 @@ public class BetService {
 
     private final BetRepository betRepository;
     private final GameRoundRepository gameRoundRepository;
+    private final GameControlRepository gameControlRepository;
     private final PointsTransactionRepository transactionRepository;
     private final UserRepository userRepository;
 
     public BetService(
             BetRepository betRepository,
             GameRoundRepository gameRoundRepository,
+            GameControlRepository gameControlRepository,
             PointsTransactionRepository transactionRepository,
             UserRepository userRepository) {
         this.betRepository = betRepository;
         this.gameRoundRepository = gameRoundRepository;
+        this.gameControlRepository = gameControlRepository;
         this.transactionRepository = transactionRepository;
         this.userRepository = userRepository;
     }
@@ -59,6 +64,18 @@ public class BetService {
         if (!isValidColor(selectedColor)) {
             throw new IllegalArgumentException(
                     "Invalid color selection");
+        }
+
+        // Lock game control first. This serializes bet placement
+        // with Pause, Stop and scheduler state changes.
+        GameControl control = gameControlRepository
+                .findByIdForUpdate((short) 1)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Game control state not initialized"));
+
+        if (!"RUNNING".equals(control.getState())) {
+            throw new IllegalArgumentException(
+                    "Game is not accepting bets");
         }
 
         User user = userRepository.findByIdForUpdate(userId)
@@ -215,7 +232,7 @@ public class BetService {
                         new PointsTransaction(
                                 user,
                                 payout,
-                                "PAYOUT",
+                                "BET_PAYOUT",
                                 UUID.randomUUID().toString(),
                                 "Virtual points payout for winning color");
 

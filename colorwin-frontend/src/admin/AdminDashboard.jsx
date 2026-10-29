@@ -803,9 +803,21 @@ export default function AdminDashboard() {
   const [statsError, setStatsError] = React.useState('')
   const [lastUpdated, setLastUpdated] = React.useState(null)
 
+  const [gameState, setGameState] = React.useState(null)
+  const [controlLoading, setControlLoading] = React.useState(false)
+  const [controlError, setControlError] = React.useState('')
+  const [controlMessage, setControlMessage] = React.useState('')
+
   const logout = () => {
     localStorage.removeItem('colorwin_token')
     window.location.href = '/'
+  }
+
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('colorwin_token')
+    return token
+      ? { Authorization: `Bearer ${token}` }
+      : null
   }
 
   const loadActiveRound = React.useCallback(async () => {
@@ -836,9 +848,9 @@ export default function AdminDashboard() {
     setStatsLoading(true)
     setStatsError('')
 
-    const token = localStorage.getItem('colorwin_token')
+    const headers = getAuthHeaders()
 
-    if (!token) {
+    if (!headers) {
       setTotalUsers(null)
       setTotalVirtualPoints(null)
       setTotalBets(null)
@@ -846,8 +858,6 @@ export default function AdminDashboard() {
       setStatsLoading(false)
       return
     }
-
-    const headers = { Authorization: `Bearer ${token}` }
 
     try {
       const endpoints = [
@@ -864,7 +874,9 @@ export default function AdminDashboard() {
           })
 
           if (!response.ok) {
-            throw new Error(`${endpoint.key} API failed: ${response.status}`)
+            throw new Error(
+              `${endpoint.key} API failed: ${response.status}`,
+            )
           }
 
           return [endpoint.key, await response.json()]
@@ -881,9 +893,13 @@ export default function AdminDashboard() {
       console.error('Dashboard stats API error:', error)
 
       if (error.message.includes('401')) {
-        setStatsError('401: Login token invalid or expired. Please sign in again.')
+        setStatsError(
+          '401: Login token invalid or expired. Please sign in again.',
+        )
       } else if (error.message.includes('403')) {
-        setStatsError('403: Admin access required. Your account may not have the ADMIN role.')
+        setStatsError(
+          '403: Admin access required. Check your ADMIN role.',
+        )
       } else {
         setStatsError(`Statistics could not load. ${error.message}`)
       }
@@ -892,28 +908,133 @@ export default function AdminDashboard() {
     }
   }, [])
 
+  const loadGameControl = React.useCallback(async () => {
+    const headers = getAuthHeaders()
+
+    if (!headers) {
+      setGameState(null)
+      setControlError('Login required. Please sign in again.')
+      return
+    }
+
+    try {
+      const response = await fetch(`${API}/admin/game-control`, {
+        headers,
+        cache: 'no-store',
+      })
+
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || `Game control API failed: ${response.status}`,
+        )
+      }
+
+      setGameState(data)
+      setControlError('')
+    } catch (error) {
+      console.error('Game control API error:', error)
+      setControlError(error.message || 'Unable to load game state.')
+    }
+  }, [])
+
   const refreshDashboard = React.useCallback(() => {
     loadActiveRound()
     loadDashboardStats()
-  }, [loadActiveRound, loadDashboardStats])
+    loadGameControl()
+  }, [loadActiveRound, loadDashboardStats, loadGameControl])
+
+  const performGameAction = React.useCallback(async (action) => {
+    const headers = getAuthHeaders()
+
+    if (!headers) {
+      setControlError('Login required. Please sign in again.')
+      return
+    }
+
+    setControlLoading(true)
+    setControlError('')
+    setControlMessage('')
+
+    try {
+      const response = await fetch(
+        `${API}/admin/game-control/${action}`,
+        {
+          method: 'POST',
+          headers: {
+            ...headers,
+            'Content-Type': 'application/json',
+          },
+        },
+      )
+
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || `Request failed: ${response.status}`,
+        )
+      }
+
+      setGameState(data)
+
+      if (action === 'start') {
+        setControlMessage('Game started.')
+      } else if (action === 'pause') {
+        setControlMessage('Game paused.')
+      } else if (action === 'resume') {
+        setControlMessage('Game resumed.')
+      } else if (data.state === 'STOPPED') {
+        setControlMessage('Game stopped.')
+      } else {
+        setControlMessage(
+          'Stop requested. Waiting for the current round to finish.',
+        )
+      }
+
+      await Promise.all([
+        loadActiveRound(),
+        loadDashboardStats(),
+        loadGameControl(),
+      ])
+    } catch (error) {
+      console.error('Game control action failed:', error)
+      setControlError(error.message || 'Game control request failed.')
+      await loadGameControl()
+    } finally {
+      setControlLoading(false)
+    }
+  }, [loadActiveRound, loadDashboardStats, loadGameControl])
 
   React.useEffect(() => {
     refreshDashboard()
   }, [refreshDashboard])
 
+  React.useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      loadGameControl()
+    }, 5000)
+
+    return () => window.clearInterval(intervalId)
+  }, [loadGameControl])
+
+  const state = gameState?.state
+
   const stats = [
     {
       label: 'Total Users',
-      value: totalUsers === null ? '—' : totalUsers.toLocaleString('en-IN'),
+      value: totalUsers === null
+        ? '—'
+        : totalUsers.toLocaleString('en-IN'),
       icon: '♟',
       color: 'purple',
     },
     {
       label: 'Total Virtual Points',
-      value:
-        totalVirtualPoints === null
-          ? '—'
-          : totalVirtualPoints.toLocaleString('en-IN'),
+      value: totalVirtualPoints === null
+        ? '—'
+        : totalVirtualPoints.toLocaleString('en-IN'),
       icon: '◉',
       color: 'gold',
     },
@@ -929,11 +1050,20 @@ export default function AdminDashboard() {
     },
     {
       label: 'Total Bets',
-      value: totalBets === null ? '—' : totalBets.toLocaleString('en-IN'),
+      value: totalBets === null
+        ? '—'
+        : totalBets.toLocaleString('en-IN'),
       icon: '▥',
       color: 'pink',
     },
   ]
+
+  const stateColors = {
+    RUNNING: 'bg-emerald-950 text-emerald-300',
+    PAUSED: 'bg-amber-950 text-amber-300',
+    STOPPING: 'bg-orange-950 text-orange-300',
+    STOPPED: 'bg-red-950 text-red-300',
+  }
 
   return (
     <div className="min-h-screen bg-[#050817] text-white md:flex">
@@ -942,6 +1072,7 @@ export default function AdminDashboard() {
           <span className="text-yellow-400">♛</span> Color
           <span className="text-fuchsia-400">Win</span>
         </h1>
+
         <p className="mb-5 text-xs text-slate-500">ADMIN PANEL</p>
 
         <nav className="flex gap-2 overflow-x-auto md:flex-col">
@@ -950,8 +1081,11 @@ export default function AdminDashboard() {
               key={item}
               type="button"
               onClick={() => {
-                if (index === 0) refreshDashboard()
-                else alert(`${item} module is not connected yet.`)
+                if (index === 0) {
+                  refreshDashboard()
+                } else {
+                  alert(`${item} module is not connected yet.`)
+                }
               }}
               className={`shrink-0 rounded-lg px-3 py-2 text-left text-sm ${
                 index === 0
@@ -986,10 +1120,12 @@ export default function AdminDashboard() {
             <button
               type="button"
               onClick={refreshDashboard}
-              disabled={roundLoading || statsLoading}
+              disabled={roundLoading || statsLoading || controlLoading}
               className="rounded-lg border border-purple-700 px-3 py-2 text-sm hover:bg-purple-900/50 disabled:opacity-50"
             >
-              {roundLoading || statsLoading ? 'Loading...' : '↻ Refresh'}
+              {roundLoading || statsLoading || controlLoading
+                ? 'Loading...'
+                : '↻ Refresh'}
             </button>
 
             <button
@@ -1003,7 +1139,8 @@ export default function AdminDashboard() {
         </header>
 
         <p className="mb-4 text-xs text-slate-500">
-          Last refreshed: {lastUpdated ? lastUpdated.toLocaleTimeString() : 'Not yet'}
+          Last refreshed:{' '}
+          {lastUpdated ? lastUpdated.toLocaleTimeString() : 'Not yet'}
         </p>
 
         {statsError && (
@@ -1020,40 +1157,126 @@ export default function AdminDashboard() {
 
         <section className="mt-5 grid gap-4 xl:grid-cols-2">
           <div className="rounded-xl border border-purple-900 bg-[#091126] p-4">
-            <h3 className="font-bold">Game Control</h3>
-            <p className="mt-1 text-xs text-slate-400">
-              Game controls are not connected to backend APIs yet.
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="font-bold">Game Control</h3>
+
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-bold ${
+                  stateColors[state] || 'bg-slate-800 text-slate-300'
+                }`}
+              >
+                {state || 'Loading state...'}
+              </span>
+            </div>
+
+            <p className="mt-2 text-xs text-slate-400">
+              Control the game using secured admin APIs.
             </p>
 
-            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <button disabled className="rounded-lg bg-emerald-700/50 p-3 font-bold text-emerald-200">
+            {state === 'PAUSED' && (
+              <p className="mt-2 text-sm text-amber-300">
+                Remaining time:{' '}
+                {gameState?.pausedRemainingSeconds ?? 0} seconds
+              </p>
+            )}
+
+            {controlError && (
+              <p className="mt-3 break-words rounded-lg border border-red-800 bg-red-950/40 p-3 text-sm text-red-300">
+                {controlError}
+              </p>
+            )}
+
+            {controlMessage && (
+              <p className="mt-3 rounded-lg border border-emerald-800 bg-emerald-950/30 p-3 text-sm text-emerald-300">
+                {controlMessage}
+              </p>
+            )}
+
+            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                disabled={controlLoading || state !== 'STOPPED'}
+                onClick={() => performGameAction('start')}
+                className="rounded-lg bg-emerald-700 p-3 font-bold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-40"
+              >
                 Start Game
               </button>
-              <button disabled className="rounded-lg bg-amber-700/50 p-3 font-bold text-amber-200">
+
+              <button
+                type="button"
+                disabled={controlLoading || state !== 'RUNNING'}
+                onClick={() => performGameAction('pause')}
+                className="rounded-lg bg-amber-700 p-3 font-bold text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-40"
+              >
                 Pause Game
               </button>
-              <button disabled className="rounded-lg bg-red-700/50 p-3 font-bold text-red-200">
+
+              <button
+                type="button"
+                disabled={controlLoading || state !== 'PAUSED'}
+                onClick={() => performGameAction('resume')}
+                className="rounded-lg bg-blue-700 p-3 font-bold text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Resume Game
+              </button>
+
+              <button
+                type="button"
+                disabled={
+                  controlLoading ||
+                  !['RUNNING', 'PAUSED'].includes(state)
+                }
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      'Stop the game after the current round finishes?',
+                    )
+                  ) {
+                    performGameAction('stop')
+                  }
+                }}
+                className="rounded-lg bg-red-700 p-3 font-bold text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+              >
                 Stop Game
               </button>
             </div>
+
+            {controlLoading && (
+              <p className="mt-3 text-xs text-slate-400">
+                Processing request...
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={loadGameControl}
+              disabled={controlLoading}
+              className="mt-3 w-full rounded-lg border border-slate-700 p-2 text-sm hover:bg-slate-800 disabled:opacity-50"
+            >
+              Refresh Game State
+            </button>
           </div>
 
           <div className="rounded-xl border border-purple-900 bg-[#091126] p-4">
             <h3 className="font-bold">Game Settings</h3>
+
             <div className="mt-4 space-y-3 text-sm text-slate-300">
               <div className="flex justify-between gap-3">
                 <span>Round Duration</span>
                 <span className="font-bold">60 seconds</span>
               </div>
+
               <div className="flex justify-between gap-3">
                 <span>Allowed Colors</span>
                 <span>Red · Green · Violet</span>
               </div>
+
               <div className="flex justify-between gap-3">
                 <span>Mode</span>
                 <span className="text-emerald-300">Virtual Points</span>
               </div>
             </div>
+
             <p className="mt-4 text-xs text-slate-500">
               These are reference values, not live editable settings.
             </p>
@@ -1065,6 +1288,7 @@ export default function AdminDashboard() {
             <h3 className="font-bold">Current Round Information</h3>
 
             <p className="mt-3 text-sm text-slate-400">Round Number</p>
+
             <p className="mt-1 break-words font-bold">
               {roundLoading
                 ? 'Loading...'
@@ -1096,20 +1320,58 @@ export default function AdminDashboard() {
             <div className="mt-4 space-y-3 text-sm">
               <div className="flex justify-between gap-3">
                 <span className="text-slate-400">Backend API</span>
-                <span className={roundLoading ? 'text-amber-300' : roundError ? 'text-red-300' : 'text-emerald-300'}>
-                  {roundLoading ? 'Checking...' : roundError ? 'Unavailable' : 'Responding'}
+                <span
+                  className={
+                    roundLoading
+                      ? 'text-amber-300'
+                      : roundError
+                        ? 'text-red-300'
+                        : 'text-emerald-300'
+                  }
+                >
+                  {roundLoading
+                    ? 'Checking...'
+                    : roundError
+                      ? 'Unavailable'
+                      : 'Responding'}
                 </span>
               </div>
 
               <div className="flex justify-between gap-3">
-                <span className="text-slate-400">Database</span>
-                <span className="text-amber-300">Not checked directly</span>
+                <span className="text-slate-400">Game Control</span>
+                <span
+                  className={
+                    controlError
+                      ? 'text-red-300'
+                      : state
+                        ? 'text-emerald-300'
+                        : 'text-amber-300'
+                  }
+                >
+                  {controlError
+                    ? 'Check required'
+                    : state
+                      ? 'Connected'
+                      : 'Checking...'}
+                </span>
               </div>
 
               <div className="flex justify-between gap-3">
                 <span className="text-slate-400">Admin statistics</span>
-                <span className={statsLoading ? 'text-amber-300' : statsError ? 'text-red-300' : 'text-emerald-300'}>
-                  {statsLoading ? 'Checking...' : statsError ? 'Check required' : 'Loaded'}
+                <span
+                  className={
+                    statsLoading
+                      ? 'text-amber-300'
+                      : statsError
+                        ? 'text-red-300'
+                        : 'text-emerald-300'
+                  }
+                >
+                  {statsLoading
+                    ? 'Checking...'
+                    : statsError
+                      ? 'Check required'
+                      : 'Loaded'}
                 </span>
               </div>
             </div>
