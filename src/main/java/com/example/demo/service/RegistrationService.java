@@ -1,10 +1,11 @@
-
 package com.example.demo.service;
 
 import com.example.demo.dto.RegisterRequest;
 import com.example.demo.entity.PointsTransaction;
+import com.example.demo.entity.ReferralSettings;
 import com.example.demo.entity.User;
 import com.example.demo.repository.PointsTransactionRepository;
+import com.example.demo.repository.ReferralSettingsRepository;
 import com.example.demo.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -17,19 +18,21 @@ import java.util.UUID;
 public class RegistrationService {
 
     private static final long SIGNUP_BONUS = 1000L;
-    private static final long REFERRER_REWARD = 20L;
-    private static final long REFERRED_USER_REWARD = 10L;
+    private static final short REFERRAL_SETTINGS_ID = 1;
 
     private final UserRepository userRepository;
     private final PointsTransactionRepository pointsTransactionRepository;
+    private final ReferralSettingsRepository referralSettingsRepository;
     private final PasswordEncoder passwordEncoder;
 
     public RegistrationService(
             UserRepository userRepository,
             PointsTransactionRepository pointsTransactionRepository,
+            ReferralSettingsRepository referralSettingsRepository,
             PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.pointsTransactionRepository = pointsTransactionRepository;
+        this.referralSettingsRepository = referralSettingsRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -52,11 +55,23 @@ public class RegistrationService {
             throw new IllegalArgumentException("Mobile number already exists");
         }
 
+        // Load current admin-configured referral settings.
+        ReferralSettings referralSettings = referralSettingsRepository
+                .findById(REFERRAL_SETTINGS_ID)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Referral settings not found. Check V4 migration."));
+
         // Validate referral code, if supplied.
         User referrer = null;
         String submittedCode = request.getReferralCode();
 
         if (submittedCode != null && !submittedCode.isBlank()) {
+
+            if (!Boolean.TRUE.equals(referralSettings.getEnabled())) {
+                throw new IllegalArgumentException(
+                        "Referral program is currently disabled");
+            }
+
             submittedCode = submittedCode.trim().toUpperCase(Locale.ROOT);
 
             referrer = userRepository.findByReferralCode(submittedCode)
@@ -85,8 +100,8 @@ public class RegistrationService {
                 referrer == null ? null : referrer.getReferralCode()
         );
 
-        // User starts with 1000 points from the User entity default.
-        // Record the signup bonus without adding those points a second time.
+        // User entity initializes the balance to 1000 points.
+        // Record the signup bonus without crediting it a second time.
         User savedUser = userRepository.save(user);
 
         pointsTransactionRepository.save(new PointsTransaction(
@@ -97,8 +112,11 @@ public class RegistrationService {
                 "Welcome bonus: 1000 virtual points"
         ));
 
-        // Apply referral rewards only when a valid referral was used.
+        // Referral rewards apply only when a valid referral was supplied.
         if (referrer != null) {
+
+            long newUserReward = referralSettings.getReferredUserReward();
+            long referrerReward = referralSettings.getReferrerReward();
 
             String newUserRewardKey =
                     "REFERRAL_NEW_USER_" + savedUser.getId();
@@ -106,51 +124,58 @@ public class RegistrationService {
             String referrerRewardKey =
                     "REFERRAL_REFERRER_" + savedUser.getId();
 
-            // Lock the new user's row before changing the balance.
+            // Lock both user rows before updating balances.
             User newUserForUpdate = userRepository
                     .findByIdForUpdate(savedUser.getId())
                     .orElseThrow(() ->
                             new IllegalStateException("New user not found"));
 
-            // Lock the referrer's row to avoid concurrent balance updates.
             User referrerForUpdate = userRepository
                     .findByIdForUpdate(referrer.getId())
                     .orElseThrow(() ->
                             new IllegalStateException("Referrer not found"));
 
-            // Credit the new user an additional 10 points, once.
-            if (pointsTransactionRepository
+            // Credit the new user at most once.
+            if (newUserReward > 0
+                    && pointsTransactionRepository
                     .findByIdempotencyKey(newUserRewardKey).isEmpty()) {
 
                 newUserForUpdate.setVirtualPoints(
-                        newUserForUpdate.getVirtualPoints()
-                                + REFERRED_USER_REWARD
+                        Math.addExact(
+                                newUserForUpdate.getVirtualPoints(),
+                                newUserReward
+                        )
                 );
 
                 pointsTransactionRepository.save(new PointsTransaction(
                         newUserForUpdate,
-                        REFERRED_USER_REWARD,
+                        newUserReward,
                         "REFERRAL_BONUS",
                         newUserRewardKey,
-                        "Referral signup reward: 10 virtual points"
+                        "Referral signup reward: "
+                                + newUserReward + " virtual points"
                 ));
             }
 
-            // Credit the referrer 20 points, once.
-            if (pointsTransactionRepository
+            // Credit the referrer at most once per referred user.
+            if (referrerReward > 0
+                    && pointsTransactionRepository
                     .findByIdempotencyKey(referrerRewardKey).isEmpty()) {
 
                 referrerForUpdate.setVirtualPoints(
-                        referrerForUpdate.getVirtualPoints()
-                                + REFERRER_REWARD
+                        Math.addExact(
+                                referrerForUpdate.getVirtualPoints(),
+                                referrerReward
+                        )
                 );
 
                 pointsTransactionRepository.save(new PointsTransaction(
                         referrerForUpdate,
-                        REFERRER_REWARD,
+                        referrerReward,
                         "REFERRAL_BONUS",
                         referrerRewardKey,
-                        "Referral reward: 20 virtual points"
+                        "Referral reward: "
+                                + referrerReward + " virtual points"
                 ));
             }
         }

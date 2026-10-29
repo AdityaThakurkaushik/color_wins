@@ -1,757 +1,3 @@
-// // import React from 'react'
-
-// // const menuItems = [
-// //   'Dashboard',
-// //   'Game Management',
-// //   'Rounds & Results',
-// //   'Users',
-// //   'Bets History',
-// //   'Wallet & Transactions',
-// //   'Referral Management',
-// //   'Rewards & Offers',
-// //   'Live Activity Messages',
-// //   'Announcements',
-// //   'Settings',
-// // ]
-
-// // function StatCard({ item }) {
-// //   const colors = {
-// //     purple: 'border-purple-700 bg-purple-950/40 text-purple-300',
-// //     gold: 'border-amber-700 bg-amber-950/30 text-amber-300',
-// //     green: 'border-emerald-700 bg-emerald-950/30 text-emerald-300',
-// //     pink: 'border-fuchsia-700 bg-fuchsia-950/30 text-fuchsia-300',
-// //   }
-
-// //   return (
-// //     <div className={`rounded-xl border p-4 ${colors[item.color]}`}>
-// //       <div className="text-2xl">{item.icon}</div>
-// //       <p className="mt-3 text-sm text-slate-400">{item.label}</p>
-// //       <p className="mt-1 break-words text-xl font-bold text-white">
-// //         {item.value}
-// //       </p>
-// //     </div>
-// //   )
-// // }
-
-// // export default function AdminDashboard() {
-// //   const [activeRound, setActiveRound] = React.useState(null)
-// //   const [roundLoading, setRoundLoading] = React.useState(true)
-// //   const [roundError, setRoundError] = React.useState(false)
-// //   const [totalUsers, setTotalUsers] = React.useState(null)
-// //   const [totalVirtualPoints, setTotalVirtualPoints] = React.useState(null)
-// //   const [statsLoading, setStatsLoading] = React.useState(false)
-// //   const [statsError, setStatsError] = React.useState(false)
-// //   const [lastUpdated, setLastUpdated] = React.useState(null)
-
-// //   const loadActiveRound = React.useCallback(async () => {
-// //     setRoundLoading(true)
-// //     setRoundError(false)
-
-// //     try {
-// //       const response = await fetch(
-// //         'https://color-wins.onrender.com/api/game/current'
-// //       )
-
-// //       if (response.status === 204) {
-// //         setActiveRound(null)
-// //       } else if (!response.ok) {
-// //         throw new Error(`Request failed: ${response.status}`)
-// //       } else {
-// //         const data = await response.json()
-// //         setActiveRound(data)
-// //       }
-
-// //       setLastUpdated(new Date())
-// //     } catch (error) {
-// //       console.error('Unable to load active round:', error)
-// //       setRoundError(true)
-// //     } finally {
-// //       setRoundLoading(false)
-// //     }
-// //   }, [])
-
-// //   const loadDashboardStats = React.useCallback(async () => {
-// //     setStatsLoading(true)
-// //     setStatsError(false)
-
-// //     const token = localStorage.getItem('colorwin_token')
-
-// //     if (!token) {
-// //       console.error('Admin token not found')
-// //       setTotalUsers(null)
-// //       setTotalVirtualPoints(null)
-// //       setStatsError(true)
-// //       setStatsLoading(false)
-// //       return
-// //     }
-
-// //     const headers = {
-// //       Authorization: `Bearer ${token}`,
-// //     }
-
-// //     try {
-// //       const [usersResponse, pointsResponse] = await Promise.all([
-// //         fetch('https://color-wins.onrender.com/api/admin/stats/users', {
-// //           headers,
-// //         }),
-// //         fetch(
-// //           'https://color-wins.onrender.com/api/admin/stats/virtual-points',
-// //           { headers }
-// //         ),
-// //       ])
-
-// //       if (!usersResponse.ok) {
-// //         throw new Error(`Users API failed: ${usersResponse.status}`)
-// //       }
-
-// //       if (!pointsResponse.ok) {
-// //         throw new Error(`Virtual points API failed: ${pointsResponse.status}`)
-// //       }
-
-// //       const usersData = await usersResponse.json()
-// //       const pointsData = await pointsResponse.json()
-
-// //       setTotalUsers(usersData.totalUsers)
-// //       setTotalVirtualPoints(pointsData.totalVirtualPoints)
-// //     } catch (error) {
-// //       console.error('Dashboard stats API error:', error)
-// //       setStatsError(true)
-// //     } finally {
-// //       setStatsLoading(false)
-// //     }
-// //   }, [])
-
-// //   const refreshDashboard = React.useCallback(() => {
-// //     loadActiveRound()
-// //     loadDashboardStats()
-// //   }, [loadActiveRound, loadDashboardStats])
-
-// //   React.useEffect(() => {
-// //     refreshDashboard()
-// //   }, [refreshDashboard])
-
-// //   const stats = [
-// //     {
-// //       label: 'Total Users',
-// //       value:
-// //         totalUsers === null
-// //           ? statsLoading
-// //             ? 'Loading...'
-// //             : '—'
-// //           : totalUsers.toLocaleString('en-IN'),
-// //       icon: '♟',
-// //       color: 'purple',
-// //     },
-// //     {
-// //       label: 'Total Virtual Points',
-// //       value:
-// //         totalVirtualPoints === null
-// //           ? statsLoading
-// //             ? 'Loading...'
-// //             : '—'
-// //           : totalVirtualPoints.toLocaleString('en-IN'),
-// //       icon: '◉',
-// //       color: 'gold',
-// //     },
-// //     {
-// //       label: 'Active Round',
-// //       value: roundLoading
-// //         ? 'Loading...'
-// //         : roundError
-// //           ? 'Unavailable'
-// //           : activeRound
-// //             ? activeRound.periodNumber
-// //             : 'No active round',
-// //       icon: '🎮',
-// //       color: 'green',
-// //     },
-// //     {
-// //       label: 'Total Bets',
-// //       value: '—',
-// //       icon: '▥',
-// //       color: 'pink',
-// //     },
-// //   ]
-
-// //   return (
-// //     <div className="min-h-screen bg-[#050817] text-white md:flex">
-// //       <aside className="border-b border-purple-900 bg-[#080d20] p-4 md:min-h-screen md:w-64 md:border-b-0 md:border-r">
-// //         <h1 className="text-2xl font-black">
-// //           <span className="text-yellow-400">♛</span> Color
-// //           <span className="text-fuchsia-400">Win</span>
-// //         </h1>
-// //         <p className="mb-5 text-xs text-slate-500">ADMIN PANEL</p>
-
-// //         <nav className="flex gap-2 overflow-x-auto md:flex-col">
-// //           {menuItems.map((item, index) => (
-// //             <button
-// //               key={item}
-// //               className={`shrink-0 rounded-lg px-3 py-2 text-left text-sm ${
-// //                 index === 0
-// //                   ? 'bg-purple-700 font-bold text-white'
-// //                   : 'text-slate-300 hover:bg-slate-800'
-// //               }`}
-// //             >
-// //               {item}
-// //             </button>
-// //           ))}
-// //         </nav>
-
-// //         <p className="mt-6 text-sm font-bold text-red-400">Logout</p>
-// //       </aside>
-
-// //       <main className="min-w-0 flex-1 p-4 md:p-6">
-// //         <header className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
-// //           <div>
-// //             <h2 className="text-2xl font-black">Dashboard</h2>
-// //             <p className="mt-1 text-sm text-slate-400">
-// //               Welcome to ColorWin Admin Panel
-// //             </p>
-// //           </div>
-
-// //           <div className="flex items-center gap-2">
-// //             <button
-// //               onClick={refreshDashboard}
-// //               disabled={roundLoading || statsLoading}
-// //               className="rounded-lg border border-purple-700 px-3 py-2 text-sm hover:bg-purple-900/50 disabled:opacity-50"
-// //             >
-// //               {roundLoading || statsLoading ? 'Loading...' : '↻ Refresh'}
-// //             </button>
-
-// //             <div className="rounded-lg border border-purple-700 px-3 py-2 text-sm">
-// //               Admin
-// //             </div>
-// //           </div>
-// //         </header>
-
-// //         <p className="mb-4 text-xs text-slate-500">
-// //           Last refreshed:{' '}
-// //           {lastUpdated ? lastUpdated.toLocaleTimeString() : 'Not yet'}
-// //         </p>
-
-// //         {statsError && (
-// //           <p className="mb-4 rounded-lg border border-amber-700 bg-amber-950/30 p-3 text-sm text-amber-200">
-// //             Dashboard statistics could not be fully loaded. Check admin
-// //             authorization and the backend API.
-// //           </p>
-// //         )}
-
-// //         <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-// //           {stats.map((item) => (
-// //             <StatCard key={item.label} item={item} />
-// //           ))}
-// //         </section>
-
-// //         <section className="mt-5 grid gap-4 xl:grid-cols-2">
-// //           <div className="rounded-xl border border-purple-900 bg-[#091126] p-4">
-// //             <h3 className="font-bold">Game Control</h3>
-// //             <p className="mt-1 text-xs text-slate-400">
-// //               Game controls will be connected to the backend later.
-// //             </p>
-
-// //             <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
-// //               <button
-// //                 disabled
-// //                 className="rounded-lg bg-emerald-700/50 p-3 font-bold text-emerald-200"
-// //               >
-// //                 Start Game
-// //               </button>
-// //               <button
-// //                 disabled
-// //                 className="rounded-lg bg-amber-700/50 p-3 font-bold text-amber-200"
-// //               >
-// //                 Pause Game
-// //               </button>
-// //               <button
-// //                 disabled
-// //                 className="rounded-lg bg-red-700/50 p-3 font-bold text-red-200"
-// //               >
-// //                 Stop Game
-// //               </button>
-// //             </div>
-
-// //             <p className="mt-3 text-xs text-slate-500">
-// //               Controls disabled until secure admin APIs are implemented.
-// //             </p>
-// //           </div>
-
-// //           <div className="rounded-xl border border-purple-900 bg-[#091126] p-4">
-// //             <h3 className="font-bold">Game Settings</h3>
-
-// //             <div className="mt-4 space-y-3 text-sm text-slate-300">
-// //               <div className="flex justify-between gap-3">
-// //                 <span>Round Duration</span>
-// //                 <span className="font-bold">60 seconds</span>
-// //               </div>
-// //               <div className="flex justify-between gap-3">
-// //                 <span>Allowed Colors</span>
-// //                 <span>Red · Green · Violet</span>
-// //               </div>
-// //               <div className="flex justify-between gap-3">
-// //                 <span>Mode</span>
-// //                 <span className="text-emerald-300">Virtual Points</span>
-// //               </div>
-// //             </div>
-
-// //             <p className="mt-4 text-xs text-slate-500">
-// //               Read-only reference values; not connected to live settings.
-// //             </p>
-// //           </div>
-// //         </section>
-
-// //         <section className="mt-5 grid gap-4 xl:grid-cols-2">
-// //           <div className="rounded-xl border border-purple-900 bg-[#091126] p-4">
-// //             <h3 className="font-bold">Current Round Information</h3>
-
-// //             <p className="mt-3 text-sm text-slate-400">Round Number</p>
-// //             <p className="mt-1 break-words font-bold">
-// //               {roundLoading
-// //                 ? 'Loading...'
-// //                 : roundError
-// //                   ? 'Unable to load'
-// //                   : activeRound
-// //                     ? activeRound.periodNumber
-// //                     : 'No active round'}
-// //             </p>
-
-// //             <div className="mt-4 h-2 rounded-full bg-slate-800">
-// //               <div className="h-2 w-1/3 rounded-full bg-purple-500" />
-// //             </div>
-
-// //             <div className="mt-4 flex justify-between gap-3 text-sm">
-// //               <span className="text-slate-400">Round Status</span>
-// //               <span className="font-bold text-fuchsia-300">
-// //                 {activeRound?.status || '—'}
-// //               </span>
-// //             </div>
-
-// //             <div className="mt-3 flex justify-between gap-3 text-sm">
-// //               <span className="text-slate-400">Ends At</span>
-// //               <span className="text-right font-bold">
-// //                 {activeRound?.endsAt
-// //                   ? new Date(activeRound.endsAt).toLocaleTimeString()
-// //                   : '—'}
-// //               </span>
-// //             </div>
-// //           </div>
-
-// //           <div className="rounded-xl border border-purple-900 bg-[#091126] p-4">
-// //             <h3 className="font-bold">System Status</h3>
-
-// //             <div className="mt-4 space-y-3 text-sm">
-// //               <div className="flex justify-between gap-3">
-// //                 <span className="text-slate-400">Backend API</span>
-// //                 <span
-// //                   className={
-// //                     roundError
-// //                       ? 'text-red-300'
-// //                       : roundLoading
-// //                         ? 'text-amber-300'
-// //                         : 'text-emerald-300'
-// //                   }
-// //                 >
-// //                   {roundLoading
-// //                     ? 'Checking...'
-// //                     : roundError
-// //                       ? 'Unavailable'
-// //                       : 'Responding'}
-// //                 </span>
-// //               </div>
-
-// //               <div className="flex justify-between gap-3">
-// //                 <span className="text-slate-400">Database</span>
-// //                 <span className="text-amber-300">Not checked</span>
-// //               </div>
-
-// //               <div className="flex justify-between gap-3">
-// //                 <span className="text-slate-400">Admin authorization</span>
-// //                 <span
-// //                   className={
-// //                     statsError ? 'text-red-300' : 'text-emerald-300'
-// //                   }
-// //                 >
-// //                   {statsError ? 'Check required' : 'Statistics loaded'}
-// //                 </span>
-// //               </div>
-// //             </div>
-// //           </div>
-// //         </section>
-
-// //         <p className="mt-6 text-center text-xs text-slate-500">
-// //           ColorWin Admin • Live round, user count and virtual points statistics
-// //         </p>
-// //       </main>
-// //     </div>
-// //   )
-// // }
-
-
-
-// import React from 'react'
-
-// const API = 'https://color-wins.onrender.com/api'
-
-// const menuItems = [
-//   'Dashboard',
-//   'Game Management',
-//   'Rounds & Results',
-//   'Users',
-//   'Bets History',
-//   'Wallet & Transactions',
-//   'Referral Management',
-//   'Rewards & Offers',
-//   'Live Activity Messages',
-//   'Announcements',
-//   'Settings',
-// ]
-
-// function StatCard({ item }) {
-//   const colors = {
-//     purple: 'border-purple-700 bg-purple-950/40 text-purple-300',
-//     gold: 'border-amber-700 bg-amber-950/30 text-amber-300',
-//     green: 'border-emerald-700 bg-emerald-950/30 text-emerald-300',
-//     pink: 'border-fuchsia-700 bg-fuchsia-950/30 text-fuchsia-300',
-//   }
-
-//   return (
-//     <div className={`rounded-xl border p-4 ${colors[item.color]}`}>
-//       <div className="text-2xl">{item.icon}</div>
-//       <p className="mt-3 text-sm text-slate-400">{item.label}</p>
-//       <p className="mt-1 break-words text-xl font-bold text-white">
-//         {item.value}
-//       </p>
-//     </div>
-//   )
-// }
-
-// export default function AdminDashboard() {
-//   const [activeRound, setActiveRound] = React.useState(null)
-//   const [roundLoading, setRoundLoading] = React.useState(true)
-//   const [roundError, setRoundError] = React.useState(false)
-
-//   const [totalUsers, setTotalUsers] = React.useState(null)
-//   const [totalVirtualPoints, setTotalVirtualPoints] = React.useState(null)
-//   const [totalBets, setTotalBets] = React.useState(null)
-//   const [statsLoading, setStatsLoading] = React.useState(false)
-//   const [statsError, setStatsError] = React.useState('')
-//   const [lastUpdated, setLastUpdated] = React.useState(null)
-
-//   const loadActiveRound = React.useCallback(async () => {
-//     setRoundLoading(true)
-//     setRoundError(false)
-
-//     try {
-//       const response = await fetch(`${API}/game/current`)
-
-//       if (response.status === 204) {
-//         setActiveRound(null)
-//       } else if (!response.ok) {
-//         throw new Error(`Round API failed: ${response.status}`)
-//       } else {
-//         setActiveRound(await response.json())
-//       }
-//     } catch (error) {
-//       console.error('Unable to load active round:', error)
-//       setRoundError(true)
-//     } finally {
-//       setRoundLoading(false)
-//     }
-//   }, [])
-
-//   const loadDashboardStats = React.useCallback(async () => {
-//     setStatsLoading(true)
-//     setStatsError('')
-
-//     const token = localStorage.getItem('colorwin_token')
-
-//     if (!token) {
-//       setTotalUsers(null)
-//       setTotalVirtualPoints(null)
-//       setTotalBets(null)
-//       setStatsError('Admin authorization is required to load statistics.')
-//       setStatsLoading(false)
-//       return
-//     }
-
-//     const headers = { Authorization: `Bearer ${token}` }
-
-//     try {
-//       const endpoints = [
-//         { key: 'users', url: `${API}/admin/stats/users`, field: 'totalUsers' },
-//         {
-//           key: 'points',
-//           url: `${API}/admin/stats/virtual-points`,
-//           field: 'totalVirtualPoints',
-//         },
-//         { key: 'bets', url: `${API}/admin/stats/bets`, field: 'totalBets' },
-//       ]
-
-//       const responses = await Promise.all(
-//         endpoints.map(async (endpoint) => {
-//           const response = await fetch(endpoint.url, { headers })
-
-//           if (!response.ok) {
-//             throw new Error(`${endpoint.key} API failed: ${response.status}`)
-//           }
-
-//           return {
-//             key: endpoint.key,
-//             data: await response.json(),
-//           }
-//         }),
-//       )
-
-//       const values = Object.fromEntries(
-//         responses.map(({ key, data }) => [key, data]),
-//       )
-
-//       setTotalUsers(values.users.totalUsers)
-//       setTotalVirtualPoints(values.points.totalVirtualPoints)
-//       setTotalBets(values.bets.totalBets)
-//       setLastUpdated(new Date())
-//     } catch (error) {
-//       console.error('Dashboard stats API error:', error)
-
-//       if (error.message.includes('401') || error.message.includes('403')) {
-//         setStatsError(
-//           'Statistics could not be loaded: admin authorization failed or the session token expired.',
-//         )
-//       } else {
-//         setStatsError(
-//           `Statistics could not be fully loaded. ${error.message}`,
-//         )
-//       }
-//     } finally {
-//       setStatsLoading(false)
-//     }
-//   }, [])
-
-//   const refreshDashboard = React.useCallback(() => {
-//     loadActiveRound()
-//     loadDashboardStats()
-//   }, [loadActiveRound, loadDashboardStats])
-
-//   React.useEffect(() => {
-//     refreshDashboard()
-//   }, [refreshDashboard])
-
-//   const stats = [
-//     {
-//       label: 'Total Users',
-//       value: totalUsers === null ? '—' : totalUsers.toLocaleString('en-IN'),
-//       icon: '♟',
-//       color: 'purple',
-//     },
-//     {
-//       label: 'Total Virtual Points',
-//       value:
-//         totalVirtualPoints === null
-//           ? '—'
-//           : totalVirtualPoints.toLocaleString('en-IN'),
-//       icon: '◉',
-//       color: 'gold',
-//     },
-//     {
-//       label: 'Active Round',
-//       value: roundLoading
-//         ? 'Loading...'
-//         : roundError
-//           ? 'Unavailable'
-//           : activeRound?.periodNumber || 'No active round',
-//       icon: '🎮',
-//       color: 'green',
-//     },
-//     {
-//       label: 'Total Bets',
-//       value: totalBets === null ? '—' : totalBets.toLocaleString('en-IN'),
-//       icon: '▥',
-//       color: 'pink',
-//     },
-//   ]
-
-//   return (
-//     <div className="min-h-screen bg-[#050817] text-white md:flex">
-//       <aside className="border-b border-purple-900 bg-[#080d20] p-4 md:min-h-screen md:w-64 md:border-b-0 md:border-r">
-//         <h1 className="text-2xl font-black">
-//           <span className="text-yellow-400">♛</span> Color
-//           <span className="text-fuchsia-400">Win</span>
-//         </h1>
-//         <p className="mb-5 text-xs text-slate-500">ADMIN PANEL</p>
-
-//         <nav className="flex gap-2 overflow-x-auto md:flex-col">
-//           {menuItems.map((item, index) => (
-//             <button
-//               key={item}
-//               className={`shrink-0 rounded-lg px-3 py-2 text-left text-sm ${
-//                 index === 0
-//                   ? 'bg-purple-700 font-bold text-white'
-//                   : 'text-slate-300 hover:bg-slate-800'
-//               }`}
-//             >
-//               {item}
-//             </button>
-//           ))}
-//         </nav>
-
-//         <p className="mt-6 text-sm font-bold text-red-400">Logout</p>
-//       </aside>
-
-//       <main className="min-w-0 flex-1 p-4 md:p-6">
-//         <header className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
-//           <div>
-//             <h2 className="text-2xl font-black">Dashboard</h2>
-//             <p className="mt-1 text-sm text-slate-400">
-//               Welcome to ColorWin Admin Panel
-//             </p>
-//           </div>
-
-//           <div className="flex items-center gap-2">
-//             <button
-//               onClick={refreshDashboard}
-//               disabled={roundLoading || statsLoading}
-//               className="rounded-lg border border-purple-700 px-3 py-2 text-sm hover:bg-purple-900/50 disabled:opacity-50"
-//             >
-//               {roundLoading || statsLoading ? 'Loading...' : '↻ Refresh'}
-//             </button>
-//             <div className="rounded-lg border border-purple-700 px-3 py-2 text-sm">
-//               Admin
-//             </div>
-//           </div>
-//         </header>
-
-//         <p className="mb-4 text-xs text-slate-500">
-//           Last refreshed: {lastUpdated ? lastUpdated.toLocaleTimeString() : 'Not yet'}
-//         </p>
-
-//         {statsError && (
-//           <p className="mb-4 rounded-lg border border-amber-700 bg-amber-950/30 p-3 text-sm text-amber-200">
-//             {statsError}
-//           </p>
-//         )}
-
-//         <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-//           {stats.map((item) => (
-//             <StatCard key={item.label} item={item} />
-//           ))}
-//         </section>
-
-//         <section className="mt-5 grid gap-4 xl:grid-cols-2">
-//           <div className="rounded-xl border border-purple-900 bg-[#091126] p-4">
-//             <h3 className="font-bold">Game Control</h3>
-//             <p className="mt-1 text-xs text-slate-400">
-//               Game controls will be connected to the backend later.
-//             </p>
-//             <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
-//               <button disabled className="rounded-lg bg-emerald-700/50 p-3 font-bold text-emerald-200">
-//                 Start Game
-//               </button>
-//               <button disabled className="rounded-lg bg-amber-700/50 p-3 font-bold text-amber-200">
-//                 Pause Game
-//               </button>
-//               <button disabled className="rounded-lg bg-red-700/50 p-3 font-bold text-red-200">
-//                 Stop Game
-//               </button>
-//             </div>
-//             <p className="mt-3 text-xs text-slate-500">
-//               Controls disabled until secure admin APIs are implemented.
-//             </p>
-//           </div>
-
-//           <div className="rounded-xl border border-purple-900 bg-[#091126] p-4">
-//             <h3 className="font-bold">Game Settings</h3>
-//             <div className="mt-4 space-y-3 text-sm text-slate-300">
-//               <div className="flex justify-between gap-3">
-//                 <span>Round Duration</span>
-//                 <span className="font-bold">60 seconds</span>
-//               </div>
-//               <div className="flex justify-between gap-3">
-//                 <span>Allowed Colors</span>
-//                 <span>Red · Green · Violet</span>
-//               </div>
-//               <div className="flex justify-between gap-3">
-//                 <span>Mode</span>
-//                 <span className="text-emerald-300">Virtual Points</span>
-//               </div>
-//             </div>
-//             <p className="mt-4 text-xs text-slate-500">
-//               Read-only reference values; not connected to live settings.
-//             </p>
-//           </div>
-//         </section>
-
-//         <section className="mt-5 grid gap-4 xl:grid-cols-2">
-//           <div className="rounded-xl border border-purple-900 bg-[#091126] p-4">
-//             <h3 className="font-bold">Current Round Information</h3>
-//             <p className="mt-3 text-sm text-slate-400">Round Number</p>
-//             <p className="mt-1 break-words font-bold">
-//               {roundLoading
-//                 ? 'Loading...'
-//                 : roundError
-//                   ? 'Unable to load'
-//                   : activeRound?.periodNumber || 'No active round'}
-//             </p>
-
-//             <div className="mt-4 h-2 rounded-full bg-slate-800">
-//               <div className="h-2 w-1/3 rounded-full bg-purple-500" />
-//             </div>
-
-//             <div className="mt-4 flex justify-between gap-3 text-sm">
-//               <span className="text-slate-400">Round Status</span>
-//               <span className="font-bold text-fuchsia-300">
-//                 {activeRound?.status || '—'}
-//               </span>
-//             </div>
-
-//             <div className="mt-3 flex justify-between gap-3 text-sm">
-//               <span className="text-slate-400">Ends At</span>
-//               <span className="text-right font-bold">
-//                 {activeRound?.endsAt
-//                   ? new Date(activeRound.endsAt).toLocaleTimeString()
-//                   : '—'}
-//               </span>
-//             </div>
-//           </div>
-
-//           <div className="rounded-xl border border-purple-900 bg-[#091126] p-4">
-//             <h3 className="font-bold">System Status</h3>
-//             <div className="mt-4 space-y-3 text-sm">
-//               <div className="flex justify-between gap-3">
-//                 <span className="text-slate-400">Backend API</span>
-//                 <span className={roundLoading ? 'text-amber-300' : roundError ? 'text-red-300' : 'text-emerald-300'}>
-//                   {roundLoading ? 'Checking...' : roundError ? 'Unavailable' : 'Responding'}
-//                 </span>
-//               </div>
-
-//               <div className="flex justify-between gap-3">
-//                 <span className="text-slate-400">Database</span>
-//                 <span className="text-amber-300">Not checked</span>
-//               </div>
-
-//               <div className="flex justify-between gap-3">
-//                 <span className="text-slate-400">Admin statistics</span>
-//                 <span className={statsError ? 'text-red-300' : statsLoading ? 'text-amber-300' : 'text-emerald-300'}>
-//                   {statsLoading ? 'Checking...' : statsError ? 'Check required' : 'Loaded'}
-//                 </span>
-//               </div>
-//             </div>
-//           </div>
-//         </section>
-
-//         <p className="mt-6 text-center text-xs text-slate-500">
-//           ColorWin Admin • Live round, user count, virtual points and bets statistics
-//         </p>
-//       </main>
-//     </div>
-//   )
-// }
-
-
-
-
-
-
-
-
 
 
 import React from 'react'
@@ -792,6 +38,7 @@ function StatCard({ item }) {
 }
 
 export default function AdminDashboard() {
+  const [activePage, setActivePage] = React.useState('Dashboard')
   const [activeRound, setActiveRound] = React.useState(null)
   const [roundLoading, setRoundLoading] = React.useState(true)
   const [roundError, setRoundError] = React.useState(false)
@@ -807,6 +54,19 @@ export default function AdminDashboard() {
   const [controlLoading, setControlLoading] = React.useState(false)
   const [controlError, setControlError] = React.useState('')
   const [controlMessage, setControlMessage] = React.useState('')
+  const [referralSettings, setReferralSettings] = React.useState(null)
+
+const [referralForm, setReferralForm] = React.useState({
+  enabled: true,
+  referrerReward: '20',
+  referredUserReward: '10',
+  rewardCondition: 'REGISTRATION',
+})
+
+const [referralLoading, setReferralLoading] = React.useState(false)
+const [referralSaving, setReferralSaving] = React.useState(false)
+const [referralError, setReferralError] = React.useState('')
+const [referralMessage, setReferralMessage] = React.useState('')
 
   const logout = () => {
     localStorage.removeItem('colorwin_token')
@@ -938,6 +198,114 @@ export default function AdminDashboard() {
       setControlError(error.message || 'Unable to load game state.')
     }
   }, [])
+const loadReferralSettings = async () => {
+  setReferralLoading(true)
+  setReferralError('')
+  setReferralMessage('')
+
+  const headers = getAuthHeaders()
+
+  if (!headers) {
+    setReferralError('Login required. Please sign in again.')
+    setReferralLoading(false)
+    return
+  }
+
+  try {
+    const response = await fetch(`${API}/admin/referral-settings`, {
+      method: 'GET',
+      headers,
+      cache: 'no-store',
+    })
+
+    if (!response.ok) {
+      throw new Error(`Settings load nahi hui. Status: ${response.status}`)
+    }
+
+    const data = await response.json()
+
+    setReferralSettings(data)
+    setReferralForm({
+      enabled: data.enabled ?? true,
+      referrerReward: String(data.referrerReward ?? 20),
+      referredUserReward: String(data.referredUserReward ?? 10),
+      rewardCondition: data.rewardCondition ?? 'REGISTRATION',
+    })
+  } catch (error) {
+    setReferralError(error.message || 'Settings load nahi hui.')
+  } finally {
+    setReferralLoading(false)
+  }
+}
+  const saveReferralSettings = async () => {
+    setReferralSaving(true)
+    setReferralError('')
+    setReferralMessage('')
+
+    const referrerReward = Number(referralForm.referrerReward)
+    const referredUserReward = Number(referralForm.referredUserReward)
+
+    if (
+      !Number.isInteger(referrerReward) ||
+      referrerReward < 0 ||
+      !Number.isInteger(referredUserReward) ||
+      referredUserReward < 0
+    ) {
+      setReferralError('Rewards must be non-negative whole numbers.')
+      setReferralSaving(false)
+      return
+    }
+
+    const headers = getAuthHeaders()
+
+    if (!headers) {
+      setReferralError('Login required. Please sign in again.')
+      setReferralSaving(false)
+      return
+    }
+
+    try {
+      const response = await fetch(`${API}/admin/referral-settings`, {
+        method: 'PUT',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          enabled: referralForm.enabled,
+          referrerReward,
+          referredUserReward,
+          rewardCondition: referralForm.rewardCondition,
+        }),
+      })
+
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || `Settings save failed: ${response.status}`,
+        )
+      }
+
+      setReferralSettings(data)
+      setReferralForm({
+        enabled: data.enabled ?? referralForm.enabled,
+        referrerReward: String(data.referrerReward ?? referrerReward),
+        referredUserReward: String(
+          data.referredUserReward ?? referredUserReward,
+        ),
+        rewardCondition:
+          data.rewardCondition ?? referralForm.rewardCondition,
+      })
+      setReferralMessage('Referral settings saved successfully.')
+    } catch (error) {
+      setReferralError(
+        error.message || 'Referral settings could not be saved.',
+      )
+    } finally {
+      setReferralSaving(false)
+    }
+  }
 
   const refreshDashboard = React.useCallback(() => {
     loadActiveRound()
@@ -1019,6 +387,11 @@ export default function AdminDashboard() {
     return () => window.clearInterval(intervalId)
   }, [loadGameControl])
 
+  React.useEffect(() => {
+  if (activePage === 'Referral Management') {
+    loadReferralSettings()
+  }
+}, [activePage])
   const state = gameState?.state
 
   const stats = [
@@ -1081,17 +454,16 @@ export default function AdminDashboard() {
               key={item}
               type="button"
               onClick={() => {
-                if (index === 0) {
+                setActivePage(item)
+                if (item === 'Dashboard') {
                   refreshDashboard()
-                } else {
-                  alert(`${item} module is not connected yet.`)
                 }
               }}
               className={`shrink-0 rounded-lg px-3 py-2 text-left text-sm ${
-                index === 0
+                activePage === item
                   ? 'bg-purple-700 font-bold text-white'
                   : 'text-slate-300 hover:bg-slate-800'
-              }`}
+              }`} 
             >
               {item}
             </button>
@@ -1110,9 +482,11 @@ export default function AdminDashboard() {
       <main className="min-w-0 flex-1 p-4 md:p-6">
         <header className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
           <div>
-            <h2 className="text-2xl font-black">Dashboard</h2>
+            <h2 className="text-2xl font-black">{activePage}</h2>
             <p className="mt-1 text-sm text-slate-400">
-              Welcome to ColorWin Admin Panel
+              {activePage === 'Referral Management'
+                ? 'Manage referral rewards and registration rules.'
+                : 'Welcome to ColorWin Admin Panel'}
             </p>
           </div>
 
@@ -1138,6 +512,162 @@ export default function AdminDashboard() {
           </div>
         </header>
 
+        {activePage === 'Referral Management' ? (
+          <section className="mx-auto max-w-3xl rounded-xl border border-purple-900 bg-[#091126] p-4 md:p-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-bold">Referral Program Settings</h3>
+                <p className="mt-1 text-sm text-slate-400">
+                  Rewards use virtual points and apply to successful registration.
+                </p>
+              </div>
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-bold ${
+                  referralForm.enabled
+                    ? 'bg-emerald-950 text-emerald-300'
+                    : 'bg-red-950 text-red-300'
+                }`}
+              >
+                {referralForm.enabled ? 'Enabled' : 'Disabled'}
+              </span>
+            </div>
+
+            {referralLoading && (
+              <p className="mt-4 text-sm text-slate-400">
+                Loading referral settings...
+              </p>
+            )}
+
+            {referralError && (
+              <p className="mt-4 break-words rounded-lg border border-red-800 bg-red-950/40 p-3 text-sm text-red-300">
+                {referralError}
+              </p>
+            )}
+
+            {referralMessage && (
+              <p className="mt-4 rounded-lg border border-emerald-800 bg-emerald-950/30 p-3 text-sm text-emerald-300">
+                {referralMessage}
+              </p>
+            )}
+
+            <div className="mt-6 flex items-center justify-between gap-4 rounded-lg border border-slate-800 p-4">
+              <div>
+                <p className="font-semibold">Referral program</p>
+                <p className="mt-1 text-xs text-slate-400">
+                  Turn referral rewards on or off for new registrations.
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={referralForm.enabled}
+                onClick={() =>
+                  setReferralForm((current) => ({
+                    ...current,
+                    enabled: !current.enabled,
+                  }))
+                }
+                disabled={referralLoading || referralSaving}
+                className={`rounded-lg px-4 py-2 text-sm font-bold disabled:opacity-50 ${
+                  referralForm.enabled
+                    ? 'bg-emerald-700 hover:bg-emerald-600'
+                    : 'bg-slate-700 hover:bg-slate-600'
+                }`}
+              >
+                {referralForm.enabled ? 'Enabled' : 'Disabled'}
+              </button>
+            </div>
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <label className="block">
+                <span className="text-sm font-semibold">Referrer reward</span>
+                <span className="mt-1 block text-xs text-slate-400">
+                  Points given to the person who referred a new user.
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  inputMode="numeric"
+                  value={referralForm.referrerReward}
+                  onChange={(event) =>
+                    setReferralForm((current) => ({
+                      ...current,
+                      referrerReward: event.target.value,
+                    }))
+                  }
+                  disabled={referralLoading || referralSaving}
+                  className="mt-2 w-full rounded-lg border border-slate-700 bg-[#050817] px-3 py-2 text-white outline-none focus:border-purple-500 disabled:opacity-50"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-sm font-semibold">New user reward</span>
+                <span className="mt-1 block text-xs text-slate-400">
+                  Points given to the referred user after registration.
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  inputMode="numeric"
+                  value={referralForm.referredUserReward}
+                  onChange={(event) =>
+                    setReferralForm((current) => ({
+                      ...current,
+                      referredUserReward: event.target.value,
+                    }))
+                  }
+                  disabled={referralLoading || referralSaving}
+                  className="mt-2 w-full rounded-lg border border-slate-700 bg-[#050817] px-3 py-2 text-white outline-none focus:border-purple-500 disabled:opacity-50"
+                />
+              </label>
+            </div>
+
+            <label className="mt-5 block">
+              <span className="text-sm font-semibold">Reward condition</span>
+              <select
+                value={referralForm.rewardCondition}
+                onChange={(event) =>
+                  setReferralForm((current) => ({
+                    ...current,
+                    rewardCondition: event.target.value,
+                  }))
+                }
+                disabled={referralLoading || referralSaving}
+                className="mt-2 w-full rounded-lg border border-slate-700 bg-[#050817] px-3 py-2 text-white outline-none focus:border-purple-500 disabled:opacity-50"
+              >
+                <option value="REGISTRATION">Successful registration</option>
+              </select>
+            </label>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={saveReferralSettings}
+                disabled={referralLoading || referralSaving}
+                className="rounded-lg bg-purple-700 px-5 py-3 font-bold text-white hover:bg-purple-600 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {referralSaving ? 'Saving...' : 'Save Settings'}
+              </button>
+              <button
+                type="button"
+                onClick={loadReferralSettings}
+                disabled={referralLoading || referralSaving}
+                className="rounded-lg border border-slate-700 px-5 py-3 font-semibold hover:bg-slate-800 disabled:opacity-50"
+              >
+                Reload Settings
+              </button>
+            </div>
+
+            {referralSettings && (
+              <p className="mt-4 text-xs text-slate-500">
+                Settings loaded from the backend. Changes take effect only after a successful save.
+              </p>
+            )}
+          </section>
+        ) : activePage === 'Dashboard' ? (
+          <>
         <p className="mb-4 text-xs text-slate-500">
           Last refreshed:{' '}
           {lastUpdated ? lastUpdated.toLocaleTimeString() : 'Not yet'}
@@ -1381,7 +911,62 @@ export default function AdminDashboard() {
         <p className="mt-6 text-center text-xs text-slate-500">
           ColorWin Admin • Virtual points only
         </p>
+
+          </>
+        ) : (
+          <section className="rounded-xl border border-purple-900 bg-[#091126] p-5">
+            <h3 className="text-lg font-bold">{activePage}</h3>
+            <p className="mt-2 text-sm text-slate-400">
+              This module is not connected yet.
+            </p>
+          </section>
+        )}
       </main>
     </div>
   )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
