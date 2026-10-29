@@ -1,4 +1,395 @@
+// // import React from 'react'
+
+// // const menuItems = [
+// //   'Dashboard',
+// //   'Game Management',
+// //   'Rounds & Results',
+// //   'Users',
+// //   'Bets History',
+// //   'Wallet & Transactions',
+// //   'Referral Management',
+// //   'Rewards & Offers',
+// //   'Live Activity Messages',
+// //   'Announcements',
+// //   'Settings',
+// // ]
+
+// // function StatCard({ item }) {
+// //   const colors = {
+// //     purple: 'border-purple-700 bg-purple-950/40 text-purple-300',
+// //     gold: 'border-amber-700 bg-amber-950/30 text-amber-300',
+// //     green: 'border-emerald-700 bg-emerald-950/30 text-emerald-300',
+// //     pink: 'border-fuchsia-700 bg-fuchsia-950/30 text-fuchsia-300',
+// //   }
+
+// //   return (
+// //     <div className={`rounded-xl border p-4 ${colors[item.color]}`}>
+// //       <div className="text-2xl">{item.icon}</div>
+// //       <p className="mt-3 text-sm text-slate-400">{item.label}</p>
+// //       <p className="mt-1 break-words text-xl font-bold text-white">
+// //         {item.value}
+// //       </p>
+// //     </div>
+// //   )
+// // }
+
+// // export default function AdminDashboard() {
+// //   const [activeRound, setActiveRound] = React.useState(null)
+// //   const [roundLoading, setRoundLoading] = React.useState(true)
+// //   const [roundError, setRoundError] = React.useState(false)
+// //   const [totalUsers, setTotalUsers] = React.useState(null)
+// //   const [totalVirtualPoints, setTotalVirtualPoints] = React.useState(null)
+// //   const [statsLoading, setStatsLoading] = React.useState(false)
+// //   const [statsError, setStatsError] = React.useState(false)
+// //   const [lastUpdated, setLastUpdated] = React.useState(null)
+
+// //   const loadActiveRound = React.useCallback(async () => {
+// //     setRoundLoading(true)
+// //     setRoundError(false)
+
+// //     try {
+// //       const response = await fetch(
+// //         'https://color-wins.onrender.com/api/game/current'
+// //       )
+
+// //       if (response.status === 204) {
+// //         setActiveRound(null)
+// //       } else if (!response.ok) {
+// //         throw new Error(`Request failed: ${response.status}`)
+// //       } else {
+// //         const data = await response.json()
+// //         setActiveRound(data)
+// //       }
+
+// //       setLastUpdated(new Date())
+// //     } catch (error) {
+// //       console.error('Unable to load active round:', error)
+// //       setRoundError(true)
+// //     } finally {
+// //       setRoundLoading(false)
+// //     }
+// //   }, [])
+
+// //   const loadDashboardStats = React.useCallback(async () => {
+// //     setStatsLoading(true)
+// //     setStatsError(false)
+
+// //     const token = localStorage.getItem('colorwin_token')
+
+// //     if (!token) {
+// //       console.error('Admin token not found')
+// //       setTotalUsers(null)
+// //       setTotalVirtualPoints(null)
+// //       setStatsError(true)
+// //       setStatsLoading(false)
+// //       return
+// //     }
+
+// //     const headers = {
+// //       Authorization: `Bearer ${token}`,
+// //     }
+
+// //     try {
+// //       const [usersResponse, pointsResponse] = await Promise.all([
+// //         fetch('https://color-wins.onrender.com/api/admin/stats/users', {
+// //           headers,
+// //         }),
+// //         fetch(
+// //           'https://color-wins.onrender.com/api/admin/stats/virtual-points',
+// //           { headers }
+// //         ),
+// //       ])
+
+// //       if (!usersResponse.ok) {
+// //         throw new Error(`Users API failed: ${usersResponse.status}`)
+// //       }
+
+// //       if (!pointsResponse.ok) {
+// //         throw new Error(`Virtual points API failed: ${pointsResponse.status}`)
+// //       }
+
+// //       const usersData = await usersResponse.json()
+// //       const pointsData = await pointsResponse.json()
+
+// //       setTotalUsers(usersData.totalUsers)
+// //       setTotalVirtualPoints(pointsData.totalVirtualPoints)
+// //     } catch (error) {
+// //       console.error('Dashboard stats API error:', error)
+// //       setStatsError(true)
+// //     } finally {
+// //       setStatsLoading(false)
+// //     }
+// //   }, [])
+
+// //   const refreshDashboard = React.useCallback(() => {
+// //     loadActiveRound()
+// //     loadDashboardStats()
+// //   }, [loadActiveRound, loadDashboardStats])
+
+// //   React.useEffect(() => {
+// //     refreshDashboard()
+// //   }, [refreshDashboard])
+
+// //   const stats = [
+// //     {
+// //       label: 'Total Users',
+// //       value:
+// //         totalUsers === null
+// //           ? statsLoading
+// //             ? 'Loading...'
+// //             : '—'
+// //           : totalUsers.toLocaleString('en-IN'),
+// //       icon: '♟',
+// //       color: 'purple',
+// //     },
+// //     {
+// //       label: 'Total Virtual Points',
+// //       value:
+// //         totalVirtualPoints === null
+// //           ? statsLoading
+// //             ? 'Loading...'
+// //             : '—'
+// //           : totalVirtualPoints.toLocaleString('en-IN'),
+// //       icon: '◉',
+// //       color: 'gold',
+// //     },
+// //     {
+// //       label: 'Active Round',
+// //       value: roundLoading
+// //         ? 'Loading...'
+// //         : roundError
+// //           ? 'Unavailable'
+// //           : activeRound
+// //             ? activeRound.periodNumber
+// //             : 'No active round',
+// //       icon: '🎮',
+// //       color: 'green',
+// //     },
+// //     {
+// //       label: 'Total Bets',
+// //       value: '—',
+// //       icon: '▥',
+// //       color: 'pink',
+// //     },
+// //   ]
+
+// //   return (
+// //     <div className="min-h-screen bg-[#050817] text-white md:flex">
+// //       <aside className="border-b border-purple-900 bg-[#080d20] p-4 md:min-h-screen md:w-64 md:border-b-0 md:border-r">
+// //         <h1 className="text-2xl font-black">
+// //           <span className="text-yellow-400">♛</span> Color
+// //           <span className="text-fuchsia-400">Win</span>
+// //         </h1>
+// //         <p className="mb-5 text-xs text-slate-500">ADMIN PANEL</p>
+
+// //         <nav className="flex gap-2 overflow-x-auto md:flex-col">
+// //           {menuItems.map((item, index) => (
+// //             <button
+// //               key={item}
+// //               className={`shrink-0 rounded-lg px-3 py-2 text-left text-sm ${
+// //                 index === 0
+// //                   ? 'bg-purple-700 font-bold text-white'
+// //                   : 'text-slate-300 hover:bg-slate-800'
+// //               }`}
+// //             >
+// //               {item}
+// //             </button>
+// //           ))}
+// //         </nav>
+
+// //         <p className="mt-6 text-sm font-bold text-red-400">Logout</p>
+// //       </aside>
+
+// //       <main className="min-w-0 flex-1 p-4 md:p-6">
+// //         <header className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
+// //           <div>
+// //             <h2 className="text-2xl font-black">Dashboard</h2>
+// //             <p className="mt-1 text-sm text-slate-400">
+// //               Welcome to ColorWin Admin Panel
+// //             </p>
+// //           </div>
+
+// //           <div className="flex items-center gap-2">
+// //             <button
+// //               onClick={refreshDashboard}
+// //               disabled={roundLoading || statsLoading}
+// //               className="rounded-lg border border-purple-700 px-3 py-2 text-sm hover:bg-purple-900/50 disabled:opacity-50"
+// //             >
+// //               {roundLoading || statsLoading ? 'Loading...' : '↻ Refresh'}
+// //             </button>
+
+// //             <div className="rounded-lg border border-purple-700 px-3 py-2 text-sm">
+// //               Admin
+// //             </div>
+// //           </div>
+// //         </header>
+
+// //         <p className="mb-4 text-xs text-slate-500">
+// //           Last refreshed:{' '}
+// //           {lastUpdated ? lastUpdated.toLocaleTimeString() : 'Not yet'}
+// //         </p>
+
+// //         {statsError && (
+// //           <p className="mb-4 rounded-lg border border-amber-700 bg-amber-950/30 p-3 text-sm text-amber-200">
+// //             Dashboard statistics could not be fully loaded. Check admin
+// //             authorization and the backend API.
+// //           </p>
+// //         )}
+
+// //         <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+// //           {stats.map((item) => (
+// //             <StatCard key={item.label} item={item} />
+// //           ))}
+// //         </section>
+
+// //         <section className="mt-5 grid gap-4 xl:grid-cols-2">
+// //           <div className="rounded-xl border border-purple-900 bg-[#091126] p-4">
+// //             <h3 className="font-bold">Game Control</h3>
+// //             <p className="mt-1 text-xs text-slate-400">
+// //               Game controls will be connected to the backend later.
+// //             </p>
+
+// //             <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+// //               <button
+// //                 disabled
+// //                 className="rounded-lg bg-emerald-700/50 p-3 font-bold text-emerald-200"
+// //               >
+// //                 Start Game
+// //               </button>
+// //               <button
+// //                 disabled
+// //                 className="rounded-lg bg-amber-700/50 p-3 font-bold text-amber-200"
+// //               >
+// //                 Pause Game
+// //               </button>
+// //               <button
+// //                 disabled
+// //                 className="rounded-lg bg-red-700/50 p-3 font-bold text-red-200"
+// //               >
+// //                 Stop Game
+// //               </button>
+// //             </div>
+
+// //             <p className="mt-3 text-xs text-slate-500">
+// //               Controls disabled until secure admin APIs are implemented.
+// //             </p>
+// //           </div>
+
+// //           <div className="rounded-xl border border-purple-900 bg-[#091126] p-4">
+// //             <h3 className="font-bold">Game Settings</h3>
+
+// //             <div className="mt-4 space-y-3 text-sm text-slate-300">
+// //               <div className="flex justify-between gap-3">
+// //                 <span>Round Duration</span>
+// //                 <span className="font-bold">60 seconds</span>
+// //               </div>
+// //               <div className="flex justify-between gap-3">
+// //                 <span>Allowed Colors</span>
+// //                 <span>Red · Green · Violet</span>
+// //               </div>
+// //               <div className="flex justify-between gap-3">
+// //                 <span>Mode</span>
+// //                 <span className="text-emerald-300">Virtual Points</span>
+// //               </div>
+// //             </div>
+
+// //             <p className="mt-4 text-xs text-slate-500">
+// //               Read-only reference values; not connected to live settings.
+// //             </p>
+// //           </div>
+// //         </section>
+
+// //         <section className="mt-5 grid gap-4 xl:grid-cols-2">
+// //           <div className="rounded-xl border border-purple-900 bg-[#091126] p-4">
+// //             <h3 className="font-bold">Current Round Information</h3>
+
+// //             <p className="mt-3 text-sm text-slate-400">Round Number</p>
+// //             <p className="mt-1 break-words font-bold">
+// //               {roundLoading
+// //                 ? 'Loading...'
+// //                 : roundError
+// //                   ? 'Unable to load'
+// //                   : activeRound
+// //                     ? activeRound.periodNumber
+// //                     : 'No active round'}
+// //             </p>
+
+// //             <div className="mt-4 h-2 rounded-full bg-slate-800">
+// //               <div className="h-2 w-1/3 rounded-full bg-purple-500" />
+// //             </div>
+
+// //             <div className="mt-4 flex justify-between gap-3 text-sm">
+// //               <span className="text-slate-400">Round Status</span>
+// //               <span className="font-bold text-fuchsia-300">
+// //                 {activeRound?.status || '—'}
+// //               </span>
+// //             </div>
+
+// //             <div className="mt-3 flex justify-between gap-3 text-sm">
+// //               <span className="text-slate-400">Ends At</span>
+// //               <span className="text-right font-bold">
+// //                 {activeRound?.endsAt
+// //                   ? new Date(activeRound.endsAt).toLocaleTimeString()
+// //                   : '—'}
+// //               </span>
+// //             </div>
+// //           </div>
+
+// //           <div className="rounded-xl border border-purple-900 bg-[#091126] p-4">
+// //             <h3 className="font-bold">System Status</h3>
+
+// //             <div className="mt-4 space-y-3 text-sm">
+// //               <div className="flex justify-between gap-3">
+// //                 <span className="text-slate-400">Backend API</span>
+// //                 <span
+// //                   className={
+// //                     roundError
+// //                       ? 'text-red-300'
+// //                       : roundLoading
+// //                         ? 'text-amber-300'
+// //                         : 'text-emerald-300'
+// //                   }
+// //                 >
+// //                   {roundLoading
+// //                     ? 'Checking...'
+// //                     : roundError
+// //                       ? 'Unavailable'
+// //                       : 'Responding'}
+// //                 </span>
+// //               </div>
+
+// //               <div className="flex justify-between gap-3">
+// //                 <span className="text-slate-400">Database</span>
+// //                 <span className="text-amber-300">Not checked</span>
+// //               </div>
+
+// //               <div className="flex justify-between gap-3">
+// //                 <span className="text-slate-400">Admin authorization</span>
+// //                 <span
+// //                   className={
+// //                     statsError ? 'text-red-300' : 'text-emerald-300'
+// //                   }
+// //                 >
+// //                   {statsError ? 'Check required' : 'Statistics loaded'}
+// //                 </span>
+// //               </div>
+// //             </div>
+// //           </div>
+// //         </section>
+
+// //         <p className="mt-6 text-center text-xs text-slate-500">
+// //           ColorWin Admin • Live round, user count and virtual points statistics
+// //         </p>
+// //       </main>
+// //     </div>
+// //   )
+// // }
+
+
+
 // import React from 'react'
+
+// const API = 'https://color-wins.onrender.com/api'
 
 // const menuItems = [
 //   'Dashboard',
@@ -37,10 +428,12 @@
 //   const [activeRound, setActiveRound] = React.useState(null)
 //   const [roundLoading, setRoundLoading] = React.useState(true)
 //   const [roundError, setRoundError] = React.useState(false)
+
 //   const [totalUsers, setTotalUsers] = React.useState(null)
 //   const [totalVirtualPoints, setTotalVirtualPoints] = React.useState(null)
+//   const [totalBets, setTotalBets] = React.useState(null)
 //   const [statsLoading, setStatsLoading] = React.useState(false)
-//   const [statsError, setStatsError] = React.useState(false)
+//   const [statsError, setStatsError] = React.useState('')
 //   const [lastUpdated, setLastUpdated] = React.useState(null)
 
 //   const loadActiveRound = React.useCallback(async () => {
@@ -48,20 +441,15 @@
 //     setRoundError(false)
 
 //     try {
-//       const response = await fetch(
-//         'https://color-wins.onrender.com/api/game/current'
-//       )
+//       const response = await fetch(`${API}/game/current`)
 
 //       if (response.status === 204) {
 //         setActiveRound(null)
 //       } else if (!response.ok) {
-//         throw new Error(`Request failed: ${response.status}`)
+//         throw new Error(`Round API failed: ${response.status}`)
 //       } else {
-//         const data = await response.json()
-//         setActiveRound(data)
+//         setActiveRound(await response.json())
 //       }
-
-//       setLastUpdated(new Date())
 //     } catch (error) {
 //       console.error('Unable to load active round:', error)
 //       setRoundError(true)
@@ -72,50 +460,67 @@
 
 //   const loadDashboardStats = React.useCallback(async () => {
 //     setStatsLoading(true)
-//     setStatsError(false)
+//     setStatsError('')
 
 //     const token = localStorage.getItem('colorwin_token')
 
 //     if (!token) {
-//       console.error('Admin token not found')
 //       setTotalUsers(null)
 //       setTotalVirtualPoints(null)
-//       setStatsError(true)
+//       setTotalBets(null)
+//       setStatsError('Admin authorization is required to load statistics.')
 //       setStatsLoading(false)
 //       return
 //     }
 
-//     const headers = {
-//       Authorization: `Bearer ${token}`,
-//     }
+//     const headers = { Authorization: `Bearer ${token}` }
 
 //     try {
-//       const [usersResponse, pointsResponse] = await Promise.all([
-//         fetch('https://color-wins.onrender.com/api/admin/stats/users', {
-//           headers,
+//       const endpoints = [
+//         { key: 'users', url: `${API}/admin/stats/users`, field: 'totalUsers' },
+//         {
+//           key: 'points',
+//           url: `${API}/admin/stats/virtual-points`,
+//           field: 'totalVirtualPoints',
+//         },
+//         { key: 'bets', url: `${API}/admin/stats/bets`, field: 'totalBets' },
+//       ]
+
+//       const responses = await Promise.all(
+//         endpoints.map(async (endpoint) => {
+//           const response = await fetch(endpoint.url, { headers })
+
+//           if (!response.ok) {
+//             throw new Error(`${endpoint.key} API failed: ${response.status}`)
+//           }
+
+//           return {
+//             key: endpoint.key,
+//             data: await response.json(),
+//           }
 //         }),
-//         fetch(
-//           'https://color-wins.onrender.com/api/admin/stats/virtual-points',
-//           { headers }
-//         ),
-//       ])
+//       )
 
-//       if (!usersResponse.ok) {
-//         throw new Error(`Users API failed: ${usersResponse.status}`)
-//       }
+//       const values = Object.fromEntries(
+//         responses.map(({ key, data }) => [key, data]),
+//       )
 
-//       if (!pointsResponse.ok) {
-//         throw new Error(`Virtual points API failed: ${pointsResponse.status}`)
-//       }
-
-//       const usersData = await usersResponse.json()
-//       const pointsData = await pointsResponse.json()
-
-//       setTotalUsers(usersData.totalUsers)
-//       setTotalVirtualPoints(pointsData.totalVirtualPoints)
+//       setTotalUsers(values.users.totalUsers)
+//       setTotalVirtualPoints(values.points.totalVirtualPoints)
+//       setTotalBets(values.bets.totalBets)
+//       setLastUpdated(new Date())
 //     } catch (error) {
 //       console.error('Dashboard stats API error:', error)
-//       setStatsError(true)
+
+//       if (error.message.includes('401') || error.message.includes('403')) {
+//         setStatsError(
+//           'Statistics could not be loaded: admin authorization failed or the session token expired.',
+//         )
+//       } else {
+//         setStatsError(
+//           `Statistics could not be fully loaded. ${error.message}`,
+//         )
+//       }
 //     } finally {
 //       setStatsLoading(false)
 //     }
@@ -133,12 +538,7 @@
 //   const stats = [
 //     {
 //       label: 'Total Users',
-//       value:
-//         totalUsers === null
-//           ? statsLoading
-//             ? 'Loading...'
-//             : '—'
-//           : totalUsers.toLocaleString('en-IN'),
+//       value: totalUsers === null ? '—' : totalUsers.toLocaleString('en-IN'),
 //       icon: '♟',
 //       color: 'purple',
 //     },
@@ -146,9 +546,7 @@
 //       label: 'Total Virtual Points',
 //       value:
 //         totalVirtualPoints === null
-//           ? statsLoading
-//             ? 'Loading...'
-//             : '—'
+//           ? '—'
 //           : totalVirtualPoints.toLocaleString('en-IN'),
 //       icon: '◉',
 //       color: 'gold',
@@ -159,15 +557,13 @@
 //         ? 'Loading...'
 //         : roundError
 //           ? 'Unavailable'
-//           : activeRound
-//             ? activeRound.periodNumber
-//             : 'No active round',
+//           : activeRound?.periodNumber || 'No active round',
 //       icon: '🎮',
 //       color: 'green',
 //     },
 //     {
 //       label: 'Total Bets',
-//       value: '—',
+//       value: totalBets === null ? '—' : totalBets.toLocaleString('en-IN'),
 //       icon: '▥',
 //       color: 'pink',
 //     },
@@ -217,7 +613,6 @@
 //             >
 //               {roundLoading || statsLoading ? 'Loading...' : '↻ Refresh'}
 //             </button>
-
 //             <div className="rounded-lg border border-purple-700 px-3 py-2 text-sm">
 //               Admin
 //             </div>
@@ -225,14 +620,12 @@
 //         </header>
 
 //         <p className="mb-4 text-xs text-slate-500">
-//           Last refreshed:{' '}
-//           {lastUpdated ? lastUpdated.toLocaleTimeString() : 'Not yet'}
+//           Last refreshed: {lastUpdated ? lastUpdated.toLocaleTimeString() : 'Not yet'}
 //         </p>
 
 //         {statsError && (
 //           <p className="mb-4 rounded-lg border border-amber-700 bg-amber-950/30 p-3 text-sm text-amber-200">
-//             Dashboard statistics could not be fully loaded. Check admin
-//             authorization and the backend API.
+//             {statsError}
 //           </p>
 //         )}
 
@@ -248,28 +641,17 @@
 //             <p className="mt-1 text-xs text-slate-400">
 //               Game controls will be connected to the backend later.
 //             </p>
-
 //             <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
-//               <button
-//                 disabled
-//                 className="rounded-lg bg-emerald-700/50 p-3 font-bold text-emerald-200"
-//               >
+//               <button disabled className="rounded-lg bg-emerald-700/50 p-3 font-bold text-emerald-200">
 //                 Start Game
 //               </button>
-//               <button
-//                 disabled
-//                 className="rounded-lg bg-amber-700/50 p-3 font-bold text-amber-200"
-//               >
+//               <button disabled className="rounded-lg bg-amber-700/50 p-3 font-bold text-amber-200">
 //                 Pause Game
 //               </button>
-//               <button
-//                 disabled
-//                 className="rounded-lg bg-red-700/50 p-3 font-bold text-red-200"
-//               >
+//               <button disabled className="rounded-lg bg-red-700/50 p-3 font-bold text-red-200">
 //                 Stop Game
 //               </button>
 //             </div>
-
 //             <p className="mt-3 text-xs text-slate-500">
 //               Controls disabled until secure admin APIs are implemented.
 //             </p>
@@ -277,7 +659,6 @@
 
 //           <div className="rounded-xl border border-purple-900 bg-[#091126] p-4">
 //             <h3 className="font-bold">Game Settings</h3>
-
 //             <div className="mt-4 space-y-3 text-sm text-slate-300">
 //               <div className="flex justify-between gap-3">
 //                 <span>Round Duration</span>
@@ -292,7 +673,6 @@
 //                 <span className="text-emerald-300">Virtual Points</span>
 //               </div>
 //             </div>
-
 //             <p className="mt-4 text-xs text-slate-500">
 //               Read-only reference values; not connected to live settings.
 //             </p>
@@ -302,16 +682,13 @@
 //         <section className="mt-5 grid gap-4 xl:grid-cols-2">
 //           <div className="rounded-xl border border-purple-900 bg-[#091126] p-4">
 //             <h3 className="font-bold">Current Round Information</h3>
-
 //             <p className="mt-3 text-sm text-slate-400">Round Number</p>
 //             <p className="mt-1 break-words font-bold">
 //               {roundLoading
 //                 ? 'Loading...'
 //                 : roundError
 //                   ? 'Unable to load'
-//                   : activeRound
-//                     ? activeRound.periodNumber
-//                     : 'No active round'}
+//                   : activeRound?.periodNumber || 'No active round'}
 //             </p>
 
 //             <div className="mt-4 h-2 rounded-full bg-slate-800">
@@ -337,24 +714,11 @@
 
 //           <div className="rounded-xl border border-purple-900 bg-[#091126] p-4">
 //             <h3 className="font-bold">System Status</h3>
-
 //             <div className="mt-4 space-y-3 text-sm">
 //               <div className="flex justify-between gap-3">
 //                 <span className="text-slate-400">Backend API</span>
-//                 <span
-//                   className={
-//                     roundError
-//                       ? 'text-red-300'
-//                       : roundLoading
-//                         ? 'text-amber-300'
-//                         : 'text-emerald-300'
-//                   }
-//                 >
-//                   {roundLoading
-//                     ? 'Checking...'
-//                     : roundError
-//                       ? 'Unavailable'
-//                       : 'Responding'}
+//                 <span className={roundLoading ? 'text-amber-300' : roundError ? 'text-red-300' : 'text-emerald-300'}>
+//                   {roundLoading ? 'Checking...' : roundError ? 'Unavailable' : 'Responding'}
 //                 </span>
 //               </div>
 
@@ -364,13 +728,9 @@
 //               </div>
 
 //               <div className="flex justify-between gap-3">
-//                 <span className="text-slate-400">Admin authorization</span>
-//                 <span
-//                   className={
-//                     statsError ? 'text-red-300' : 'text-emerald-300'
-//                   }
-//                 >
-//                   {statsError ? 'Check required' : 'Statistics loaded'}
+//                 <span className="text-slate-400">Admin statistics</span>
+//                 <span className={statsError ? 'text-red-300' : statsLoading ? 'text-amber-300' : 'text-emerald-300'}>
+//                   {statsLoading ? 'Checking...' : statsError ? 'Check required' : 'Loaded'}
 //                 </span>
 //               </div>
 //             </div>
@@ -378,7 +738,7 @@
 //         </section>
 
 //         <p className="mt-6 text-center text-xs text-slate-500">
-//           ColorWin Admin • Live round, user count and virtual points statistics
+//           ColorWin Admin • Live round, user count, virtual points and bets statistics
 //         </p>
 //       </main>
 //     </div>
@@ -387,23 +747,15 @@
 
 
 
-import React from 'react'
 
-const API = 'https://color-wins.onrender.com/api'
 
-const menuItems = [
-  'Dashboard',
-  'Game Management',
-  'Rounds & Results',
-  'Users',
-  'Bets History',
-  'Wallet & Transactions',
-  'Referral Management',
-  'Rewards & Offers',
-  'Live Activity Messages',
-  'Announcements',
-  'Settings',
-]
+
+
+
+
+
+
+
 
 function StatCard({ item }) {
   const colors = {
@@ -493,8 +845,7 @@ export default function AdminDashboard() {
           if (!response.ok) {
             throw new Error(`${endpoint.key} API failed: ${response.status}`)
           }
-
-          return {
+  return {
             key: endpoint.key,
             data: await response.json(),
           }
@@ -568,7 +919,6 @@ export default function AdminDashboard() {
       color: 'pink',
     },
   ]
-
   return (
     <div className="min-h-screen bg-[#050817] text-white md:flex">
       <aside className="border-b border-purple-900 bg-[#080d20] p-4 md:min-h-screen md:w-64 md:border-b-0 md:border-r">
@@ -613,9 +963,17 @@ export default function AdminDashboard() {
             >
               {roundLoading || statsLoading ? 'Loading...' : '↻ Refresh'}
             </button>
-            <div className="rounded-lg border border-purple-700 px-3 py-2 text-sm">
-              Admin
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.removeItem('colorwin_token')
+                window.location.href = '/'
+              }}
+              className="rounded-lg border border-purple-700 px-3 py-2 text-sm hover:bg-purple-900/50 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              title="Go to the main site to sign in again"
+            >
+              Login again
+            </button>
           </div>
         </header>
 
@@ -656,7 +1014,6 @@ export default function AdminDashboard() {
               Controls disabled until secure admin APIs are implemented.
             </p>
           </div>
-
           <div className="rounded-xl border border-purple-900 bg-[#091126] p-4">
             <h3 className="font-bold">Game Settings</h3>
             <div className="mt-4 space-y-3 text-sm text-slate-300">
