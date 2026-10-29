@@ -755,8 +755,24 @@
 
 
 
+import React from 'react'
 
-import React from "react"
+const API = 'https://color-wins.onrender.com/api'
+
+const menuItems = [
+  'Dashboard',
+  'Game Management',
+  'Rounds & Results',
+  'Users',
+  'Bets History',
+  'Wallet & Transactions',
+  'Referral Management',
+  'Rewards & Offers',
+  'Live Activity Messages',
+  'Announcements',
+  'Settings',
+]
+
 function StatCard({ item }) {
   const colors = {
     purple: 'border-purple-700 bg-purple-950/40 text-purple-300',
@@ -766,7 +782,11 @@ function StatCard({ item }) {
   }
 
   return (
-    <div className={`rounded-xl border p-4 ${colors[item.color]}`}>
+    <div
+      className={`rounded-xl border p-4 ${
+        colors[item.color] || colors.purple
+      }`}
+    >
       <div className="text-2xl">{item.icon}</div>
       <p className="mt-3 text-sm text-slate-400">{item.label}</p>
       <p className="mt-1 break-words text-xl font-bold text-white">
@@ -793,7 +813,9 @@ export default function AdminDashboard() {
     setRoundError(false)
 
     try {
-      const response = await fetch(`${API}/game/current`)
+      const response = await fetch(`${API}/game/current`, {
+        cache: 'no-store',
+      })
 
       if (response.status === 204) {
         setActiveRound(null)
@@ -820,32 +842,47 @@ export default function AdminDashboard() {
       setTotalUsers(null)
       setTotalVirtualPoints(null)
       setTotalBets(null)
-      setStatsError('Admin authorization is required to load statistics.')
+      setStatsError(
+        'Admin login required. Please log in again from the main site.',
+      )
       setStatsLoading(false)
       return
     }
 
-    const headers = { Authorization: `Bearer ${token}` }
+    const headers = {
+      Authorization: `Bearer ${token}`,
+    }
+
+    const endpoints = [
+      {
+        key: 'users',
+        url: `${API}/admin/stats/users`,
+      },
+      {
+        key: 'points',
+        url: `${API}/admin/stats/virtual-points`,
+      },
+      {
+        key: 'bets',
+        url: `${API}/admin/stats/bets`,
+      },
+    ]
 
     try {
-      const endpoints = [
-        { key: 'users', url: `${API}/admin/stats/users`, field: 'totalUsers' },
-        {
-          key: 'points',
-          url: `${API}/admin/stats/virtual-points`,
-          field: 'totalVirtualPoints',
-        },
-        { key: 'bets', url: `${API}/admin/stats/bets`, field: 'totalBets' },
-      ]
-
       const responses = await Promise.all(
         endpoints.map(async (endpoint) => {
-          const response = await fetch(endpoint.url, { headers })
+          const response = await fetch(endpoint.url, {
+            headers,
+            cache: 'no-store',
+          })
 
           if (!response.ok) {
-            throw new Error(`${endpoint.key} API failed: ${response.status}`)
+            throw new Error(
+              `${endpoint.key} API failed: ${response.status}`,
+            )
           }
-  return {
+
+          return {
             key: endpoint.key,
             data: await response.json(),
           }
@@ -856,16 +893,23 @@ export default function AdminDashboard() {
         responses.map(({ key, data }) => [key, data]),
       )
 
-      setTotalUsers(values.users.totalUsers)
-      setTotalVirtualPoints(values.points.totalVirtualPoints)
-      setTotalBets(values.bets.totalBets)
+      setTotalUsers(Number(values.users.totalUsers))
+      setTotalVirtualPoints(Number(values.points.totalVirtualPoints))
+      setTotalBets(Number(values.bets.totalBets))
       setLastUpdated(new Date())
     } catch (error) {
       console.error('Dashboard stats API error:', error)
 
-      if (error.message.includes('401') || error.message.includes('403')) {
+      setTotalUsers(null)
+      setTotalVirtualPoints(null)
+      setTotalBets(null)
+
+      if (
+        String(error.message).includes('401') ||
+        String(error.message).includes('403')
+      ) {
         setStatsError(
-          'Statistics could not be loaded: admin authorization failed or the session token expired.',
+          'Statistics could not be loaded: admin authorization failed or the session token expired. Log in again, then refresh.',
         )
       } else {
         setStatsError(
@@ -878,18 +922,26 @@ export default function AdminDashboard() {
   }, [])
 
   const refreshDashboard = React.useCallback(() => {
-    loadActiveRound()
-    loadDashboardStats()
+    void loadActiveRound()
+    void loadDashboardStats()
   }, [loadActiveRound, loadDashboardStats])
 
   React.useEffect(() => {
     refreshDashboard()
   }, [refreshDashboard])
 
+  function handleLogout() {
+    localStorage.removeItem('colorwin_token')
+    window.location.href = '/'
+  }
+
   const stats = [
     {
       label: 'Total Users',
-      value: totalUsers === null ? '—' : totalUsers.toLocaleString('en-IN'),
+      value:
+        totalUsers === null
+          ? '—'
+          : totalUsers.toLocaleString('en-IN'),
       icon: '♟',
       color: 'purple',
     },
@@ -914,11 +966,15 @@ export default function AdminDashboard() {
     },
     {
       label: 'Total Bets',
-      value: totalBets === null ? '—' : totalBets.toLocaleString('en-IN'),
+      value:
+        totalBets === null
+          ? '—'
+          : totalBets.toLocaleString('en-IN'),
       icon: '▥',
       color: 'pink',
     },
   ]
+
   return (
     <div className="min-h-screen bg-[#050817] text-white md:flex">
       <aside className="border-b border-purple-900 bg-[#080d20] p-4 md:min-h-screen md:w-64 md:border-b-0 md:border-r">
@@ -926,12 +982,23 @@ export default function AdminDashboard() {
           <span className="text-yellow-400">♛</span> Color
           <span className="text-fuchsia-400">Win</span>
         </h1>
-        <p className="mb-5 text-xs text-slate-500">ADMIN PANEL</p>
+
+        <p className="mb-5 text-xs text-slate-500">
+          ADMIN PANEL
+        </p>
 
         <nav className="flex gap-2 overflow-x-auto md:flex-col">
           {menuItems.map((item, index) => (
             <button
               key={item}
+              type="button"
+              onClick={() => {
+                if (item !== 'Dashboard') {
+                  window.alert(
+                    `${item} module is not connected yet.`,
+                  )
+                }
+              }}
               className={`shrink-0 rounded-lg px-3 py-2 text-left text-sm ${
                 index === 0
                   ? 'bg-purple-700 font-bold text-white'
@@ -943,7 +1010,13 @@ export default function AdminDashboard() {
           ))}
         </nav>
 
-        <p className="mt-6 text-sm font-bold text-red-400">Logout</p>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="mt-6 rounded-lg px-3 py-2 text-left text-sm font-bold text-red-400 hover:bg-red-950/40 focus:outline-none focus:ring-2 focus:ring-red-500"
+        >
+          Logout
+        </button>
       </aside>
 
       <main className="min-w-0 flex-1 p-4 md:p-6">
@@ -957,34 +1030,47 @@ export default function AdminDashboard() {
 
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={refreshDashboard}
               disabled={roundLoading || statsLoading}
               className="rounded-lg border border-purple-700 px-3 py-2 text-sm hover:bg-purple-900/50 disabled:opacity-50"
             >
-              {roundLoading || statsLoading ? 'Loading...' : '↻ Refresh'}
+              {roundLoading || statsLoading
+                ? 'Loading...'
+                : '↻ Refresh'}
             </button>
+
             <button
               type="button"
-              onClick={() => {
-                localStorage.removeItem('colorwin_token')
-                window.location.href = '/'
-              }}
+              onClick={handleLogout}
               className="rounded-lg border border-purple-700 px-3 py-2 text-sm hover:bg-purple-900/50 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              title="Go to the main site to sign in again"
             >
-              Login again
+              Logout
             </button>
           </div>
         </header>
 
         <p className="mb-4 text-xs text-slate-500">
-          Last refreshed: {lastUpdated ? lastUpdated.toLocaleTimeString() : 'Not yet'}
+          Last refreshed:{' '}
+          {lastUpdated
+            ? lastUpdated.toLocaleTimeString()
+            : 'Not yet'}
         </p>
 
         {statsError && (
-          <p className="mb-4 rounded-lg border border-amber-700 bg-amber-950/30 p-3 text-sm text-amber-200">
-            {statsError}
-          </p>
+          <div
+            role="alert"
+            className="mb-4 rounded-lg border border-amber-700 bg-amber-950/30 p-3 text-sm text-amber-200"
+          >
+            {statsError}{' '}
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="underline"
+            >
+              Return to login
+            </button>
+          </div>
         )}
 
         <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
@@ -999,23 +1085,36 @@ export default function AdminDashboard() {
             <p className="mt-1 text-xs text-slate-400">
               Game controls will be connected to the backend later.
             </p>
+
             <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <button disabled className="rounded-lg bg-emerald-700/50 p-3 font-bold text-emerald-200">
+              <button
+                disabled
+                className="rounded-lg bg-emerald-700/50 p-3 font-bold text-emerald-200"
+              >
                 Start Game
               </button>
-              <button disabled className="rounded-lg bg-amber-700/50 p-3 font-bold text-amber-200">
+              <button
+                disabled
+                className="rounded-lg bg-amber-700/50 p-3 font-bold text-amber-200"
+              >
                 Pause Game
               </button>
-              <button disabled className="rounded-lg bg-red-700/50 p-3 font-bold text-red-200">
+              <button
+                disabled
+                className="rounded-lg bg-red-700/50 p-3 font-bold text-red-200"
+              >
                 Stop Game
               </button>
             </div>
+
             <p className="mt-3 text-xs text-slate-500">
               Controls disabled until secure admin APIs are implemented.
             </p>
           </div>
+
           <div className="rounded-xl border border-purple-900 bg-[#091126] p-4">
             <h3 className="font-bold">Game Settings</h3>
+
             <div className="mt-4 space-y-3 text-sm text-slate-300">
               <div className="flex justify-between gap-3">
                 <span>Round Duration</span>
@@ -1027,9 +1126,12 @@ export default function AdminDashboard() {
               </div>
               <div className="flex justify-between gap-3">
                 <span>Mode</span>
-                <span className="text-emerald-300">Virtual Points</span>
+                <span className="text-emerald-300">
+                  Virtual Points
+                </span>
               </div>
             </div>
+
             <p className="mt-4 text-xs text-slate-500">
               Read-only reference values; not connected to live settings.
             </p>
@@ -1039,7 +1141,10 @@ export default function AdminDashboard() {
         <section className="mt-5 grid gap-4 xl:grid-cols-2">
           <div className="rounded-xl border border-purple-900 bg-[#091126] p-4">
             <h3 className="font-bold">Current Round Information</h3>
-            <p className="mt-3 text-sm text-slate-400">Round Number</p>
+
+            <p className="mt-3 text-sm text-slate-400">
+              Round Number
+            </p>
             <p className="mt-1 break-words font-bold">
               {roundLoading
                 ? 'Loading...'
@@ -1071,11 +1176,24 @@ export default function AdminDashboard() {
 
           <div className="rounded-xl border border-purple-900 bg-[#091126] p-4">
             <h3 className="font-bold">System Status</h3>
+
             <div className="mt-4 space-y-3 text-sm">
               <div className="flex justify-between gap-3">
                 <span className="text-slate-400">Backend API</span>
-                <span className={roundLoading ? 'text-amber-300' : roundError ? 'text-red-300' : 'text-emerald-300'}>
-                  {roundLoading ? 'Checking...' : roundError ? 'Unavailable' : 'Responding'}
+                <span
+                  className={
+                    roundLoading
+                      ? 'text-amber-300'
+                      : roundError
+                        ? 'text-red-300'
+                        : 'text-emerald-300'
+                  }
+                >
+                  {roundLoading
+                    ? 'Checking...'
+                    : roundError
+                      ? 'Unavailable'
+                      : 'Responding'}
                 </span>
               </div>
 
@@ -1085,9 +1203,23 @@ export default function AdminDashboard() {
               </div>
 
               <div className="flex justify-between gap-3">
-                <span className="text-slate-400">Admin statistics</span>
-                <span className={statsError ? 'text-red-300' : statsLoading ? 'text-amber-300' : 'text-emerald-300'}>
-                  {statsLoading ? 'Checking...' : statsError ? 'Check required' : 'Loaded'}
+                <span className="text-slate-400">
+                  Admin statistics
+                </span>
+                <span
+                  className={
+                    statsError
+                      ? 'text-red-300'
+                      : statsLoading
+                        ? 'text-amber-300'
+                        : 'text-emerald-300'
+                  }
+                >
+                  {statsLoading
+                    ? 'Checking...'
+                    : statsError
+                      ? 'Check required'
+                      : 'Loaded'}
                 </span>
               </div>
             </div>
