@@ -1,5 +1,4 @@
 
-
 import React from 'react'
 
 const API = 'https://color-wins.onrender.com/api'
@@ -67,6 +66,23 @@ const [referralLoading, setReferralLoading] = React.useState(false)
 const [referralSaving, setReferralSaving] = React.useState(false)
 const [referralError, setReferralError] = React.useState('')
 const [referralMessage, setReferralMessage] = React.useState('')
+
+
+  // User Management state
+  const [users, setUsers] = React.useState([])
+  const [usersTotal, setUsersTotal] = React.useState(0)
+  const [usersSearch, setUsersSearch] = React.useState('')
+  const [usersPage, setUsersPage] = React.useState(0)
+  const [usersTotalPages, setUsersTotalPages] = React.useState(0)
+  const [usersLoading, setUsersLoading] = React.useState(false)
+  const [usersError, setUsersError] = React.useState('')
+  const [walletUser, setWalletUser] = React.useState(null)
+  const [walletAction, setWalletAction] = React.useState('CREDIT')
+  const [walletAmount, setWalletAmount] = React.useState('')
+  const [walletReason, setWalletReason] = React.useState('')
+  const [walletLoading, setWalletLoading] = React.useState(false)
+  const [walletError, setWalletError] = React.useState('')
+  const [usersMessage, setUsersMessage] = React.useState('')
 
   const logout = () => {
     localStorage.removeItem('colorwin_token')
@@ -307,6 +323,119 @@ const loadReferralSettings = async () => {
     }
   }
 
+  const loadUsers = React.useCallback(async (page = usersPage, search = usersSearch) => {
+    const headers = getAuthHeaders()
+    if (!headers) {
+      setUsersError('Login required. Please sign in again.')
+      return
+    }
+
+    setUsersLoading(true)
+    setUsersError('')
+    setUsersMessage('')
+    try {
+      const params = new URLSearchParams({
+        page: String(page),
+        size: '20',
+        search: search.trim(),
+      })
+      const response = await fetch(`${API}/admin/users?${params.toString()}`, {
+        headers,
+        cache: 'no-store',
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(data.message || `Users API failed: ${response.status}`)
+      }
+      setUsers(Array.isArray(data.content) ? data.content : [])
+      setUsersTotal(Number(data.totalElements || 0))
+      setUsersTotalPages(Number(data.totalPages || 0))
+      setUsersPage(Number(data.number || 0))
+    } catch (error) {
+      setUsersError(error.message || 'Users could not be loaded.')
+    } finally {
+      setUsersLoading(false)
+    }
+  }, [usersPage, usersSearch])
+
+  React.useEffect(() => {
+    if (activePage === 'Users') loadUsers(0, usersSearch)
+  }, [activePage, loadUsers, usersSearch])
+
+  const submitWalletAdjustment = async (event) => {
+    event.preventDefault()
+    const amount = Number(walletAmount)
+    if (!Number.isSafeInteger(amount) || amount <= 0) {
+      setWalletError('Enter a positive whole-number amount.')
+      return
+    }
+    if (!walletReason.trim()) {
+      setWalletError('Reason is required.')
+      return
+    }
+    if (!window.confirm(`${walletAction} ${amount.toLocaleString('en-IN')} virtual points ${walletAction === 'CREDIT' ? 'to' : 'from'} ${walletUser.username}?`)) return
+
+    const headers = getAuthHeaders()
+    if (!headers) {
+      setWalletError('Login required. Please sign in again.')
+      return
+    }
+    setWalletLoading(true)
+    setWalletError('')
+    try {
+      const response = await fetch(`${API}/admin/users/${walletUser.id}/wallet-adjustment`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: walletAction,
+          amount,
+          reason: walletReason.trim(),
+          idempotencyKey: window.crypto?.randomUUID?.() || `admin-${Date.now()}-${walletUser.id}`,
+        }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.message || `Adjustment failed: ${response.status}`)
+      setWalletUser(null)
+      setWalletAmount('')
+      setWalletReason('')
+      setUsersMessage(`Wallet adjustment completed for ${data.username || 'user'}.`)
+      await loadUsers(usersPage, usersSearch)
+      loadDashboardStats()
+    } catch (error) {
+      setWalletError(error.message || 'Wallet adjustment failed.')
+    } finally {
+      setWalletLoading(false)
+    }
+  }
+
+  const updateUserStatus = async (user) => {
+    const nextActive = !user.active
+    const actionText = nextActive ? 'unblock' : 'block'
+    if (!window.confirm(`Are you sure you want to ${actionText} ${user.username}?`)) return
+    const headers = getAuthHeaders()
+    if (!headers) {
+      setUsersError('Login required. Please sign in again.')
+      return
+    }
+    setUsersLoading(true)
+    setUsersError('')
+    try {
+      const response = await fetch(`${API}/admin/users/${user.id}/status`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active: nextActive }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.message || `Status update failed: ${response.status}`)
+      setUsersMessage(`${user.username} has been ${nextActive ? 'unblocked' : 'blocked'}.`)
+      await loadUsers(usersPage, usersSearch)
+    } catch (error) {
+      setUsersError(error.message || 'Account status could not be updated.')
+    } finally {
+      setUsersLoading(false)
+    }
+  }
+
   const refreshDashboard = React.useCallback(() => {
     loadActiveRound()
     loadDashboardStats()
@@ -486,7 +615,9 @@ const loadReferralSettings = async () => {
             <p className="mt-1 text-sm text-slate-400">
               {activePage === 'Referral Management'
                 ? 'Manage referral rewards and registration rules.'
-                : 'Welcome to ColorWin Admin Panel'}
+                : activePage === 'Users'
+                  ? 'Search accounts, manage virtual points and account access.'
+                  : 'Welcome to ColorWin Admin Panel'}
             </p>
           </div>
 
@@ -664,6 +795,106 @@ const loadReferralSettings = async () => {
               <p className="mt-4 text-xs text-slate-500">
                 Settings loaded from the backend. Changes take effect only after a successful save.
               </p>
+            )}
+          </section>
+        ) : activePage === 'Users' ? (
+          <section className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-purple-900 bg-[#091126] p-4">
+                <p className="text-sm text-slate-400">Total registered users</p>
+                <p className="mt-2 text-3xl font-black">{usersTotal.toLocaleString('en-IN')}</p>
+              </div>
+              <div className="rounded-xl border border-purple-900 bg-[#091126] p-4">
+                <p className="text-sm text-slate-400">Users on this page</p>
+                <p className="mt-2 text-3xl font-black">{users.length}</p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-purple-900 bg-[#091126] p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <input
+                  type="search"
+                  value={usersSearch}
+                  onChange={(event) => { setUsersSearch(event.target.value); setUsersPage(0) }}
+                  placeholder="Search username or email..."
+                  className="w-full rounded-lg border border-slate-700 bg-[#050817] px-3 py-2 text-sm text-white outline-none focus:border-purple-500 sm:max-w-md"
+                />
+                <button type="button" onClick={() => loadUsers(usersPage, usersSearch)} disabled={usersLoading} className="rounded-lg border border-purple-700 px-4 py-2 text-sm font-semibold hover:bg-purple-900/50 disabled:opacity-50">
+                  {usersLoading ? 'Loading...' : 'Refresh Users'}
+                </button>
+              </div>
+
+              {usersError && <p className="mt-3 rounded-lg border border-red-800 bg-red-950/40 p-3 text-sm text-red-300">{usersError}</p>}
+              {usersMessage && <p className="mt-3 rounded-lg border border-emerald-800 bg-emerald-950/30 p-3 text-sm text-emerald-300">{usersMessage}</p>}
+
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full min-w-[850px] text-left text-sm">
+                  <thead className="border-b border-slate-700 text-xs uppercase text-slate-400">
+                    <tr>
+                      <th className="px-3 py-3">User</th>
+                      <th className="px-3 py-3">Email</th>
+                      <th className="px-3 py-3">Mobile</th>
+                      <th className="px-3 py-3">Virtual Points</th>
+                      <th className="px-3 py-3">Status</th>
+                      <th className="px-3 py-3">Registered</th>
+                      <th className="px-3 py-3">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                    {usersLoading && users.length === 0 ? (
+                      <tr><td colSpan="7" className="px-3 py-8 text-center text-slate-400">Loading users...</td></tr>
+                    ) : users.length === 0 ? (
+                      <tr><td colSpan="7" className="px-3 py-8 text-center text-slate-400">No users found.</td></tr>
+                    ) : users.map((user) => (
+                      <tr key={user.id} className="hover:bg-slate-800/30">
+                        <td className="px-3 py-3"><span className="font-semibold">{user.username}</span><span className="block text-xs text-slate-500">ID: {user.id}</span></td>
+                        <td className="px-3 py-3 text-slate-300">{user.email || '—'}</td>
+                        <td className="px-3 py-3 text-slate-300">{user.mobileNumber || '—'}</td>
+                        <td className="px-3 py-3 font-semibold">{Number(user.virtualPoints || 0).toLocaleString('en-IN')}</td>
+                        <td className="px-3 py-3"><span className={`rounded-full px-2 py-1 text-xs font-bold ${user.active ? 'bg-emerald-950 text-emerald-300' : 'bg-red-950 text-red-300'}`}>{user.active ? 'Active' : 'Blocked'}</span></td>
+                        <td className="px-3 py-3 text-slate-400">{user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN') : '—'}</td>
+                        <td className="px-3 py-3"><div className="flex gap-2">
+                          <button type="button" onClick={() => { setWalletUser(user); setWalletAction('CREDIT'); setWalletAmount(''); setWalletReason(''); setWalletError('') }} className="rounded-md bg-emerald-700 px-3 py-1.5 text-xs font-bold hover:bg-emerald-600">Adjust</button>
+                          <button type="button" onClick={() => updateUserStatus(user)} disabled={usersLoading} className={`rounded-md px-3 py-1.5 text-xs font-bold disabled:opacity-50 ${user.active ? 'bg-red-900 hover:bg-red-800' : 'bg-blue-800 hover:bg-blue-700'}`}>{user.active ? 'Block' : 'Unblock'}</button>
+                        </div></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-400">
+                <span>Page {usersTotalPages === 0 ? 0 : usersPage + 1} of {usersTotalPages}</span>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => loadUsers(Math.max(0, usersPage - 1), usersSearch)} disabled={usersLoading || usersPage <= 0} className="rounded-lg border border-slate-700 px-3 py-2 disabled:opacity-40">Previous</button>
+                  <button type="button" onClick={() => loadUsers(usersPage + 1, usersSearch)} disabled={usersLoading || usersPage + 1 >= usersTotalPages} className="rounded-lg border border-slate-700 px-3 py-2 disabled:opacity-40">Next</button>
+                </div>
+              </div>
+            </div>
+
+            {walletUser && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="wallet-modal-title">
+                <form onSubmit={submitWalletAdjustment} className="w-full max-w-md rounded-xl border border-purple-800 bg-[#091126] p-5 shadow-2xl">
+                  <div className="flex items-start justify-between gap-3">
+                    <div><h3 id="wallet-modal-title" className="text-lg font-bold">Adjust Virtual Points</h3><p className="mt-1 text-sm text-slate-400">{walletUser.username} · Current: {Number(walletUser.virtualPoints || 0).toLocaleString('en-IN')}</p></div>
+                    <button type="button" onClick={() => setWalletUser(null)} className="rounded px-2 py-1 text-slate-400 hover:bg-slate-800" aria-label="Close">✕</button>
+                  </div>
+                  <label className="mt-4 block text-sm font-semibold">Action
+                    <select value={walletAction} onChange={(event) => setWalletAction(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-700 bg-[#050817] px-3 py-2 text-white"><option value="CREDIT">Credit points</option><option value="DEBIT">Debit points</option></select>
+                  </label>
+                  <label className="mt-4 block text-sm font-semibold">Amount
+                    <input type="number" min="1" step="1" required value={walletAmount} onChange={(event) => setWalletAmount(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-700 bg-[#050817] px-3 py-2 text-white" placeholder="Enter whole number" />
+                  </label>
+                  <label className="mt-4 block text-sm font-semibold">Reason (required)
+                    <textarea required maxLength="255" rows="3" value={walletReason} onChange={(event) => setWalletReason(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-700 bg-[#050817] px-3 py-2 text-white" placeholder="Explain why this adjustment is being made" />
+                  </label>
+                  {walletError && <p className="mt-3 rounded-lg border border-red-800 bg-red-950/40 p-3 text-sm text-red-300">{walletError}</p>}
+                  <div className="mt-5 flex flex-wrap justify-end gap-2">
+                    <button type="button" onClick={() => setWalletUser(null)} disabled={walletLoading} className="rounded-lg border border-slate-700 px-4 py-2 text-sm">Cancel</button>
+                    <button type="submit" disabled={walletLoading} className="rounded-lg bg-purple-700 px-4 py-2 text-sm font-bold hover:bg-purple-600 disabled:opacity-50">{walletLoading ? 'Processing...' : 'Confirm Adjustment'}</button>
+                  </div>
+                </form>
+              </div>
             )}
           </section>
         ) : activePage === 'Dashboard' ? (
@@ -925,48 +1156,3 @@ const loadReferralSettings = async () => {
     </div>
   )
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
