@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Auth from './Auth.jsx'
 import AdminDashboard from './admin/AdminDashboard.jsx'
 
@@ -358,6 +358,7 @@ function GameApp() {
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [notificationsLoading, setNotificationsLoading] = useState(false)
   const [notificationError, setNotificationError] = useState('')
+  const notificationPanelRef = useRef(null)
 
   const [pendingBetId, setPendingBetId] = useState(null)
   const [resultPopup, setResultPopup] = useState(null)
@@ -548,6 +549,27 @@ const loadUserProfile = useCallback(async () => {
   }, [isAuthenticated, loadUserProfile])
   
 // Notification unread count refresh
+// Close notification dropdown when clicking outside
+useEffect(() => {
+  if (!notificationsOpen) return
+
+  const handleOutsideClick = (event) => {
+    if (
+      notificationPanelRef.current &&
+      !notificationPanelRef.current.contains(event.target)
+    ) {
+      setNotificationsOpen(false)
+    }
+  }
+
+  document.addEventListener('mousedown', handleOutsideClick)
+  document.addEventListener('touchstart', handleOutsideClick)
+
+  return () => {
+    document.removeEventListener('mousedown', handleOutsideClick)
+    document.removeEventListener('touchstart', handleOutsideClick)
+  }
+}, [notificationsOpen])
 useEffect(() => {
   if (!isAuthenticated) {
     setUnreadCount(0)
@@ -896,8 +918,8 @@ useEffect(() => {
     👑 Color<span className="text-fuchsia-400">Win</span>
   </h1>
 
-  {isAuthenticated && (
-    <div className="relative">
+ {isAuthenticated && (
+  <div ref={notificationPanelRef} className="relative">
       <button
         aria-label="Notifications"
         onClick={() => {
