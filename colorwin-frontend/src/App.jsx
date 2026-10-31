@@ -352,6 +352,10 @@ function GameApp() {
   const [betError, setBetError] = useState(false)
   const [submittingBet, setSubmittingBet] = useState(false)
   const [historyLoading, setHistoryLoading] = useState(false)
+  // Notifications page state
+const [allNotifications, setAllNotifications] = useState([])
+const [notificationPage, setNotificationPage] = useState(0)
+const [notificationTotalPages, setNotificationTotalPages] = useState(0)
     // Notifications state
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
@@ -417,7 +421,7 @@ const loadNotifications = useCallback(async () => {
 
   try {
     const response = await fetch(
-      `${API}/user/notifications?page=0&size=20`,
+      `${API}/user/notifications?page=0&size=15`,
       {
         headers: { Authorization: `Bearer ${savedToken}` },
         cache: 'no-store',
@@ -436,13 +440,52 @@ const loadNotifications = useCallback(async () => {
     setNotificationError('')
   } catch (error) {
     console.error('Notifications loading failed:', error)
-    setNotificationError('Notifications load nahi ho sake.')
+    setNotificationError('Please wait for Notifications? load nahi ho sake.')
+    
   } finally {
     setNotificationsLoading(false)
   }
 }, [])
 
+// Load all notifications with pagination
+const loadAllNotifications = useCallback(async (pageNumber = 0) => {
+  const savedToken = token()
 
+  if (!savedToken) {
+    setAllNotifications([])
+    return
+  }
+
+  setNotificationsLoading(true)
+
+  try {
+    const response = await fetch(
+      `${API}/user/notifications?page=${pageNumber}&size=15`,
+      {
+        headers: { Authorization: `Bearer ${savedToken}` },
+        cache: 'no-store',
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error(`Notifications API: ${response.status}`)
+    }
+
+    const data = await response.json()
+
+    setAllNotifications(
+      Array.isArray(data.content) ? data.content : []
+    )
+    setNotificationPage(data.number ?? pageNumber)
+    setNotificationTotalPages(data.totalPages ?? 0)
+    setNotificationError('')
+  } catch (error) {
+    console.error('All notifications loading failed:', error)
+    setNotificationError('Notifications load nahi ho sake.')
+  } finally {
+    setNotificationsLoading(false)
+  }
+}, [])
 // Mark one notification as read
 const handleMarkNotificationRead = useCallback(async (notificationId) => {
   const savedToken = token()
@@ -467,12 +510,13 @@ const handleMarkNotificationRead = useCallback(async (notificationId) => {
     await Promise.all([
       loadNotifications(),
       loadUnreadCount(),
+      loadAllNotifications(notificationPage),
     ])
   } catch (error) {
     console.error('Mark notification read failed:', error)
     setNotificationError('Notification update nahi ho saka.')
   }
-}, [loadNotifications, loadUnreadCount])
+}, [loadNotifications, loadUnreadCount, loadAllNotifications, notificationPage])
 
 // Mark all notifications as read
 const handleMarkAllNotificationsRead = useCallback(async () => {
@@ -496,14 +540,15 @@ const handleMarkAllNotificationsRead = useCallback(async () => {
     }
 
     await Promise.all([
-      loadNotifications(),
-      loadUnreadCount(),
-    ])
+  loadNotifications(),
+  loadUnreadCount(),
+  loadAllNotifications(notificationPage),
+])
   } catch (error) {
     console.error('Mark all notifications read failed:', error)
     setNotificationError('Notifications update nahi ho sake.')
   }
-}, [loadNotifications, loadUnreadCount])
+}, [loadNotifications, loadUnreadCount, loadAllNotifications, notificationPage])
 
 
 // Load user profile
@@ -585,7 +630,12 @@ useEffect(() => {
 
   return () => clearInterval(interval)
 }, [isAuthenticated, loadUnreadCount])
-
+// Load notifications when Notifications page opens
+useEffect(() => {
+  if (page === 'Notifications' && isAuthenticated) {
+    loadAllNotifications(0)
+  }
+}, [page, isAuthenticated, loadAllNotifications])
 
   const loadGameData = useCallback(async () => {
     try {
@@ -942,7 +992,7 @@ useEffect(() => {
       </button>
 
       {notificationsOpen && (
-        <div className="absolute right-0 top-12 z-50 w-[min(90vw,360px)] overflow-hidden rounded-xl border border-purple-700 bg-[#101020] shadow-2xl">
+        <div className="fixed left-1/2 top-28 z-50 w-[min(90vw,360px)] -translate-x-1/2 overflow-hidden rounded-xl border border-purple-700 bg-[#101020] shadow-2xl sm:absolute sm:left-auto sm:right-0 sm:top-12 sm:translate-x-0">
           <div className="flex items-center justify-between border-b border-purple-900 p-3">
             <h3 className="font-bold text-white">Notifications</h3>
             <button
@@ -968,7 +1018,7 @@ useEffect(() => {
                 No notifications available.
               </p>
             ) : (
-              notifications.map((notification) => (
+              notifications.slice(0, 7).map((notification) => (
                 <button
                   key={notification.id}
                   onClick={() => {
@@ -1003,8 +1053,19 @@ useEffect(() => {
                   )}
                 </button>
               ))
-            )}
+                        )}
           </div>
+
+          <button
+            onClick={() => {
+  setNotificationsOpen(false)
+  setPage('Notifications')
+  
+}}
+            className="w-full border-t border-purple-900 p-3 text-center text-sm font-bold text-fuchsia-300 hover:bg-purple-900/30"
+          >
+            See All Notifications
+          </button>
         </div>
       )}
     </div>
@@ -1196,7 +1257,110 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
               </p>
             </>
           )}
+          {page === 'Notifications' && (
+            <section className="rounded-2xl border border-purple-800 bg-[#101020] p-4">
+              <div className="mb-4 flex items-center justify-between gap-2">
+                <h2 className="text-xl font-black text-white">
+                  All Notifications
+                </h2>
 
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleMarkAllNotificationsRead}
+                    disabled={unreadCount === 0}
+                    className="rounded-lg bg-fuchsia-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-40"
+                  >
+                    Mark All Read
+                  </button>
+
+                  <button
+                    onClick={() => setPage('Home')}
+                    className="rounded-lg bg-purple-800 px-3 py-2 text-sm font-bold text-white"
+                  >
+                    Back
+                  </button>
+                </div>
+              </div>
+
+              {notificationsLoading ? (
+                <p className="p-4 text-center text-slate-400">
+                  Loading notifications...
+                </p>
+              ) : notificationError ? (
+                <p className="p-4 text-center text-red-400">
+                  {notificationError}
+                </p>
+              ) : allNotifications.length === 0 ? (
+                <p className="p-4 text-center text-slate-400">
+                  No notifications available.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {allNotifications.map((notification) => (
+                    <button
+                      key={notification.id}
+                      onClick={() => {
+                        if (!notification.isRead) {
+                          handleMarkNotificationRead(notification.id)
+                        }
+                      }}
+                      className={`w-full rounded-xl border border-purple-900 p-3 text-left ${
+                        notification.isRead
+                          ? 'bg-transparent'
+                          : 'bg-purple-900/30'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <p className="font-bold text-white">
+                          {notification.title}
+                        </p>
+                        {!notification.isRead && (
+                          <span className="h-2 w-2 rounded-full bg-fuchsia-400" />
+                        )}
+                      </div>
+
+                      <p className="mt-1 text-sm text-slate-300">
+                        {notification.message}
+                      </p>
+
+                      {notification.publishedAt && (
+                        <p className="mt-2 text-xs text-slate-500">
+                          {new Date(notification.publishedAt).toLocaleString()}
+                        </p>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-4 flex items-center justify-between">
+                <button
+                  disabled={notificationPage <= 0 || notificationsLoading}
+                  onClick={() => loadAllNotifications(notificationPage - 1)}
+                  className="rounded-lg bg-purple-800 px-4 py-2 text-sm font-bold disabled:opacity-40"
+                >
+                  Previous
+                </button>
+
+                <span className="text-xs text-slate-400">
+                  Page {notificationTotalPages === 0 ? 0 : notificationPage + 1}
+                  {' / '}
+                  {notificationTotalPages}
+                </span>
+
+                <button
+                  disabled={
+                    notificationPage >= notificationTotalPages - 1 ||
+                    notificationsLoading
+                  }
+                  onClick={() => loadAllNotifications(notificationPage + 1)}
+                  className="rounded-lg bg-purple-800 px-4 py-2 text-sm font-bold disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            </section>
+          )}
           {page === 'Results' && (
             <section className="space-y-4">
               <h2 className="text-xl font-black">Results &amp; History</h2>
