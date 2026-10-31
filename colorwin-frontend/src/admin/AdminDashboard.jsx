@@ -83,6 +83,25 @@ const [referralMessage, setReferralMessage] = React.useState('')
   const [walletLoading, setWalletLoading] = React.useState(false)
   const [walletError, setWalletError] = React.useState('')
   const [usersMessage, setUsersMessage] = React.useState('')
+  // Announcements / Notifications state
+const [notifications, setNotifications] = React.useState([])
+const [notificationPage, setNotificationPage] = React.useState(0)
+const [notificationTotalPages, setNotificationTotalPages] = React.useState(0)
+const [notificationLoading, setNotificationLoading] = React.useState(false)
+const [notificationSaving, setNotificationSaving] = React.useState(false)
+const [notificationError, setNotificationError] = React.useState('')
+const [notificationMessage, setNotificationMessage] = React.useState('')
+
+const [notificationForm, setNotificationForm] = React.useState({
+  title: '',
+  message: '',
+  priority: 'NORMAL',
+  targetType: 'ALL',
+  targetUserId: '',
+  scheduleType: 'NOW',
+  scheduledAt: '',
+  active: true,
+})
 
   const logout = () => {
     localStorage.removeItem('colorwin_token')
@@ -96,6 +115,184 @@ const [referralMessage, setReferralMessage] = React.useState('')
       : null
   }
 
+  const loadNotifications = async (page = notificationPage) => {
+  const headers = getAuthHeaders()
+
+  if (!headers) {
+    setNotificationError('Login required. Please sign in again.')
+    return
+  }
+
+  setNotificationLoading(true)
+  setNotificationError('')
+  setNotificationMessage('')
+
+  try {
+    const params = new URLSearchParams({
+      page: String(page),
+      size: '10',
+    })
+
+    const response = await fetch(
+      `${API}/admin/notifications?${params.toString()}`,
+      {
+        headers,
+        cache: 'no-store',
+      },
+    )
+
+    const data = await response.json().catch(() => ({}))
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || `Notifications API failed: ${response.status}`,
+      )
+    }
+
+    setNotifications(Array.isArray(data.content) ? data.content : [])
+    setNotificationTotalPages(Number(data.totalPages || 0))
+    setNotificationPage(Number(data.number || 0))
+  } catch (error) {
+    setNotificationError(
+      error.message || 'Notification history could not be loaded.',
+    )
+  } finally {
+    setNotificationLoading(false)
+  }
+}
+
+const createNotification = async (event) => {
+  event.preventDefault()
+
+  const headers = getAuthHeaders()
+
+  if (!headers) {
+    setNotificationError('Login required. Please sign in again.')
+    return
+  }
+
+  if (
+  notificationForm.scheduleType === 'LATER' &&
+  (!notificationForm.scheduledAt ||
+    Number.isNaN(new Date(notificationForm.scheduledAt).getTime()))
+) {
+  setNotificationError('Please select a valid scheduled date and time.')
+  return
+}
+
+const scheduledAt =
+  notificationForm.scheduleType === 'NOW'
+    ? new Date().toISOString()
+    : new Date(notificationForm.scheduledAt).toISOString()
+
+  if (
+    notificationForm.targetType === 'USER' &&
+    !notificationForm.targetUserId
+  ) {
+    setNotificationError('Please select a target user.')
+    return
+  }
+
+  setNotificationSaving(true)
+  setNotificationError('')
+  setNotificationMessage('')
+
+  try {
+    const payload = {
+      title: notificationForm.title.trim(),
+      message: notificationForm.message.trim(),
+      priority: notificationForm.priority,
+      targetType: notificationForm.targetType,
+      targetUserId:
+        notificationForm.targetType === 'USER'
+          ? Number(notificationForm.targetUserId)
+          : null,
+      scheduledAt,
+      active: notificationForm.active,
+    }
+
+    const response = await fetch(`${API}/admin/notifications`, {
+      method: 'POST',
+      headers: {
+        ...headers,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+
+    const data = await response.json().catch(() => ({}))
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || `Notification creation failed: ${response.status}`,
+      )
+    }
+
+    setNotificationMessage('Notification created successfully.')
+
+    setNotificationForm({
+      title: '',
+      message: '',
+      priority: 'NORMAL',
+      targetType: 'ALL',
+      targetUserId: '',
+      scheduleType: 'NOW',
+      scheduledAt: '',
+      active: true,
+    })
+
+    await loadNotifications(0)
+  } catch (error) {
+    setNotificationError(
+      error.message || 'Notification could not be created.',
+    )
+  } finally {
+    setNotificationSaving(false)
+  }
+}
+
+// यहाँ updateNotificationStatus का पूरा code paste करना है
+
+
+const updateNotificationStatus = async (id, active) => {
+  const headers = getAuthHeaders()
+
+  if (!headers) {
+    setNotificationError('Login required. Please sign in again.')
+    return
+  }
+
+  setNotificationError('')
+  setNotificationMessage('')
+
+  try {
+    const response = await fetch(
+      `${API}/admin/notifications/${id}/active?active=${active}`,
+      {
+        method: 'PUT',
+        headers,
+      },
+    )
+
+    const data = await response.json().catch(() => ({}))
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || `Status update failed: ${response.status}`,
+      )
+    }
+
+    setNotificationMessage(
+      `Notification ${active ? 'activated' : 'deactivated'} successfully.`,
+    )
+
+    await loadNotifications(notificationPage)
+  } catch (error) {
+    setNotificationError(
+      error.message || 'Notification status could not be updated.',
+    )
+  }
+}
   const loadActiveRound = React.useCallback(async () => {
     setRoundLoading(true)
     setRoundError(false)
@@ -361,6 +558,11 @@ const loadReferralSettings = async () => {
   React.useEffect(() => {
     if (activePage === 'Users') loadUsers(0, usersSearch)
   }, [activePage, loadUsers, usersSearch])
+  React.useEffect(() => {
+    if (activePage === 'Announcements') {
+      loadNotifications(0)
+    }
+  }, [activePage])
 
   const submitWalletAdjustment = async (event) => {
     event.preventDefault()
@@ -896,6 +1098,294 @@ const loadReferralSettings = async () => {
                 </form>
               </div>
             )}
+                 </section>
+        ) : activePage === 'Announcements' ? (
+          <section className="space-y-4">
+           <div className="grid gap-4 xl:grid-cols-2">
+
+  {/* Create Notification */}
+  <div className="rounded-xl border border-purple-900 bg-[#091126] p-4">
+    <h3 className="text-lg font-bold">Create Notification</h3>
+    <p className="mt-1 text-sm text-slate-400">
+      Send an announcement to players.
+    </p>
+
+    <form onSubmit={createNotification} className="mt-4 space-y-4">
+
+      <div>
+        <label className="mb-1 block text-sm font-semibold">Title</label>
+        <input
+          type="text"
+          required
+          maxLength="120"
+          value={notificationForm.title}
+          onChange={(e) => setNotificationForm({
+            ...notificationForm,
+            title: e.target.value,
+          })}
+          className="w-full rounded-lg border border-slate-700 bg-[#050817] px-3 py-2 text-white"
+          placeholder="Notification title"
+        />
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-semibold">Message</label>
+        <textarea
+          required
+          maxLength="1000"
+          rows="4"
+          value={notificationForm.message}
+          onChange={(e) => setNotificationForm({
+            ...notificationForm,
+            message: e.target.value,
+          })}
+          className="w-full rounded-lg border border-slate-700 bg-[#050817] px-3 py-2 text-white"
+          placeholder="Write your announcement..."
+        />
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-semibold">Priority</label>
+        <select
+          value={notificationForm.priority}
+          onChange={(e) => setNotificationForm({
+            ...notificationForm,
+            priority: e.target.value,
+          })}
+          className="w-full rounded-lg border border-slate-700 bg-[#050817] px-3 py-2 text-white"
+        >
+          <option value="NORMAL">Normal</option>
+          <option value="IMPORTANT">Important</option>
+          <option value="CRITICAL">Critical</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-semibold">Send To</label>
+        <select
+          value={notificationForm.targetType}
+          onChange={(e) => setNotificationForm({
+            ...notificationForm,
+            targetType: e.target.value,
+            targetUserId: '',
+          })}
+          className="w-full rounded-lg border border-slate-700 bg-[#050817] px-3 py-2 text-white"
+        >
+          <option value="ALL">All Users</option>
+          <option value="USER">Specific User</option>
+        </select>
+      </div>
+
+      {notificationForm.targetType === 'USER' && (
+        <div>
+          <label className="mb-1 block text-sm font-semibold">
+            Target User ID
+          </label>
+          <input
+            type="number"
+            min="1"
+            required
+            value={notificationForm.targetUserId}
+            onChange={(e) => setNotificationForm({
+              ...notificationForm,
+              targetUserId: e.target.value,
+            })}
+            className="w-full rounded-lg border border-slate-700 bg-[#050817] px-3 py-2 text-white"
+            placeholder="Enter user ID"
+          />
+        </div>
+      )}
+
+      <div>
+        <label className="mb-1 block text-sm font-semibold">Schedule</label>
+        <select
+          value={notificationForm.scheduleType}
+          onChange={(e) => setNotificationForm({
+            ...notificationForm,
+            scheduleType: e.target.value,
+            scheduledAt: '',
+          })}
+          className="w-full rounded-lg border border-slate-700 bg-[#050817] px-3 py-2 text-white"
+        >
+          <option value="NOW">Send Now</option>
+          <option value="LATER">Schedule for Later</option>
+        </select>
+      </div>
+
+      {notificationForm.scheduleType === 'LATER' && (
+        <div>
+          <label className="mb-1 block text-sm font-semibold">
+            Scheduled Date & Time
+          </label>
+          <input
+            type="datetime-local"
+            required
+            value={notificationForm.scheduledAt}
+            onChange={(e) => setNotificationForm({
+              ...notificationForm,
+              scheduledAt: e.target.value,
+            })}
+            className="w-full rounded-lg border border-slate-700 bg-[#050817] px-3 py-2 text-white"
+          />
+        </div>
+      )}
+
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={notificationForm.active}
+          onChange={(e) => setNotificationForm({
+            ...notificationForm,
+            active: e.target.checked,
+          })}
+        />
+        Notification Active
+      </label>
+
+      {notificationError && (
+        <p className="rounded-lg border border-red-800 bg-red-950/40 p-3 text-sm text-red-300">
+          {notificationError}
+        </p>
+      )}
+
+      {notificationMessage && (
+        <p className="rounded-lg border border-emerald-800 bg-emerald-950/30 p-3 text-sm text-emerald-300">
+          {notificationMessage}
+        </p>
+      )}
+
+      <button
+        type="submit"
+        disabled={notificationSaving}
+        className="w-full rounded-lg bg-purple-700 px-4 py-3 font-bold text-white hover:bg-purple-600 disabled:opacity-50"
+      >
+        {notificationSaving ? 'Creating...' : 'Create Notification'}
+      </button>
+
+    </form>
+  </div>
+
+  {/* Notification History */}
+  <div className="rounded-xl border border-purple-900 bg-[#091126] p-4">
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <div>
+        <h3 className="text-lg font-bold">Notification History</h3>
+        <p className="text-sm text-slate-400">
+          Previously created notifications
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => loadNotifications(notificationPage)}
+        disabled={notificationLoading}
+        className="rounded-lg border border-purple-700 px-3 py-2 text-sm hover:bg-purple-900/50 disabled:opacity-50"
+      >
+        {notificationLoading ? 'Loading...' : 'Refresh'}
+      </button>
+    </div>
+
+    {notificationError && (
+      <p className="mt-3 rounded-lg border border-red-800 bg-red-950/40 p-3 text-sm text-red-300">
+        {notificationError}
+      </p>
+    )}
+
+    {notificationMessage && (
+      <p className="mt-3 rounded-lg border border-emerald-800 bg-emerald-950/30 p-3 text-sm text-emerald-300">
+        {notificationMessage}
+      </p>
+    )}
+
+    <div className="mt-4 space-y-3">
+      {notificationLoading && notifications.length === 0 ? (
+        <p className="py-6 text-center text-sm text-slate-400">
+          Loading notifications...
+        </p>
+      ) : notifications.length === 0 ? (
+        <p className="py-6 text-center text-sm text-slate-400">
+          No notifications found.
+        </p>
+      ) : (
+        notifications.map((item) => (
+          <div
+            key={item.id}
+            className="rounded-lg border border-slate-700 bg-[#050817] p-3"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <h4 className="font-bold">{item.title}</h4>
+              <span className={`rounded-full px-2 py-1 text-xs font-bold ${
+                item.active
+                  ? 'bg-emerald-950 text-emerald-300'
+                  : 'bg-red-950 text-red-300'
+              }`}>
+                {item.active ? 'Active' : 'Inactive'}
+              </span>
+            </div>
+
+            <p className="mt-2 whitespace-pre-wrap break-words text-sm text-slate-300">
+              {item.message}
+            </p>
+
+            <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-400">
+              <span>Priority: {item.priority}</span>
+              <span>Target: {item.targetType}</span>
+              <span>
+                Scheduled: {item.scheduledAt
+                  ? new Date(item.scheduledAt).toLocaleString('en-IN')
+                  : '—'}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => updateNotificationStatus(item.id, !item.active)}
+              disabled={notificationLoading}
+              className={`mt-3 rounded-lg px-3 py-2 text-xs font-bold text-white disabled:opacity-50 ${
+                item.active
+                  ? 'bg-red-800 hover:bg-red-700'
+                  : 'bg-emerald-800 hover:bg-emerald-700'
+              }`}
+            >
+              {item.active ? 'Deactivate' : 'Activate'}
+            </button>
+          </div>
+        ))
+      )}
+    </div>
+
+    <div className="mt-4 flex items-center justify-between text-sm text-slate-400">
+      <span>
+        Page {notificationTotalPages === 0 ? 0 : notificationPage + 1}
+        {' '}of {notificationTotalPages}
+      </span>
+
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => loadNotifications(Math.max(0, notificationPage - 1))}
+          disabled={notificationLoading || notificationPage <= 0}
+          className="rounded-lg border border-slate-700 px-3 py-2 disabled:opacity-40"
+        >
+          Previous
+        </button>
+
+        <button
+          type="button"
+          onClick={() => loadNotifications(notificationPage + 1)}
+          disabled={notificationLoading || notificationPage + 1 >= notificationTotalPages}
+          className="rounded-lg border border-slate-700 px-3 py-2 disabled:opacity-40"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+
           </section>
         ) : activePage === 'Dashboard' ? (
           <>
