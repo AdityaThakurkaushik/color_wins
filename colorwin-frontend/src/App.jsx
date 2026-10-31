@@ -352,6 +352,12 @@ function GameApp() {
   const [betError, setBetError] = useState(false)
   const [submittingBet, setSubmittingBet] = useState(false)
   const [historyLoading, setHistoryLoading] = useState(false)
+    // Notifications state
+  const [notifications, setNotifications] = useState([])
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [notificationsLoading, setNotificationsLoading] = useState(false)
+  const [notificationError, setNotificationError] = useState('')
 
   const [pendingBetId, setPendingBetId] = useState(null)
   const [resultPopup, setResultPopup] = useState(null)
