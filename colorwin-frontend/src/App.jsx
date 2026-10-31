@@ -15,7 +15,6 @@ const amounts = [10, 50, 100, 500, 1000]
 
 
 
-const REFERRAL_REWARD = 20
 
 function ReferralPage({ currentUser }) {
   const [copied, setCopied] = useState('')
@@ -30,6 +29,45 @@ function ReferralPage({ currentUser }) {
   const [statsError, setStatsError] = useState('')
 
   const referralCode = currentUser?.referralCode || ''
+  const [referralSettings, setReferralSettings] = useState(null)
+const [referralSettingsLoading, setReferralSettingsLoading] = useState(true)
+const [referralSettingsError, setReferralSettingsError] = useState('')
+
+useEffect(() => {
+  let cancelled = false
+
+  async function loadReferralSettings() {
+    try {
+      const response = await fetch(`${API}/referral-settings`, {
+        cache: 'no-store',
+      })
+
+      if (!response.ok) {
+        throw new Error(`Settings load failed: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      if (!cancelled) {
+        setReferralSettings(data)
+      }
+    } catch (error) {
+      if (!cancelled) {
+        setReferralSettingsError(error.message)
+      }
+    } finally {
+      if (!cancelled) {
+        setReferralSettingsLoading(false)
+      }
+    }
+  }
+
+  loadReferralSettings()
+
+  return () => {
+    cancelled = true
+  }
+}, [])
 
   const referralLink =
     `https://color-wins.vercel.app/register?ref=${referralCode}`
@@ -204,26 +242,34 @@ function ReferralPage({ currentUser }) {
         </div>
 
         <div className="mt-3 grid grid-cols-2 gap-3">
-          <div className="rounded-xl border border-purple-800 bg-[#101020] p-3">
-            <p className="text-sm text-slate-300">You Get</p>
-            <p className="mt-1 text-xl font-black text-yellow-300">
-              20 Coins
-            </p>
-            <p className="mt-1 text-xs text-slate-400">
-              Referrer reward per eligible signup.
-            </p>
-          </div>
+  <div className="rounded-xl border border-purple-800 bg-[#101020] p-3">
+    <p className="text-sm text-slate-300">You Get</p>
+    <p className="mt-1 text-xl font-black text-yellow-300">
+      {referralSettingsLoading
+        ? 'Loading...'
+        : referralSettings
+          ? `${referralSettings.referrerReward} Coins`
+          : 'Unavailable'}
+    </p>
+    <p className="mt-1 text-xs text-slate-400">
+      Referrer reward per eligible signup.
+    </p>
+  </div>
 
-          <div className="rounded-xl border border-purple-800 bg-[#101020] p-3">
-            <p className="text-sm text-slate-300">Your Friend Gets</p>
-            <p className="mt-1 text-xl font-black text-yellow-300">
-              10 Coins
-            </p>
-            <p className="mt-1 text-xs text-slate-400">
-              New user referral reward.
-            </p>
-          </div>
-        </div>
+  <div className="rounded-xl border border-purple-800 bg-[#101020] p-3">
+    <p className="text-sm text-slate-300">Your Friend Gets</p>
+    <p className="mt-1 text-xl font-black text-yellow-300">
+      {referralSettingsLoading
+        ? 'Loading...'
+        : referralSettings
+          ? `${referralSettings.referredUserReward} Coins`
+          : 'Unavailable'}
+    </p>
+    <p className="mt-1 text-xs text-slate-400">
+      New user referral reward.
+    </p>
+  </div>
+</div>
       </section>
 
       <section className="rounded-2xl border border-purple-900 bg-[#0d0d1c] p-3">
@@ -253,7 +299,19 @@ function ReferralPage({ currentUser }) {
               </p>
             </div>
           ))}
-        </div>
+                </div>
+
+        {referralSettingsError && (
+          <p className="mt-2 text-sm text-red-400">
+            Referral settings load nahi hui.
+          </p>
+        )}
+
+        {referralSettings && !referralSettings.enabled && (
+          <p className="mt-2 text-sm text-yellow-400">
+            Referral program is currently disabled.
+          </p>
+        )}
       </section>
 
       <section className="rounded-2xl border border-purple-900 bg-[#0d0d1c] p-3">
