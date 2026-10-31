@@ -1,10 +1,11 @@
+
 package com.example.demo.controller;
 
+import com.example.demo.entity.ReferralSettings;
 import com.example.demo.repository.BetRepository;
 import com.example.demo.repository.UserRepository;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.example.demo.service.ReferralSettingsService;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
@@ -14,12 +15,16 @@ public class AdminController {
 
     private final UserRepository userRepository;
     private final BetRepository betRepository;
+    private final ReferralSettingsService referralSettingsService;
 
     public AdminController(
             UserRepository userRepository,
-            BetRepository betRepository) {
+            BetRepository betRepository,
+            ReferralSettingsService referralSettingsService) {
+
         this.userRepository = userRepository;
         this.betRepository = betRepository;
+        this.referralSettingsService = referralSettingsService;
     }
 
     @GetMapping("/health")
@@ -54,5 +59,32 @@ public class AdminController {
         return Map.of(
                 "totalBets", betRepository.count()
         );
+    }
+
+    // Get referral settings
+    @GetMapping("/referral-settings")
+    public ReferralSettings getReferralSettings() {
+        return referralSettingsService.getSettings();
+    }
+
+    // Update referral settings
+    @PutMapping("/referral-settings")
+    public ReferralSettings updateReferralSettings(
+            @RequestBody ReferralSettingsRequest request) {
+
+        return referralSettingsService.updateSettings(
+                request.enabled(),
+                request.referrerReward(),
+                request.referredUserReward(),
+                request.rewardCondition()
+        );
+    }
+
+    public record ReferralSettingsRequest(
+            Boolean enabled,
+            Long referrerReward,
+            Long referredUserReward,
+            String rewardCondition
+    ) {
     }
 }
