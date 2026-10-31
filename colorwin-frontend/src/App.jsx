@@ -366,40 +366,175 @@ function GameApp() {
     () => Boolean(localStorage.getItem('colorwin_token'))
   )
 
-  const token = () => localStorage.getItem('colorwin_token')
+const token = () => localStorage.getItem('colorwin_token')
 
-  const authHeaders = () => ({
-    Authorization: `Bearer ${token()}`,
-  })
+const authHeaders = () => ({
+  Authorization: `Bearer ${token()}`,
+})
 
-  const loadUserProfile = useCallback(async () => {
-    const savedToken = token()
+// Load unread notification count
+const loadUnreadCount = useCallback(async () => {
+  const savedToken = token()
 
-    if (!savedToken) {
+  if (!savedToken) {
+    setUnreadCount(0)
+    return
+  }
+
+  try {
+    const response = await fetch(
+      `${API}/user/notifications/unread-count`,
+      {
+        headers: { Authorization: `Bearer ${savedToken}` },
+        cache: 'no-store',
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error(`Unread count API: ${response.status}`)
+    }
+
+    const data = await response.json()
+    setUnreadCount(Number(data.unreadCount ?? 0))
+    setNotificationError('')
+  } catch (error) {
+    console.error('Unread notification count failed:', error)
+    setNotificationError('Notifications load nahi ho sake.')
+  }
+}, [])
+
+// Load notification history
+const loadNotifications = useCallback(async () => {
+  const savedToken = token()
+
+  if (!savedToken) {
+    setNotifications([])
+    return
+  }
+
+  setNotificationsLoading(true)
+
+  try {
+    const response = await fetch(
+      `${API}/user/notifications?page=0&size=20`,
+      {
+        headers: { Authorization: `Bearer ${savedToken}` },
+        cache: 'no-store',
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error(`Notifications API: ${response.status}`)
+    }
+
+    const data = await response.json()
+
+    setNotifications(
+      Array.isArray(data.content) ? data.content : []
+    )
+    setNotificationError('')
+  } catch (error) {
+    console.error('Notifications loading failed:', error)
+    setNotificationError('Notifications load nahi ho sake.')
+  } finally {
+    setNotificationsLoading(false)
+  }
+}, [])
+
+
+// Mark one notification as read
+const handleMarkNotificationRead = useCallback(async (notificationId) => {
+  const savedToken = token()
+
+  if (!savedToken) return
+
+  try {
+    const response = await fetch(
+      `${API}/user/notifications/${notificationId}/read`,
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${savedToken}`,
+        },
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error(`Mark as read API: ${response.status}`)
+    }
+
+    await Promise.all([
+      loadNotifications(),
+      loadUnreadCount(),
+    ])
+  } catch (error) {
+    console.error('Mark notification read failed:', error)
+    setNotificationError('Notification update nahi ho saka.')
+  }
+}, [loadNotifications, loadUnreadCount])
+
+// Mark all notifications as read
+const handleMarkAllNotificationsRead = useCallback(async () => {
+  const savedToken = token()
+
+  if (!savedToken) return
+
+  try {
+    const response = await fetch(
+      `${API}/user/notifications/read-all`,
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${savedToken}`,
+        },
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error(`Mark all read API: ${response.status}`)
+    }
+
+    await Promise.all([
+      loadNotifications(),
+      loadUnreadCount(),
+    ])
+  } catch (error) {
+    console.error('Mark all notifications read failed:', error)
+    setNotificationError('Notifications update nahi ho sake.')
+  }
+}, [loadNotifications, loadUnreadCount])
+
+
+// Load user profile
+const loadUserProfile = useCallback(async () => {
+  const savedToken = token()
+
+  if (!savedToken) {
+    setCurrentUser(null)
+    return
+  }
+
+  try {
+    const response = await fetch(`${API}/user/me`, {
+      headers: { Authorization: `Bearer ${savedToken}` },
+      cache: 'no-store',
+    })
+
+    if (response.status === 401) {
       setCurrentUser(null)
       return
     }
 
-    try {
-      const response = await fetch(`${API}/user/me`, {
-        headers: { Authorization: `Bearer ${savedToken}` },
-        cache: 'no-store',
-      })
-
-      if (response.status === 401) {
-        setCurrentUser(null)
-        return
-      }
-
-      if (!response.ok) {
-        throw new Error(`Profile API: ${response.status}`)
-      }
-
-      setCurrentUser(await response.json())
-    } catch (error) {
-      console.error('Profile loading failed:', error)
+    if (!response.ok) {
+      throw new Error(`Profile API: ${response.status}`)
     }
-  }, [])
+
+    setCurrentUser(await response.json())
+  } catch (error) {
+    console.error('Profile loading failed:', error)
+  }
+}, [])
+
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -411,6 +546,24 @@ function GameApp() {
       setResultPopup(null)
     }
   }, [isAuthenticated, loadUserProfile])
+  
+// Notification unread count refresh
+useEffect(() => {
+  if (!isAuthenticated) {
+    setUnreadCount(0)
+    setNotifications([])
+    return
+  }
+
+  loadUnreadCount()
+
+  const interval = setInterval(() => {
+    loadUnreadCount()
+  }, 30000)
+
+  return () => clearInterval(interval)
+}, [isAuthenticated, loadUnreadCount])
+
 
   const loadGameData = useCallback(async () => {
     try {
@@ -729,32 +882,126 @@ function GameApp() {
   return (
     <div className="min-h-screen bg-[#03030c] text-white">
       <div className="mx-auto min-h-screen w-full border-x border-purple-950 pb-24">
-        <header className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-purple-900 bg-[#080817] px-3 py-3">
-          <button
-            aria-label="Menu"
-            onClick={() => setPage('Home')}
-            className="text-2xl"
-          >
-            ☰
-          </button>
+       
+<header className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-purple-900 bg-[#080817] px-3 py-3">
+  <button
+    aria-label="Menu"
+    onClick={() => setPage('Home')}
+    className="text-2xl"
+  >
+    ☰
+  </button>
 
-          <h1 className="text-xl font-black">
-            👑 Color<span className="text-fuchsia-400">Win</span>
-          </h1>
+  <h1 className="text-lg font-black">
+    👑 Color<span className="text-fuchsia-400">Win</span>
+  </h1>
 
-          <div className="rounded-full border border-yellow-500/50 bg-slate-900 px-3 py-2 text-sm text-yellow-300">
-            🪙 {(currentUser?.virtualPoints ?? 0).toLocaleString('en-IN')}
+  {isAuthenticated && (
+    <div className="relative">
+      <button
+        aria-label="Notifications"
+        onClick={() => {
+          const opening = !notificationsOpen
+          setNotificationsOpen(opening)
+
+          if (opening) {
+            loadNotifications()
+            loadUnreadCount()
+          }
+        }}
+        className="relative rounded-xl border border-purple-700 bg-[#151027] px-3 py-2 text-xl"
+      >
+        🔔
+        {unreadCount > 0 && (
+          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-xs font-bold text-white">
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
+        )}
+      </button>
+
+      {notificationsOpen && (
+        <div className="absolute right-0 top-12 z-50 w-[min(90vw,360px)] overflow-hidden rounded-xl border border-purple-700 bg-[#101020] shadow-2xl">
+          <div className="flex items-center justify-between border-b border-purple-900 p-3">
+            <h3 className="font-bold text-white">Notifications</h3>
+            <button
+              onClick={handleMarkAllNotificationsRead}
+              disabled={unreadCount === 0}
+              className="text-xs font-semibold text-fuchsia-300 disabled:opacity-40"
+            >
+              Mark all read
+            </button>
           </div>
 
-          {!isAuthenticated && (
-            <button
-              onClick={() => setPage('Login')}
-              className="rounded-lg bg-purple-600 px-3 py-2 text-sm font-bold"
-            >
-              Login
-            </button>
-          )}
-        </header>
+          <div className="max-h-80 overflow-y-auto">
+            {notificationsLoading ? (
+              <p className="p-4 text-center text-sm text-slate-400">
+                Loading notifications...
+              </p>
+            ) : notificationError ? (
+              <p className="p-4 text-center text-sm text-red-400">
+                {notificationError}
+              </p>
+            ) : notifications.length === 0 ? (
+              <p className="p-4 text-center text-sm text-slate-400">
+                No notifications available.
+              </p>
+            ) : (
+              notifications.map((notification) => (
+                <button
+                  key={notification.id}
+                  onClick={() => {
+                    if (!notification.isRead) {
+                      handleMarkNotificationRead(notification.id)
+                    }
+                  }}
+                  className={`block w-full border-b border-purple-900 p-3 text-left ${
+                    notification.isRead
+                      ? 'bg-transparent'
+                      : 'bg-purple-900/20'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-bold text-white">
+                      {notification.title}
+                    </p>
+
+                    {!notification.isRead && (
+                      <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-fuchsia-400" />
+                    )}
+                  </div>
+
+                  <p className="mt-1 text-xs leading-5 text-slate-300">
+                    {notification.message}
+                  </p>
+
+                  {notification.publishedAt && (
+                    <p className="mt-2 text-[10px] text-slate-500">
+                      {new Date(notification.publishedAt).toLocaleString()}
+                    </p>
+                  )}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )}
+
+  <div className="rounded-full border border-yellow-500/50 bg-slate-900 px-2 py-2 text-xs text-yellow-300">
+    🪙 {(currentUser?.virtualPoints ?? 0).toLocaleString('en-IN')}
+  </div>
+
+  {!isAuthenticated && (
+    <button
+      onClick={() => setPage('Login')}
+      className="rounded-lg bg-purple-600 px-3 py-2 text-sm font-bold"
+    >
+      Login
+    </button>
+  )}
+</header>
+
 
         <main className="mx-auto w-full max-w-5xl space-y-2 p-2 pb-4">
           {page === 'Login' && <Auth onLogin={handleLogin} />}
