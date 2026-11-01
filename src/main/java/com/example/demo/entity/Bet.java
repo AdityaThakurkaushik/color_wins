@@ -82,4 +82,9 @@ public class Bet {
         this.status = "LOST";
         this.pointsPayout = 0L;
     }
+
+    public void markRefunded() {
+        this.status = "CANCELLED";
+        this.pointsPayout = this.amount;
+    }
 }

@@ -1,0 +1,72 @@
+name: Production Deployment
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: colorwin-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Re-run backend verification
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: colorwin
+          POSTGRES_USER: colorwin
+          POSTGRES_PASSWORD: colorwin_test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U colorwin -d colorwin"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/colorwin
+      SPRING_DATASOURCE_USERNAME: colorwin
+      SPRING_DATASOURCE_PASSWORD: colorwin_test_password
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Run tests and package
+        run: |
+          chmod +x ./mvnw
+          ./mvnw -B --no-transfer-progress clean verify
+
+  deploy:
+    name: Deploy to Render (approval required)
+    needs: verify
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    steps:
+      - name: Trigger Render deployment
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          test -n "$RENDER_DEPLOY_HOOK_URL" || {
+            echo "Missing production environment secret: RENDER_DEPLOY_HOOK_URL"
+            exit 1
+          }
+          curl --connect-timeout 10 --max-time 30 --fail --silent --show-error \
+            --request POST "$RENDER_DEPLOY_HOOK_URL" \
+            --output /dev/null
+          echo "Render deploy hook accepted the request. Verify deployment health in Render."

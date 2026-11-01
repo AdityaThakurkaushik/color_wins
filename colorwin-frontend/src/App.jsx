@@ -775,7 +775,7 @@ useEffect(() => {
           (item) => String(item.betId) === String(pendingBetId)
         )
 
-        if (!bet || !['WON', 'LOST'].includes(bet.status)) return
+        if (!bet || !['WON', 'LOST', 'CANCELLED'].includes(bet.status)) return
 
         const profileResponse = await fetch(`${API}/user/me`, {
           headers: { Authorization: `Bearer ${savedToken}` },
@@ -949,6 +949,7 @@ useEffect(() => {
   }
 
   const won = resultPopup?.status === 'WON'
+  const refunded = resultPopup?.status === 'CANCELLED'
   const popupColor = won ? 'emerald' : 'red'
 
   return (
@@ -1687,21 +1688,23 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
               <h2
                 id="result-popup-title"
                 className={`mt-4 text-3xl font-black tracking-wide ${
-                  won ? 'text-yellow-300' : 'text-red-300'
+                  won ? 'text-yellow-300' : refunded ? 'text-sky-300' : 'text-red-300'
                 }`}
               >
-                {won ? 'YOU WON!' : 'YOU LOST'}
+                {won ? 'YOU WON!' : refunded ? 'ROUND CANCELLED' : 'YOU LOST'}
               </h2>
 
               <div
                 className={`mt-4 rounded-xl border px-3 py-3 text-3xl font-black ${
                   won
                     ? 'border-emerald-500 bg-emerald-950/70 text-emerald-300'
-                    : 'border-red-500 bg-red-950/60 text-red-300'
+                    : refunded
+                      ? 'border-sky-500 bg-sky-950/60 text-sky-300'
+                      : 'border-red-500 bg-red-950/60 text-red-300'
                 }`}
               >
-                {won ? '+' : '-'}
-                {Number(won ? resultPopup.pointsPayout ?? 0 : resultPopup.amount ?? 0).toLocaleString('en-IN')}
+                {won || refunded ? '+' : '-'}
+                {Number(won || refunded ? resultPopup.pointsPayout ?? 0 : resultPopup.amount ?? 0).toLocaleString('en-IN')}
                 <span className="ml-2 text-lg">Points</span>
               </div>
 
@@ -1722,7 +1725,7 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
 
                 <div className="flex justify-between gap-3 text-sm">
                   <span className="text-slate-400">Bet Status</span>
-                  <span className={`font-bold ${won ? 'text-emerald-300' : 'text-red-300'}`}>
+                  <span className={`font-bold ${won ? 'text-emerald-300' : refunded ? 'text-sky-300' : 'text-red-300'}`}>
                     {resultPopup.status}
                   </span>
                 </div>
@@ -1747,8 +1750,8 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
                     {Number(resultPopup.updatedBalance ?? 0).toLocaleString('en-IN')} Points
                   </p>
                 </div>
-                <span className={`text-2xl ${won ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {won ? '↑' : '↓'}
+                <span className={`text-2xl ${won ? 'text-emerald-400' : refunded ? 'text-sky-400' : 'text-red-400'}`}>
+                  {won || refunded ? '↑' : '↓'}
                 </span>
               </div>
 
