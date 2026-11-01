@@ -1818,6 +1818,24 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
                     {resultPopup.color}
                   </span>
                 </div>
+                {!isRefunded && resultPopup.resultColor && (
+  <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-500/70 bg-emerald-950/40 px-3 py-3 shadow-lg shadow-emerald-500/10">
+    <span className="font-bold text-white">
+      🏆 Winning Color
+    </span>
+
+    <span className={`flex items-center gap-2 font-black ${colorTextClass(resultPopup.resultColor)}`}>
+      <span className={`h-3 w-3 rounded-full ${
+        resultPopup.resultColor === 'RED'
+          ? 'bg-red-500'
+          : resultPopup.resultColor === 'GREEN'
+            ? 'bg-emerald-500'
+            : 'bg-blue-500'
+      }`} />
+      {resultPopup.resultColor}
+    </span>
+  </div>
+)}
 
                 <div className="flex justify-between gap-3 text-sm">
                   <span className="text-slate-400">Bet Amount</span>
