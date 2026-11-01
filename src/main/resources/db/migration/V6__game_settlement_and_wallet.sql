@@ -59,7 +59,10 @@ ALTER TABLE points_transactions
         'BET_DEBIT',
         'BET_PAYOUT',
         'BET_REFUND',
-        'ADMIN_ADJUSTMENT'
+        'ADMIN_ADJUSTMENT',
+        'ADMIN_CREDIT',
+        'ADMIN_DEBIT',
+        'REFERRAL_BONUS'
     ));
 
 -- 6. Admin commission settings
