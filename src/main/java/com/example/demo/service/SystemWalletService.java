@@ -38,6 +38,22 @@ public class SystemWalletService {
     }
 
     @Transactional
+    public void fundPlatformWallet(long amount, String requestId, String adminUsername) {
+        if (amount <= 0) {
+            throw new IllegalArgumentException("Funding amount must be positive");
+        }
+        if (requestId == null || requestId.isBlank() || requestId.length() > 80) {
+            throw new IllegalArgumentException("A valid request ID is required");
+        }
+        String key = "MANUAL_PLATFORM_FUND_" + requestId.trim();
+        if (transactionRepository.existsByIdempotencyKey(key)) {
+            throw new IllegalArgumentException("This funding request has already been processed");
+        }
+        credit("PLATFORM", amount, "PLATFORM_FUND_CREDIT", key,
+                "Manual Platform Wallet funding by admin " + adminUsername);
+    }
+
+    @Transactional
     public void debitPlatformForRound(GameRound round, long amount) {
         if (amount <= 0) return;
         SystemWallet wallet = walletRepository.findByTypeForUpdate("PLATFORM")
