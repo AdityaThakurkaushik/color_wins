@@ -132,7 +132,7 @@ public class BetService {
                 betRepository.save(bet);
             }
             systemWalletService.creditAdminForRound(round, totalPool, "NO_WINNER_POOL_CREDIT");
-            round.completeSettlement(totalPool, totalPool, 0L);
+            round.completeSettlement(totalPool, 0L, 0L);
             return;
         }
 
