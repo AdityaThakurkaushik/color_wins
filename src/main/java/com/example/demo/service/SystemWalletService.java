@@ -38,16 +38,6 @@ public class SystemWalletService {
     }
 
     @Transactional
-    public void fund(String type, long amount, String adminUsername) {
-        if (amount <= 0) throw new IllegalArgumentException("Funding amount must be positive");
-        if (!"PLATFORM".equals(type) && !"ADMIN".equals(type))
-            throw new IllegalArgumentException("Invalid wallet type");
-        String prefix = "ADMIN".equals(type) ? "ADMIN_FUND_CREDIT" : "PLATFORM_FUND_CREDIT";
-        credit(type, amount, prefix, "MANUAL_FUND_" + type + "_" + UUID.randomUUID(),
-                "Manual virtual-point funding by " + adminUsername);
-    }
-
-    @Transactional
     public void debitPlatformForRound(GameRound round, long amount) {
         if (amount <= 0) return;
         SystemWallet wallet = walletRepository.findByTypeForUpdate("PLATFORM")
