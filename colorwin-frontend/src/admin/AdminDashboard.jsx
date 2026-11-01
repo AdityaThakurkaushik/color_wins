@@ -11,6 +11,7 @@ const menuItems = [
   'Bets History',
   'Wallet & Transactions',
   'Referral Management',
+  'Commission Settings',
   'Rewards & Offers',
   'Live Activity Messages',
   'Announcements',
@@ -54,6 +55,11 @@ export default function AdminDashboard() {
   const [controlError, setControlError] = React.useState('')
   const [controlMessage, setControlMessage] = React.useState('')
   const [referralSettings, setReferralSettings] = React.useState(null)
+  const [commissionPercent, setCommissionPercent] = React.useState('5')
+const [commissionLoading, setCommissionLoading] = React.useState(false)
+const [commissionSaving, setCommissionSaving] = React.useState(false)
+const [commissionError, setCommissionError] = React.useState('')
+const [commissionMessage, setCommissionMessage] = React.useState('')
 
 const [referralForm, setReferralForm] = React.useState({
   enabled: true,
@@ -450,6 +456,78 @@ const loadReferralSettings = async () => {
     setReferralLoading(false)
   }
 }
+
+const loadCommissionSettings = async () => {
+  setCommissionLoading(true)
+  setCommissionError('')
+  setCommissionMessage('')
+
+  const headers = getAuthHeaders()
+
+  if (!headers) {
+    setCommissionError('Login required. Please sign in again.')
+    setCommissionLoading(false)
+    return
+  }
+
+  try {
+    const response = await fetch(`${API}/admin/commission-settings`, {
+      headers,
+      cache: 'no-store',
+    })
+
+    const data = await response.json().catch(() => ({}))
+
+    if (!response.ok) {
+      throw new Error(data.message || `Load failed: ${response.status}`)
+    }
+
+    setCommissionPercent(String(data.commissionPercent))
+  } catch (error) {
+    setCommissionError(error.message || 'Commission settings could not load.')
+  } finally {
+    setCommissionLoading(false)
+  }
+}
+
+const saveCommissionSettings = async () => {
+  const headers = getAuthHeaders()
+
+  if (!headers) {
+    setCommissionError('Login required. Please sign in again.')
+    return
+  }
+
+  setCommissionSaving(true)
+  setCommissionError('')
+  setCommissionMessage('')
+
+  try {
+    const response = await fetch(`${API}/admin/commission-settings`, {
+      method: 'PUT',
+      headers: {
+        ...headers,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        commissionPercent: Number(commissionPercent),
+      }),
+    })
+
+    const data = await response.json().catch(() => ({}))
+
+    if (!response.ok) {
+      throw new Error(data.message || `Save failed: ${response.status}`)
+    }
+
+    setCommissionPercent(String(data.commissionPercent))
+    setCommissionMessage('Commission setting updated successfully.')
+  } catch (error) {
+    setCommissionError(error.message || 'Commission setting could not be saved.')
+  } finally {
+    setCommissionSaving(false)
+  }
+}
   const saveReferralSettings = async () => {
     setReferralSaving(true)
     setReferralError('')
@@ -723,6 +801,11 @@ const loadReferralSettings = async () => {
     loadReferralSettings()
   }
 }, [activePage])
+React.useEffect(() => {
+  if (activePage === 'Commission Settings') {
+    loadCommissionSettings()
+  }
+}, [activePage])
   const state = gameState?.state
 
   const stats = [
@@ -845,7 +928,69 @@ const loadReferralSettings = async () => {
           </div>
         </header>
 
-        {activePage === 'Referral Management' ? (
+        {activePage === 'Commission Settings' ? (
+  <section className="mx-auto max-w-2xl rounded-xl border border-purple-900 bg-[#091126] p-4 md:p-6">
+    <h3 className="text-lg font-bold">Game Commission Settings</h3>
+
+    <p className="mt-2 text-sm text-slate-400">
+      Select the platform commission for newly created rounds.
+    </p>
+
+    {commissionLoading ? (
+      <p className="mt-5 text-sm text-slate-400">Loading settings...</p>
+    ) : (
+      <>
+        <label className="mt-5 block text-sm font-semibold">
+          Commission Percentage
+        </label>
+
+        <select
+          value={commissionPercent}
+          onChange={(e) => setCommissionPercent(e.target.value)}
+          className="mt-2 w-full rounded-lg border border-slate-700 bg-[#050817] px-3 py-3 text-white"
+        >
+          <option value="5">5%</option>
+          <option value="10">10%</option>
+          <option value="15">15%</option>
+          <option value="20">20%</option>
+        </select>
+
+        <div className="mt-4 rounded-lg border border-slate-700 bg-[#050817] p-4">
+          <p className="text-sm text-slate-400">Selected Commission</p>
+          <p className="mt-1 text-3xl font-black text-amber-400">
+            {commissionPercent}%
+          </p>
+        </div>
+
+        <p className="mt-3 text-xs text-slate-400">
+          This setting applies to newly created rounds. Existing rounds retain
+          their saved commission percentage.
+        </p>
+
+        {commissionError && (
+          <p className="mt-4 rounded-lg border border-red-800 bg-red-950/40 p-3 text-sm text-red-300">
+            {commissionError}
+          </p>
+        )}
+
+        {commissionMessage && (
+          <p className="mt-4 rounded-lg border border-emerald-800 bg-emerald-950/30 p-3 text-sm text-emerald-300">
+            {commissionMessage}
+          </p>
+        )}
+
+        <button
+          type="button"
+          onClick={saveCommissionSettings}
+          disabled={commissionSaving}
+          className="mt-5 w-full rounded-lg bg-purple-700 px-4 py-3 font-bold text-white hover:bg-purple-600 disabled:opacity-50"
+        >
+          {commissionSaving ? 'Saving...' : 'Save Commission Settings'}
+        </button>
+      </>
+    )}
+  </section>
+) : activePage === 'Referral Management' ? (
           <section className="mx-auto max-w-3xl rounded-xl border border-purple-900 bg-[#091126] p-4 md:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
