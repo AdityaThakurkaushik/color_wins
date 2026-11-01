@@ -366,6 +366,12 @@ const [notificationTotalPages, setNotificationTotalPages] = useState(0)
 
   const [pendingBetId, setPendingBetId] = useState(null)
   const [resultPopup, setResultPopup] = useState(null)
+const currentPendingBet =
+  myBets.find(
+    (bet) => String(bet.betId) === String(pendingBetId)
+  ) ||
+  myBets.find((bet) => bet.status === 'PENDING') ||
+  null
 
   const [isAuthenticated, setIsAuthenticated] = useState(
     () => Boolean(localStorage.getItem('colorwin_token'))
@@ -1219,6 +1225,52 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
               </section>
 
               <section className="rounded-xl border border-purple-900 bg-[#0d0d1c] p-2">
+                {currentPendingBet && (
+  <section className="rounded-2xl border-2 border-fuchsia-500 bg-gradient-to-br from-[#21102d] to-[#0d0d1c] p-3 shadow-lg shadow-fuchsia-500/20">
+
+    <div className="mb-3 flex items-center justify-between border-b border-purple-800 pb-2">
+      <h3 className="text-lg font-black text-white">
+        🎯 Your Current Bet
+      </h3>
+
+      <span className="rounded-full border border-yellow-500 bg-yellow-500/20 px-3 py-1 text-xs font-black text-yellow-300">
+        {currentPendingBet.status}
+      </span>
+    </div>
+
+    <div className="grid grid-cols-3 divide-x divide-purple-700 text-center">
+
+      <div className="px-1">
+        <p className="text-xs text-slate-400">Period</p>
+        <p className="mt-2 break-all text-xs font-bold text-white">
+          {currentPendingBet.periodNumber}
+        </p>
+      </div>
+
+      <div className="px-1">
+        <p className="text-xs text-slate-400">Selected Color</p>
+        <p className="mt-2 font-black text-white">
+          <span className={`mr-1 inline-block h-3 w-3 rounded-full ${
+            currentPendingBet.color === 'RED'
+              ? 'bg-red-500'
+              : currentPendingBet.color === 'GREEN'
+                ? 'bg-emerald-500'
+                : 'bg-blue-500'
+          }`} />
+          {currentPendingBet.color}
+        </p>
+      </div>
+
+      <div className="px-1">
+        <p className="text-xs text-slate-400">Bet Amount</p>
+        <p className="mt-2 font-black text-yellow-300">
+          {currentPendingBet.amount} points
+        </p>
+      </div>
+
+    </div>
+  </section>
+)}
                 <h3 className="font-bold">Recent Results</h3>
 
                 <div className="mt-2 flex flex-wrap gap-2">
