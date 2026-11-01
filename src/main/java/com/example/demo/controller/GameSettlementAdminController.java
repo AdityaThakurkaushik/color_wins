@@ -9,6 +9,7 @@ import jakarta.validation.constraints.Positive;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
 import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -47,7 +48,12 @@ public class GameSettlementAdminController {
         return Map.of("status", "SUCCESS", "commissionPercent", updated);
     }
 
-    @GetMapping("/settings/audit")\n    public Map<String, Object> getCommissionAudit() {\n        return Map.of("history", commissionService.getAuditHistory());\n    }\n\n    @GetMapping("/wallets")
+    @GetMapping("/settings/audit")
+    public Map<String, Object> getCommissionAudit() {
+        return Map.of("history", commissionService.getAuditHistory());
+    }
+
+    @GetMapping("/wallets")
     public Map<String, Object> getWallets() {
         return Map.of("wallets", walletService.getBalances());
     }
