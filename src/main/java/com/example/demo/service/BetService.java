@@ -256,15 +256,39 @@ public class BetService {
         // CASE B: Exactly one unique player
         if (uniquePlayers.size() == 1) {
 
-            settleSinglePlayer(
-                    round,
-                    pendingBets,
-                    lockedUsers,
-                    totalPool
-            );
+    List<Bet> winningBets = pendingBets.stream()
+            .filter(b -> winningColor.equals(
+                    normalizeColor(b.getSelectedColor())))
+            .toList();
 
-            return;
+    if (winningBets.isEmpty()) {
+
+        for (Bet bet : pendingBets) {
+            bet.markLost();
         }
+
+        creditPlatformWallet(
+                totalPool,
+                "SINGLE_PLAYER_NO_WINNER",
+                roundId,
+                "ROUND_" + roundId + "_SINGLE_PLAYER_NO_WINNER",
+                "No winning bets in single-player round"
+        );
+
+        round.settle(totalPool, 0L, 0L);
+        return;
+    }
+
+    settleSinglePlayer(
+            round,
+            pendingBets,
+            winningBets,
+            lockedUsers,
+            totalPool
+    );
+
+    return;
+}
 
         List<Bet> winningBets = pendingBets.stream()
                 .filter(b ->
@@ -301,77 +325,100 @@ public class BetService {
         );
     }
 
-    // ================= SINGLE PLAYER =================
+   // ================= SINGLE PLAYER =================
 
-    private void settleSinglePlayer(
-            GameRound round,
-            List<Bet> bets,
-            Map<Long, User> lockedUsers,
-            long totalPool) {
+private void settleSinglePlayer(
+        GameRound round,
+        List<Bet> allBets,
+        List<Bet> winningBets,
+        Map<Long, User> lockedUsers,
+        long totalPool) {
 
-        long reward = totalPool / 4L;
-        long totalPayout = Math.addExact(totalPool, reward);
+    long winningStake = 0L;
 
-        PlatformWallet wallet = platformWalletRepository
-                .findByIdForUpdate((short) 1)
-                .orElseThrow(() -> new IllegalStateException(
-                        "Platform wallet not found"));
+    for (Bet bet : winningBets) {
+        winningStake = Math.addExact(
+                winningStake,
+                bet.getAmount());
+    }
 
-        // If wallet cannot fund reward, refund original stakes.
-        if (wallet.getBalance() < reward) {
+    long losingStake = Math.subtractExact(
+            totalPool,
+            winningStake);
 
-            User user = lockedUsers.values()
-                    .iterator().next();
+    // 25% reward only on winning bets
+    long reward = winningStake / 4L;
 
-            for (Bet bet : bets) {
+    long totalPayout = Math.addExact(
+            winningStake,
+            reward);
 
-                long newBalance = Math.addExact(
-                        user.getVirtualPoints(),
-                        bet.getAmount());
+    PlatformWallet wallet = platformWalletRepository
+            .findByIdForUpdate((short) 1)
+            .orElseThrow(() -> new IllegalStateException(
+                    "Platform wallet not found"));
 
-                user.setVirtualPoints(newBalance);
-
-                bet.markRefunded();
-
-                transactionRepository.save(
-                        new PointsTransaction(
-                                user,
-                                bet.getAmount(),
-                                "BET_REFUND",
-                                "BET_REFUND_" + bet.getId(),
-                                "Original bet refunded"
-                        )
-                );
-            }
-
-            round.settle(totalPool, 0L, 0L);
-            round.cancel();
-            return;
-        }
-
-        if (reward > 0) {
-
-            wallet.debit(reward);
-
-            platformWalletTransactionRepository.save(
-                    new PlatformWalletTransaction(
-                            reward,
-                            "SINGLE_PLAYER_REWARD",
-                            round.getId(),
-                            "ROUND_" + round.getId()
-                                    + "_SINGLE_PLAYER_REWARD",
-                            "25 percent single-player reward"
-                    )
-            );
-        }
+    // Insufficient platform balance: refund all bets
+    if (wallet.getBalance() < reward) {
 
         User user = lockedUsers.values()
                 .iterator().next();
 
-        Map<Long, Long> payouts =
-                distributeProportionally(bets, totalPayout, totalPool);
+        for (Bet bet : allBets) {
 
-        for (Bet bet : bets) {
+            user.setVirtualPoints(
+                    Math.addExact(
+                            user.getVirtualPoints(),
+                            bet.getAmount()));
+
+            bet.markRefunded();
+
+            transactionRepository.save(
+                    new PointsTransaction(
+                            user,
+                            bet.getAmount(),
+                            "BET_REFUND",
+                            "BET_REFUND_" + bet.getId(),
+                            "Original bet refunded"
+                    )
+            );
+        }
+
+        round.settle(totalPool, 0L, 0L);
+        round.cancel();
+        return;
+    }
+
+    // Deduct bonus from platform wallet
+    if (reward > 0) {
+
+        wallet.debit(reward);
+
+        platformWalletTransactionRepository.save(
+                new PlatformWalletTransaction(
+                        reward,
+                        "SINGLE_PLAYER_REWARD",
+                        round.getId(),
+                        "ROUND_" + round.getId()
+                                + "_SINGLE_PLAYER_REWARD",
+                        "25 percent reward on winning stake"
+                )
+        );
+    }
+
+    User user = lockedUsers.values()
+            .iterator().next();
+
+    Map<Long, Long> payouts = distributeProportionally(
+            winningBets,
+            totalPayout,
+            winningStake
+    );
+
+    // Winning bets = WON, other bets = LOST
+    for (Bet bet : allBets) {
+
+        if (winningBets.contains(bet)) {
 
             long payout = payouts.get(bet.getId());
 
@@ -388,14 +435,32 @@ public class BetService {
                             payout,
                             "BET_PAYOUT",
                             "BET_PAYOUT_" + bet.getId(),
-                            "Single-player round payout"
+                            "Single-player winning payout"
                     )
             );
-        }
 
-        round.settle(totalPool, 0L, totalPayout);
+        } else {
+            bet.markLost();
+        }
     }
 
+    // Losing stake goes to platform wallet
+    if (losingStake > 0) {
+
+        creditPlatformWallet(
+                losingStake,
+                "SINGLE_PLAYER_LOSING_STAKES",
+                round.getId(),
+                "ROUND_" + round.getId()
+                        + "_SINGLE_PLAYER_LOSING_STAKES",
+                "Losing bets from single-player round"
+        );
+    }
+
+    round.settle(totalPool, 0L, totalPayout);
+}
+
+// ================= MULTIPLE PLAYERS =================
     // ================= MULTIPLE PLAYERS =================
 
     private void settleMultiplePlayers(
