@@ -16,6 +16,24 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: colorwin
+          POSTGRES_USER: colorwin
+          POSTGRES_PASSWORD: colorwin_test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U colorwin -d colorwin"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/colorwin
+      SPRING_DATASOURCE_USERNAME: colorwin
+      SPRING_DATASOURCE_PASSWORD: colorwin_test_password
     steps:
       - name: Checkout
         uses: actions/checkout@v4
