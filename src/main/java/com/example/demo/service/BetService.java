@@ -174,20 +174,35 @@ public class BetService {
 
     private void settleSinglePlayer(GameRound round, List<Bet> bets, long totalStake) {
         long bonus = BigDecimal.valueOf(totalStake)
-                .multiply(new BigDecimal("0.25")).setScale(0, RoundingMode.HALF_UP).longValueExact();
-        long payout = Math.addExact(totalStake, bonus);
+                .multiply(new BigDecimal("0.25"))
+                .setScale(0, RoundingMode.HALF_UP)
+                .longValueExact();
+        long totalPayout = Math.addExact(totalStake, bonus);
         systemWalletService.debitPlatformForRound(round, bonus);
 
         Long userId = bets.get(0).getUser().getId();
         User user = userRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        user.setVirtualPoints(Math.addExact(user.getVirtualPoints(), payout));
-        transactionRepository.save(new PointsTransaction(user, payout, "BET_PAYOUT",
+        user.setVirtualPoints(Math.addExact(user.getVirtualPoints(), totalPayout));
+        transactionRepository.save(new PointsTransaction(user, totalPayout, "BET_PAYOUT",
                 "ROUND_" + round.getId() + "_SINGLE_PLAYER_" + userId,
                 "Stake return plus 25% single-player reward"));
+
+        long allocatedBonus = 0L;
         for (int i = 0; i < bets.size(); i++) {
             Bet bet = bets.get(i);
-            bet.markWon(i == 0 ? payout : 0L);
+            long bonusShare;
+            if (i == bets.size() - 1) {
+                bonusShare = bonus - allocatedBonus;
+            } else {
+                bonusShare = BigDecimal.valueOf(bet.getAmount())
+                        .multiply(BigDecimal.valueOf(bonus))
+                        .divide(BigDecimal.valueOf(totalStake), 0, RoundingMode.DOWN)
+                        .longValueExact();
+                allocatedBonus = Math.addExact(allocatedBonus, bonusShare);
+            }
+            long betPayout = Math.addExact(bet.getAmount(), bonusShare);
+            bet.markWon(betPayout);
             betRepository.save(bet);
         }
     }
