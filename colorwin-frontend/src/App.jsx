@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Auth from './Auth.jsx'
 import AdminDashboard from './admin/AdminDashboard.jsx'
-
-const API = 'https://color-wins.onrender.com/api'
+import { API } from './api.js'
 
 const colors = [
   { name: 'RED', value: 'RED', style: 'bg-red-600' },
@@ -87,7 +86,7 @@ useEffect(() => {
         }
 
         const response = await fetch(
-          'https://color-wins.onrender.com/api/user/referral-stats',
+          `${API}/user/referral-stats`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -1139,7 +1138,7 @@ setResultPopup({
 <section className="rounded-2xl border border-purple-700 bg-gradient-to-r from-purple-950 via-fuchsia-950 to-[#080817] px-3 py-2">                <p className="text-xs font-bold uppercase tracking-[0.25em] text-yellow-300">
                   ColorWin presents
                 </p>
-                <h2 className="mt-1 text-xl font-black">PREDICT COLORSS</h2>
+                <h2 className="mt-1 text-xl font-black">PREDICT COLORS</h2>
                 <p className="text-sm font-bold text-fuchsia-300">FREE-TO-PLAY</p>
                 <p className="mt-1 text-xs text-slate-300">
                   Virtual points only · No real-money betting

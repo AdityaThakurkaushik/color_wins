@@ -3,6 +3,7 @@ package com.example.demo.controller;
 import com.example.demo.entity.ReferralSettings;
 import com.example.demo.repository.BetRepository;
 import com.example.demo.repository.UserRepository;
+import com.example.demo.service.BetService;
 import com.example.demo.service.CommissionSettingService;
 import com.example.demo.service.ReferralSettingsService;
 import org.springframework.http.ResponseEntity;
@@ -19,17 +20,20 @@ public class AdminController {
     private final BetRepository betRepository;
     private final ReferralSettingsService referralSettingsService;
     private final CommissionSettingService commissionSettingService;
+    private final BetService betService;
 
     public AdminController(
             UserRepository userRepository,
             BetRepository betRepository,
             ReferralSettingsService referralSettingsService,
-            CommissionSettingService commissionSettingService) {
+            CommissionSettingService commissionSettingService,
+            BetService betService) {
 
         this.userRepository = userRepository;
         this.betRepository = betRepository;
         this.referralSettingsService = referralSettingsService;
         this.commissionSettingService = commissionSettingService;
+        this.betService = betService;
     }
 
     @GetMapping("/health")
@@ -64,6 +68,12 @@ public class AdminController {
         return Map.of(
                 "totalBets", betRepository.count()
         );
+    }
+
+    @GetMapping("/bets/summary")
+    public Map<String, Object> getColorSummary(
+            @RequestParam String periodNumber) {
+        return betService.getColorSummary(periodNumber);
     }
 
     // Get referral settings

@@ -1,7 +1,6 @@
 
 import React from 'react'
-
-const API = 'https://color-wins.onrender.com/api'
+import { API } from '../api.js'
 
 const menuItems = [
   'Dashboard',
