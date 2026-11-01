@@ -939,12 +939,14 @@ useEffect(() => {
   function colorTextClass(color) {
     if (color === 'RED') return 'text-red-500'
     if (color === 'GREEN') return 'text-emerald-400'
+    if (color === 'BLUE') return 'text-blue-400'
     return 'text-purple-400'
   }
 
   function colorBadgeClass(color) {
     if (color === 'RED') return 'bg-red-600'
     if (color === 'GREEN') return 'bg-emerald-600'
+    if (color === 'BLUE' ) return 'bg-blue-600'
     return 'bg-purple-600'
   }
 
