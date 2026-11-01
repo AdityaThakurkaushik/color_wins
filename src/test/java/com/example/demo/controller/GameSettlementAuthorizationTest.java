@@ -1,13 +1,11 @@
 package com.example.demo.controller;
 
-import com.example.demo.JwtAuthenticationFilter;
-import com.example.demo.SecurityConfig;
 import com.example.demo.service.GameCommissionService;
 import com.example.demo.service.SystemWalletService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.context.annotation.Import;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
@@ -18,15 +16,11 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(value = GameSettlementAdminController.class,
-        properties = "app.jwt.secret=test-only-secret-with-at-least-32-bytes")
-@Import(SecurityConfig.class)
+@SpringBootTest(properties = "app.jwt.secret=test-only-secret-with-at-least-32-bytes")
+@AutoConfigureMockMvc
 class GameSettlementAuthorizationTest {
     @Autowired
     private MockMvc mockMvc;
-
-    @MockitoBean
-    private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @MockitoBean
     private GameCommissionService commissionService;

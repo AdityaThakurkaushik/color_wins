@@ -39,7 +39,7 @@ class SystemWalletServiceTest {
 
     @Test
     void fundingLocksWalletBeforeIdempotencyCheckAndRecordsOneCredit() {
-        when(transactionRepository.existsByIdempotencyKey("MANUAL_PLATFORM_FUND:req-1"))
+        when(transactionRepository.existsByIdempotencyKey("MANUAL_PLATFORM_FUND_req-1"))
                 .thenReturn(false);
 
         service.fundPlatformWallet(25, " req-1 ", "admin");
@@ -47,11 +47,11 @@ class SystemWalletServiceTest {
         assertEquals(35L, platformWallet.getBalance());
         InOrder order = inOrder(walletRepository, transactionRepository);
         order.verify(walletRepository).findByTypeForUpdate("PLATFORM");
-        order.verify(transactionRepository).existsByIdempotencyKey("MANUAL_PLATFORM_FUND:req-1");
+        order.verify(transactionRepository).existsByIdempotencyKey("MANUAL_PLATFORM_FUND_req-1");
         ArgumentCaptor<SystemWalletTransaction> transaction =
                 ArgumentCaptor.forClass(SystemWalletTransaction.class);
         verify(transactionRepository).save(transaction.capture());
-        assertEquals("MANUAL_PLATFORM_FUND:req-1",
+        assertEquals("MANUAL_PLATFORM_FUND_req-1",
                 ReflectionTestUtils.getField(transaction.getValue(), "idempotencyKey"));
         assertEquals("PLATFORM_FUND_CREDIT",
                 ReflectionTestUtils.getField(transaction.getValue(), "transactionType"));
@@ -59,7 +59,7 @@ class SystemWalletServiceTest {
 
     @Test
     void repeatedFundingRequestDoesNotChangeBalanceOrWriteLedger() {
-        when(transactionRepository.existsByIdempotencyKey("MANUAL_PLATFORM_FUND:req-1"))
+        when(transactionRepository.existsByIdempotencyKey("MANUAL_PLATFORM_FUND_req-1"))
                 .thenReturn(true);
 
         assertThrows(IllegalArgumentException.class,
