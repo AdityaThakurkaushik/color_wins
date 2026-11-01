@@ -737,10 +737,30 @@ useEffect(() => {
   }, [])
 
   useEffect(() => {
-    if (page === 'Results' && isAuthenticated) {
-      loadMyBets()
+  if (!isAuthenticated) return
+
+  let cancelled = false
+
+  async function restoreMyBets() {
+    const bets = await loadMyBets()
+
+    if (cancelled) return
+
+    const pendingBet = bets.find(
+      (bet) => bet.status === 'PENDING'
+    )
+
+    if (pendingBet) {
+      setPendingBetId(pendingBet.betId)
     }
-  }, [page, isAuthenticated, loadMyBets])
+  }
+
+  restoreMyBets()
+
+  return () => {
+    cancelled = true
+  }
+}, [isAuthenticated, loadMyBets])
 
   // Automatically check the newly placed bet until it is settled.
   useEffect(() => {
