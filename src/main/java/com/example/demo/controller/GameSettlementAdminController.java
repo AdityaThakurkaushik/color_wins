@@ -5,8 +5,6 @@ import com.example.demo.service.SystemWalletService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,7 +27,6 @@ public class GameSettlementAdminController {
     public record CommissionRequest(
             @NotNull @DecimalMin("0.00") BigDecimal commissionPercent) {}
 
-    public record FundRequest(@NotNull @Positive Long amount) {}
 
     @GetMapping("/settings")
     public Map<String, Object> getSettings() {
@@ -58,18 +55,4 @@ public class GameSettlementAdminController {
         return Map.of("wallets", walletService.getBalances());
     }
 
-    @PostMapping("/wallets/{walletType}/fund")
-    public ResponseEntity<Map<String, Object>> fundWallet(
-            @PathVariable String walletType,
-            @Valid @RequestBody FundRequest request,
-            Authentication authentication) {
-        String type = walletType.toUpperCase();
-        walletService.fund(type, request.amount(), authentication.getName());
-        return ResponseEntity.ok(Map.of(
-                "status", "SUCCESS",
-                "walletType", type,
-                "fundedAmount", request.amount(),
-                "wallets", walletService.getBalances()
-        ));
-    }
 }
