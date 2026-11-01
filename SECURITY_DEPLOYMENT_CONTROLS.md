@@ -2,10 +2,10 @@
 
 ## Automated checks added
 
-- `.github/workflows/backend-ci.yml`: Java 21 Maven `clean verify` for pull requests to main and pushes to main/feature branches; test reports are retained as an artifact.
-- `.github/workflows/security.yml`: CodeQL Java analysis, dependency review on pull requests (fails on high/critical dependency severity), and weekly CodeQL scans.
+- `.github/workflows/backend-ci.yml`: Java 21 Maven `clean verify` against an ephemeral PostgreSQL 16 service for pull requests to main and pushes to main/feature branches; test reports are retained as an artifact.
+- `.github/workflows/security.yml`: CodeQL Java analysis with an explicit Maven build, Gitleaks history scan, dependency review on pull requests (fails on high/critical dependency severity), and weekly CodeQL scans.
 - `.github/dependabot.yml`: weekly Maven and GitHub Actions dependency update pull requests.
-- `.github/workflows/production-deploy.yml`: manual production deployment workflow. It re-runs backend verification and then requires approval from the GitHub `production` Environment before calling Render.
+- `.github/workflows/production-deploy.yml`: manual production deployment workflow. It re-runs backend verification against ephemeral PostgreSQL and then requires approval from the GitHub `production` Environment before calling Render.
 
 ## One-time GitHub settings required
 
