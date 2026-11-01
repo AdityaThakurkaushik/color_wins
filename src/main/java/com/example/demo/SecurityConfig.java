@@ -97,8 +97,11 @@ public class SecurityConfig {
                                 "/api/auth/login",
                                 "/api/game/current",
                                 "/api/game/results",
-                                "/api/referral-settings"
+                                "/api/referral-settings",
+                                "/api/agent/login"
                         ).permitAll()
+                        .requestMatchers("/api/approval/**").hasRole("APPROVAL_AGENT")
+                        .requestMatchers("/api/withdraw-agent/**").hasRole("WITHDRAW_AGENT")
                         .requestMatchers("/api/admin/**")
                         .hasRole("ADMIN")
                         .anyRequest().authenticated()

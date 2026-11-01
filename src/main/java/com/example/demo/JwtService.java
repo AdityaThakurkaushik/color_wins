@@ -36,4 +36,16 @@ public class JwtService {
                 .signWith(secretKey)
                 .compact();
     }
+
+    public String generateAgentToken(Long agentId, String kind) {
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + expirationMs);
+        return Jwts.builder()
+                .subject("agent:" + agentId)
+                .claim("agentKind", kind)
+                .issuedAt(now)
+                .expiration(expiry)
+                .signWith(secretKey)
+                .compact();
+    }
 }

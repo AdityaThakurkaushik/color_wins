@@ -1,6 +1,8 @@
 
 import React from 'react'
 import { API } from '../api.js'
+import FundRequests from './FundRequests.jsx'
+import AgentAdmin from './AgentAdmin.jsx'
 
 const menuItems = [
   'Dashboard',
@@ -11,6 +13,9 @@ const menuItems = [
   'Wallet & Transactions',
   'Referral Management',
   'Commission Settings',
+  'Fund Requests',
+  'Approval Agents',
+  'Withdraw Agents',
   'Rewards & Offers',
   'Live Activity Messages',
   'Announcements',
@@ -37,6 +42,11 @@ function StatCard({ item }) {
 }
 
 export default function AdminDashboard() {
+  const [signedIn, setSignedIn] = React.useState(() => Boolean(localStorage.getItem('colorwin_token')))
+  const [loginId, setLoginId] = React.useState('')
+  const [loginPassword, setLoginPassword] = React.useState('')
+  const [loginError, setLoginError] = React.useState('')
+  const [loginBusy, setLoginBusy] = React.useState(false)
   const [activePage, setActivePage] = React.useState('Dashboard')
   const [activeRound, setActiveRound] = React.useState(null)
   const [roundLoading, setRoundLoading] = React.useState(true)
@@ -111,6 +121,37 @@ const [notificationForm, setNotificationForm] = React.useState({
   const logout = () => {
     localStorage.removeItem('colorwin_token')
     window.location.href = '/'
+  }
+
+  async function adminLogin(event) {
+    event.preventDefault()
+    setLoginError('')
+    setLoginBusy(true)
+    try {
+      const response = await fetch(`${API}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usernameOrEmail: loginId.trim(), password: loginPassword }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok || !data.token) {
+        setLoginError(data.message || 'Login failed')
+        return
+      }
+      const check = await fetch(`${API}/admin/payment-methods`, {
+        headers: { Authorization: `Bearer ${data.token}` },
+      })
+      if (!check.ok) {
+        setLoginError('This account is not an admin.')
+        return
+      }
+      localStorage.setItem('colorwin_token', data.token)
+      setSignedIn(true)
+    } catch {
+      setLoginError('Cannot reach the API.')
+    } finally {
+      setLoginBusy(false)
+    }
   }
 
   const getAuthHeaders = () => {
@@ -851,6 +892,21 @@ React.useEffect(() => {
     STOPPED: 'bg-red-950 text-red-300',
   }
 
+  if (!signedIn) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#050817] p-4 text-white">
+        <form onSubmit={adminLogin} className="w-full max-w-sm space-y-3 rounded-2xl border border-purple-800 bg-[#091126] p-6">
+          <h1 className="text-2xl font-black">Admin login</h1>
+          <p className="text-sm text-slate-400">UPI save needs an admin session. The player account cannot change it.</p>
+          <input value={loginId} onChange={(event) => setLoginId(event.target.value)} placeholder="Email" className="w-full rounded-lg border border-slate-700 bg-[#050817] px-3 py-2" required />
+          <input value={loginPassword} onChange={(event) => setLoginPassword(event.target.value)} type="password" placeholder="Password" className="w-full rounded-lg border border-slate-700 bg-[#050817] px-3 py-2" required />
+          {loginError && <p className="text-sm text-red-300">{loginError}</p>}
+          <button disabled={loginBusy} className="w-full rounded-lg bg-purple-700 py-2 font-bold disabled:opacity-50">{loginBusy ? 'Checking...' : 'Enter admin panel'}</button>
+        </form>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-[#050817] text-white md:flex">
       <aside className="border-b border-purple-900 bg-[#080d20] p-4 md:min-h-screen md:w-64 md:border-b-0 md:border-r">
@@ -927,7 +983,13 @@ React.useEffect(() => {
           </div>
         </header>
 
-        {activePage === 'Commission Settings' ? (
+        {activePage === 'Fund Requests' ? (
+          <FundRequests />
+        ) : activePage === 'Approval Agents' ? (
+          <AgentAdmin kind="APPROVAL" />
+        ) : activePage === 'Withdraw Agents' ? (
+          <AgentAdmin kind="WITHDRAW" />
+        ) : activePage === 'Commission Settings' ? (
   <section className="mx-auto max-w-2xl rounded-xl border border-purple-900 bg-[#091126] p-4 md:p-6">
     <h3 className="text-lg font-bold">Game Commission Settings</h3>
 

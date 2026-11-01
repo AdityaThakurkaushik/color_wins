@@ -1,5 +1,6 @@
 package com.example.demo;
 
+import com.example.demo.repository.ReviewAgentRepository;
 import com.example.demo.repository.UserRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -26,15 +27,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final SecretKey secretKey;
     private final UserRepository userRepository;
+    private final ReviewAgentRepository reviewAgentRepository;
 
     public JwtAuthenticationFilter(
             @Value("${app.jwt.secret}") String secret,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            ReviewAgentRepository reviewAgentRepository) {
 
         this.secretKey = Keys.hmacShaKeyFor(
                 secret.getBytes(StandardCharsets.UTF_8));
 
         this.userRepository = userRepository;
+        this.reviewAgentRepository = reviewAgentRepository;
     }
 
     @Override
@@ -61,6 +65,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     .getPayload();
 
             String username = claims.getSubject();
+            String agentKind = claims.get("agentKind", String.class);
+            if ("APPROVAL".equals(agentKind) || "WITHDRAW".equals(agentKind)) {
+                authenticateAgent(username, agentKind, response);
+                if (response.isCommitted()) {
+                    return;
+                }
+                filterChain.doFilter(request, response);
+                return;
+            }
 
             if (username == null || username.isBlank()) {
                 SecurityContextHolder.clearContext();
@@ -119,5 +132,37 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private void authenticateAgent(String subject, String kind, HttpServletResponse response) throws IOException {
+        if (subject == null || !subject.startsWith("agent:")) {
+            reject(response);
+            return;
+        }
+        long agentId;
+        try {
+            agentId = Long.parseLong(subject.substring("agent:".length()));
+        } catch (NumberFormatException ex) {
+            reject(response);
+            return;
+        }
+        var agent = reviewAgentRepository.findById(agentId);
+        if (agent.isEmpty() || !agent.get().isActive() || !kind.equals(agent.get().getKind())) {
+            reject(response);
+            return;
+        }
+        String role = "APPROVAL".equals(kind) ? "ROLE_APPROVAL_AGENT" : "ROLE_WITHDRAW_AGENT";
+        var authentication = new UsernamePasswordAuthenticationToken(
+                subject,
+                null,
+                List.of(new SimpleGrantedAuthority(role)));
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+    }
+
+    private void reject(HttpServletResponse response) throws IOException {
+        SecurityContextHolder.clearContext();
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType("application/json");
+        response.getWriter().write("{\"status\":\"ERROR\",\"message\":\"Invalid or expired token\"}");
     }
 }

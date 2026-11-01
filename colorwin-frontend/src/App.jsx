@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Auth from './Auth.jsx'
 import AdminDashboard from './admin/AdminDashboard.jsx'
+import AgentDesk from './agent/AgentDesk.jsx'
+import AddFunds from './AddFunds.jsx'
+import TransactionHistory from './TransactionHistory.jsx'
 import { API } from './api.js'
 
 const colors = [
@@ -1343,7 +1346,7 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
               </button>
 
               <p className="text-center text-xs text-slate-500">
-                Virtual points only. No deposits, withdrawals, or cash rewards.
+                Virtual points. Add funds from Profile. No cash withdrawals.
               </p>
             </>
           )}
@@ -1538,6 +1541,14 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
 )}
 
           
+{page === 'Add Funds' && (
+  <AddFunds onBack={() => { setPage('Profile'); loadUserProfile() }} onBalanceChange={loadUserProfile} />
+)}
+
+{page === 'Transaction History' && (
+  <TransactionHistory onBack={() => { setPage('Profile'); loadUserProfile() }} onBalanceChange={loadUserProfile} />
+)}
+
 {page === 'Profile' && (
   <section className="space-y-2 pb-2">
     <div className="rounded-2xl border border-purple-700 bg-gradient-to-b from-[#17102d] to-[#0d0d1c] p-3 text-center">
@@ -1579,6 +1590,30 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
         </div>
       </div>
     </div>
+
+    <button
+      onClick={() => isAuthenticated ? setPage('Add Funds') : setPage('Login')}
+      className="flex w-full items-center gap-4 rounded-2xl border border-yellow-600 bg-[#0d0d1c] p-4 text-left"
+    >
+      <span className="text-2xl text-yellow-300">🪙</span>
+      <span className="flex-1">
+        <span className="block font-bold text-white">Add Funds</span>
+        <span className="text-sm text-slate-400">Pay by UPI. 1 rupee = 1 coin</span>
+      </span>
+      <span className="text-xl text-slate-300">›</span>
+    </button>
+
+    <button
+      onClick={() => isAuthenticated ? setPage('Transaction History') : setPage('Login')}
+      className="flex w-full items-center gap-4 rounded-2xl border border-slate-700 bg-[#0d0d1c] p-4 text-left"
+    >
+      <span className="text-2xl text-emerald-300">☰</span>
+      <span className="flex-1">
+        <span className="block font-bold text-white">Transaction History</span>
+        <span className="text-sm text-slate-400">Deposits, withdrawals, and game coins</span>
+      </span>
+      <span className="text-xl text-slate-300">›</span>
+    </button>
 
     <button
       onClick={() => setPage('Help & Support')}
@@ -1919,6 +1954,12 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
 function App() {
   if (window.location.pathname === '/admin') {
     return <AdminDashboard />
+  }
+  if (window.location.pathname === '/approval-agent') {
+    return <AgentDesk panel="approval" />
+  }
+  if (window.location.pathname === '/withdraw-agent') {
+    return <AgentDesk panel="withdraw" />
   }
 
   return <GameApp />

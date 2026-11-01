@@ -37,6 +37,9 @@ public class User {
     @Column(nullable = false, length = 20)
     private String role = "USER";
 
+    @Column(name = "telegram_id", unique = true)
+    private Long telegramId;
+
     @Column(name = "is_active", nullable = false)
     private Boolean active = true;
 
@@ -130,6 +133,14 @@ public class User {
 
     public String getRole() {
         return role;
+    }
+
+    public Long getTelegramId() {
+        return telegramId;
+    }
+
+    public void setTelegramId(Long telegramId) {
+        this.telegramId = telegramId;
     }
 
     public Boolean getActive() {

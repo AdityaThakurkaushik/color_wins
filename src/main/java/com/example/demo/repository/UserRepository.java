@@ -22,6 +22,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByReferralCode(String referralCode);
 
+    Optional<User> findByTelegramId(Long telegramId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT u FROM User u WHERE u.id = :userId")
     Optional<User> findByIdForUpdate(@Param("userId") Long userId);
