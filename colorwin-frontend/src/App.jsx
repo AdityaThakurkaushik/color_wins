@@ -7,7 +7,7 @@ const API = 'https://color-wins.onrender.com/api'
 const colors = [
   { name: 'RED', value: 'RED', style: 'bg-red-600' },
   { name: 'GREEN', value: 'GREEN', style: 'bg-emerald-600' },
-  { name: 'VIOLET', value: 'VIOLET', style: 'bg-purple-600' },
+  { name: 'BLUE', value: 'BLUE', style: 'bg-BLUE-600' },
 ]
 
 const amounts = [10, 50, 100, 500, 1000]
