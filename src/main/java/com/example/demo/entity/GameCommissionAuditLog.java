@@ -25,6 +25,11 @@ public class GameCommissionAuditLog {
 
     protected GameCommissionAuditLog() {}
 
+    public BigDecimal getOldPercent() { return oldPercent; }
+    public BigDecimal getNewPercent() { return newPercent; }
+    public User getChangedBy() { return changedBy; }
+    public OffsetDateTime getChangedAt() { return changedAt; }
+
     public GameCommissionAuditLog(BigDecimal oldPercent, BigDecimal newPercent, User changedBy) {
         this.oldPercent = oldPercent;
         this.newPercent = newPercent;
