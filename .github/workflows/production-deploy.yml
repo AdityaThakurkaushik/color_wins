@@ -48,7 +48,7 @@ jobs:
             echo "Missing production environment secret: RENDER_DEPLOY_HOOK_URL"
             exit 1
           }
-          curl --fail --silent --show-error \
+          curl --connect-timeout 10 --max-time 30 --fail --silent --show-error \
             --request POST "$RENDER_DEPLOY_HOOK_URL" \
             --output /dev/null
           echo "Render deploy hook accepted the request. Verify deployment health in Render."
