@@ -47,7 +47,7 @@ public class GameSettlementAdminController {
         return Map.of("status", "SUCCESS", "commissionPercent", updated);
     }
 
-    @GetMapping("/wallets")
+    @GetMapping("/settings/audit")\n    public Map<String, Object> getCommissionAudit() {\n        return Map.of("history", commissionService.getAuditHistory());\n    }\n\n    @GetMapping("/wallets")
     public Map<String, Object> getWallets() {
         return Map.of("wallets", walletService.getBalances());
     }
