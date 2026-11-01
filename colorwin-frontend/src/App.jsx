@@ -816,11 +816,27 @@ useEffect(() => {
 
         setCurrentUser(profile)
 
-        setResultPopup({
-          ...bet,
-          updatedBalance: profile.virtualPoints,
-        })
+        const resultsResponse = await fetch(`${API}/game/results`, {
+  headers: { Authorization: `Bearer ${savedToken}` },
+  cache: 'no-store',
+})
 
+let winningColor = null
+
+if (resultsResponse.ok) {
+  const resultsData = await resultsResponse.json()
+  const roundResult = (Array.isArray(resultsData) ? resultsData : []).find(
+    (item) => String(item.periodNumber) === String(bet.periodNumber)
+  )
+
+  winningColor = roundResult?.resultColor ?? null
+}
+
+setResultPopup({
+  ...bet,
+  resultColor: winningColor,
+  updatedBalance: profile.virtualPoints,
+})
         setPendingBetId(null)
         setBetMessage('')
         setBetError(false)
