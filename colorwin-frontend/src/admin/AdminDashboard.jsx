@@ -1519,7 +1519,7 @@ const loadReferralSettings = async () => {
 
               <div className="flex justify-between gap-3">
                 <span>Allowed Colors</span>
-                <span>Red · Green · Violet</span>
+                <span>Red · Green · Blue</span>
               </div>
 
               <div className="flex justify-between gap-3">
