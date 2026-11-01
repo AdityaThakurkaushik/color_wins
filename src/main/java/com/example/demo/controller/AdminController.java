@@ -1,12 +1,14 @@
-
 package com.example.demo.controller;
 
 import com.example.demo.entity.ReferralSettings;
 import com.example.demo.repository.BetRepository;
 import com.example.demo.repository.UserRepository;
+import com.example.demo.service.CommissionSettingService;
 import com.example.demo.service.ReferralSettingsService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.Map;
 
 @RestController
@@ -16,15 +18,18 @@ public class AdminController {
     private final UserRepository userRepository;
     private final BetRepository betRepository;
     private final ReferralSettingsService referralSettingsService;
+    private final CommissionSettingService commissionSettingService;
 
     public AdminController(
             UserRepository userRepository,
             BetRepository betRepository,
-            ReferralSettingsService referralSettingsService) {
+            ReferralSettingsService referralSettingsService,
+            CommissionSettingService commissionSettingService) {
 
         this.userRepository = userRepository;
         this.betRepository = betRepository;
         this.referralSettingsService = referralSettingsService;
+        this.commissionSettingService = commissionSettingService;
     }
 
     @GetMapping("/health")
@@ -80,11 +85,52 @@ public class AdminController {
         );
     }
 
+    // Get current commission setting
+    @GetMapping("/commission-settings")
+    public Map<String, BigDecimal> getCommissionSettings() {
+        return Map.of(
+                "commissionPercent",
+                commissionSettingService.getCurrentCommission()
+        );
+    }
+
+    // Update commission setting
+    @PutMapping("/commission-settings")
+    public ResponseEntity<Map<String, Object>> updateCommissionSettings(
+            @RequestBody CommissionSettingRequest request) {
+
+        BigDecimal commission = request.commissionPercent();
+
+        if (commission == null ||
+                !(commission.compareTo(new BigDecimal("5")) == 0 ||
+                  commission.compareTo(new BigDecimal("10")) == 0 ||
+                  commission.compareTo(new BigDecimal("15")) == 0 ||
+                  commission.compareTo(new BigDecimal("20")) == 0)) {
+
+            return ResponseEntity.badRequest().body(Map.of(
+                    "message", "Commission must be 5, 10, 15 or 20 percent"
+            ));
+        }
+
+        BigDecimal updatedCommission =
+                commissionSettingService.updateCommission(commission);
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Commission updated successfully",
+                "commissionPercent", updatedCommission
+        ));
+    }
+
     public record ReferralSettingsRequest(
             Boolean enabled,
             Long referrerReward,
             Long referredUserReward,
             String rewardCondition
+    ) {
+    }
+
+    public record CommissionSettingRequest(
+            BigDecimal commissionPercent
     ) {
     }
 }
