@@ -10,6 +10,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.lang.reflect.Constructor;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -23,11 +24,13 @@ class SystemWalletServiceTest {
     private SystemWallet platformWallet;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws ReflectiveOperationException {
         walletRepository = mock(SystemWalletRepository.class);
         transactionRepository = mock(SystemWalletTransactionRepository.class);
         service = new SystemWalletService(walletRepository, transactionRepository);
-        platformWallet = ReflectionTestUtils.invokeConstructor(SystemWallet.class);
+        Constructor<SystemWallet> constructor = SystemWallet.class.getDeclaredConstructor();
+        constructor.setAccessible(true);
+        platformWallet = constructor.newInstance();
         ReflectionTestUtils.setField(platformWallet, "walletType", "PLATFORM");
         ReflectionTestUtils.setField(platformWallet, "balance", 10L);
         when(walletRepository.findByTypeForUpdate("PLATFORM"))

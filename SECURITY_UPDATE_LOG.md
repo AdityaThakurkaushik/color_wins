@@ -98,3 +98,20 @@ For every subsequent change, append:
 - Additional regression coverage: a PostgreSQL-backed concurrent duplicate-funding test asserts one success and exactly one wallet credit; migration test period numbers now fit the existing 40-character schema limit. These database tests require the ephemeral PostgreSQL service in Backend CI.
 - Refund UI refinement: cancelled stake returns use the positive balance direction indicator.
 - Local verification artifacts are excluded from version control using narrow `/work/...` ignore entries; no project source or dependency manifest is ignored.
+
+## CI failure diagnosis and fixes (2026-11-01)
+
+- Branch: `feature/game-settlement-wallets`; PR #1 remains draft.
+- The GitHub API push updated the feature branch to `de1bdc4c11002761ebf59aa0c42d79b2f98113fd`; Vercel preview status was observed successful at `https://color-wins-git-feature-game-settlement-wallets-colorwin.vercel.app`. Production and `main` were not changed.
+- Observed GitHub Actions failures for that commit:
+  - Backend CI failed in test compilation because `ReflectionTestUtils.invokeConstructor` is not part of the Spring Test API in the resolved dependency version. The test now constructs the protected JPA no-arg constructor reflectively.
+  - CodeQL build failed with `release version 21 not supported`; the job did not select Java 21. Added the same Temurin Java 21 setup used by Backend CI before invoking Maven.
+  - Gitleaks failed before scanning because its Docker container's Git considered `/github/workspace` unsafe due to ownership. Added Git's per-process `safe.directory` environment configuration to the container step.
+  - Dependency Review failed because GitHub reports Dependency Graph is disabled for this repository. This repository-level setting cannot be enabled by a workflow file; it remains an external prerequisite.
+- Local verification before these fixes: frontend `npm run build` **PASSED**; `npm run lint` **FAILED** with 11 errors and 2 warnings in existing frontend lint findings; Maven `clean verify` was blocked by host access restrictions (`target` cleanup denied and Java could not access a dependency JAR). GitHub Linux CI supplied the actionable test compile failure above.
+- The fixes in this entry still require a new GitHub Actions run. No check is claimed to pass after these changes until that run is observed.
+- Correctness/security review of the proposed fixes: test-only reflective access is confined to the JPA test fixture; CodeQL runs on the configured project JDK; the Gitleaks safe-directory setting is scoped to the isolated scan container and does not weaken host or repository Git trust globally. No settlement API, authorization rule, wallet arithmetic, or database schema changed.
+- Final correctness review of this diff: validated the protected JPA constructor fixture against the entity, the Java 21 compiler target against `pom.xml`, and the Gitleaks step's container path and scan command. No transaction, concurrency, idempotency, settlement, migration, or API behavior changed; no correctness issue found.
+- Final security review of this diff: `setup-java` runs with the existing read-only workflow token; Git's safe-directory exception is passed only to the isolated Gitleaks container for its mounted checkout; reflective access exists only in the test fixture. No authentication, authorization, privilege, injection, secret, or double-spend boundary changed; no critical/high security issue found.
+- Remaining blockers: Dependency Graph must be enabled in GitHub settings; frontend lint debt remains. No merge or production deployment.
+- Local post-fix verification: `npm run build` **PASSED**. `npm run lint` **FAILED** with the same 11 errors and 2 warnings, in existing effect patterns and unused-variable findings. Backend `mvn -s work/maven-settings.xml -B --no-transfer-progress test` **FAILED / BLOCKED** before test execution because Windows javac could not access the cached `spring-boot-starter-json-3.4.5.jar`; the Java test compilation result is therefore not established locally. A new Linux CI run is required to verify the test-constructor fix and workflow updates.
