@@ -8,7 +8,6 @@ import com.example.demo.service.GameControlService;
 import com.example.demo.service.GameRoundService;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -31,7 +30,6 @@ public class GameRoundScheduler {
     }
 
     @Scheduled(fixedDelay = 1000)
-    @Transactional
     public void processRounds() {
 
         // Lock game control before processing rounds.

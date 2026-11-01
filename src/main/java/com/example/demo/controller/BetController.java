@@ -78,21 +78,6 @@ public class BetController {
         ));
     }
 
-    @GetMapping("/summary")
-    public ResponseEntity<Map<String, Object>> getColorSummary(
-            @RequestParam String periodNumber,
-            Authentication authentication) {
-
-        if (authentication == null
-                || !authentication.isAuthenticated()) {
-            return ResponseEntity.status(401).build();
-        }
-
-        return ResponseEntity.ok(
-                betService.getColorSummary(periodNumber)
-        );
-    }
-
     @GetMapping("/my")
     public ResponseEntity<?> getMyBets(
             Authentication authentication) {

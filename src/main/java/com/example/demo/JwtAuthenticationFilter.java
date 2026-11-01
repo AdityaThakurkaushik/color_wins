@@ -47,10 +47,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String header = request.getHeader("Authorization");
 
         if (header == null || !header.startsWith("Bearer ")) {
-            System.err.println(
-                    "JWT: Missing or invalid Authorization header for "
-                            + request.getRequestURI());
-
             filterChain.doFilter(request, response);
             return;
         }
@@ -66,10 +62,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             String username = claims.getSubject();
 
-            System.err.println("JWT: Token validated successfully");
-            System.err.println("JWT: Subject present = "
-                    + (username != null && !username.isBlank()));
-
             if (username == null || username.isBlank()) {
                 SecurityContextHolder.clearContext();
                 response.sendError(
@@ -81,9 +73,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             var userOptional =
                     userRepository.findByUsername(username);
 
-            System.err.println(
-                    "JWT: User found = " + userOptional.isPresent());
-
             if (userOptional.isEmpty()) {
                 SecurityContextHolder.clearContext();
                 response.sendError(
@@ -93,9 +82,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
 
             var user = userOptional.get();
-
-            System.err.println(
-                    "JWT: Account active = " + user.isActive());
 
             if (!user.isActive()) {
                 SecurityContextHolder.clearContext();
@@ -114,10 +100,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             SecurityContextHolder.getContext()
                     .setAuthentication(authentication);
-
-            System.err.println(
-                    "JWT: Authentication established; role = "
-                            + user.getRole());
 
         } catch (JwtException | IllegalArgumentException ex) {
             SecurityContextHolder.clearContext();

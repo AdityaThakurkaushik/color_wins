@@ -16,6 +16,8 @@ public interface GameRoundRepository extends JpaRepository<GameRound, Long> {
 
     Optional<GameRound> findByPeriodNumber(String periodNumber);
 
+    List<GameRound> findTop10ByStatusOrderByStartsAtDesc(String status);
+
     Optional<GameRound> findFirstByStatusOrderByStartsAtDesc(String status);
 
     List<GameRound> findByStatusAndEndsAtLessThanEqual(

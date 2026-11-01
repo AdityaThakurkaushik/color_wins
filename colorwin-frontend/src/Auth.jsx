@@ -1,5 +1,6 @@
 
 import { useState } from 'react'
+import { API } from './api.js'
 
 export default function Auth({ onLogin }) {
   const [mode, setMode] = useState(() =>
@@ -49,7 +50,7 @@ export default function Auth({ onLogin }) {
 
       try {
         const response = await fetch(
-          'https://color-wins.onrender.com/api/auth/register',
+          `${API}/auth/register`,
           {
             method: 'POST',
             headers: {
@@ -89,7 +90,7 @@ export default function Auth({ onLogin }) {
 
     try {
       const response = await fetch(
-        'https://color-wins.onrender.com/api/auth/login',
+        `${API}/auth/login`,
         {
           method: 'POST',
           headers: {

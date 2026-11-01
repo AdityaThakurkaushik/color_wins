@@ -8,6 +8,8 @@ import com.example.demo.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.Locale;
+
 @Service
 public class LoginService {
 
@@ -25,12 +27,11 @@ public class LoginService {
     }
 
     public String login(LoginRequest request) {
-        String identifier = request.getUsernameOrEmail()
-                .trim()
-                .toLowerCase();
+        String identifier = request.getUsernameOrEmail().trim();
 
         User user = userRepository.findByUsername(identifier)
-                .or(() -> userRepository.findByEmail(identifier))
+                .or(() -> userRepository.findByEmail(
+                        identifier.toLowerCase(Locale.ROOT)))
                 .orElseThrow(() ->
                         new IllegalArgumentException(
                                 "Invalid username/email or password"));
