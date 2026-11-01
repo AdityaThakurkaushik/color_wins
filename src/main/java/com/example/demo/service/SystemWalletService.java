@@ -46,22 +46,30 @@ public class SystemWalletService {
             throw new IllegalArgumentException("A valid request ID is required");
         }
         String key = "MANUAL_PLATFORM_FUND_" + requestId.trim();
+        // Serialize request-id checks on the wallet row so concurrent calls
+        // cannot both observe an unused key before either one commits.
+        SystemWallet wallet = walletRepository.findByTypeForUpdate("PLATFORM")
+                .orElseThrow(() -> new IllegalStateException("Platform Wallet missing"));
         if (transactionRepository.existsByIdempotencyKey(key)) {
             throw new IllegalArgumentException("This funding request has already been processed");
         }
-        credit("PLATFORM", amount, "PLATFORM_FUND_CREDIT", key,
-                "Manual Platform Wallet funding by admin " + adminUsername);
+        wallet.credit(amount);
+        transactionRepository.save(new SystemWalletTransaction(wallet, null, amount,
+                "PLATFORM_FUND_CREDIT", key,
+                "Manual Platform Wallet funding by admin " + adminUsername));
     }
 
     @Transactional
-    public void debitPlatformForRound(GameRound round, long amount) {
-        if (amount <= 0) return;
+    public boolean debitPlatformForRound(GameRound round, long amount) {
+        if (amount <= 0) return true;
         SystemWallet wallet = walletRepository.findByTypeForUpdate("PLATFORM")
                 .orElseThrow(() -> new IllegalStateException("Platform Wallet missing"));
+        if (wallet.getBalance() < amount) return false;
         wallet.debit(amount);
         transactionRepository.save(new SystemWalletTransaction(wallet, round, amount,
                 "SINGLE_PLAYER_REWARD_DEBIT", "ROUND_" + round.getId() + "_PLATFORM_REWARD",
                 "Single-player 25% reward for round " + round.getPeriodNumber()));
+        return true;
     }
 
     @Transactional

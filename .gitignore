@@ -3,6 +3,10 @@ HELP.md
 target/
 bin/
 *.class
+/work/maven-home/
+/work/maven-repository/
+/work/npm-cache/
+/work/maven-settings.xml
 
 !.mvn/wrapper/maven-wrapper.jar
 

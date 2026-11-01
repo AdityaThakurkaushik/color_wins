@@ -43,14 +43,16 @@ public class BetService {
         if (!"RUNNING".equals(control.getState()))
             throw new IllegalArgumentException("Game is not accepting bets");
 
-        User user = userRepository.findByIdForUpdate(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        if (!user.isActive()) throw new IllegalArgumentException("User account is inactive");
-
         GameRound round = gameRoundRepository.findByPeriodNumber(periodNumber)
                 .map(found -> gameRoundRepository.findByIdForUpdate(found.getId())
                         .orElseThrow(() -> new IllegalArgumentException("Round not found")))
                 .orElseThrow(() -> new IllegalArgumentException("Round not found"));
+
+        // Use the same round-before-user lock order as settlement to avoid
+        // deadlocks between a bet placement and its round's settlement.
+        User user = userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        if (!user.isActive()) throw new IllegalArgumentException("User account is inactive");
 
         OffsetDateTime now = OffsetDateTime.now();
         if (!"OPEN".equals(round.getStatus()) || now.isBefore(round.getStartsAt())
@@ -95,8 +97,8 @@ public class BetService {
                 .orElseThrow(() -> new IllegalArgumentException("Round not found"));
         if (!"RESULT_DECLARED".equals(round.getStatus()))
             throw new IllegalArgumentException("Round result must be declared before settlement");
-        if ("SETTLED".equals(round.getSettlementStatus()))
-            throw new IllegalArgumentException("Round already settled");
+        if (!"PENDING".equals(round.getSettlementStatus()))
+            throw new IllegalArgumentException("Round settlement already completed");
 
         List<Bet> bets = betRepository.findByRoundIdForUpdate(roundId).stream()
                 .filter(b -> "PENDING".equals(b.getStatus())).toList();
@@ -121,7 +123,10 @@ public class BetService {
         }
 
         if (playerIds.size() == 1) {
-            settleSinglePlayer(round, bets, totalPool);
+            if (!settleSinglePlayer(round, bets, totalPool)) {
+                cancelAndRefundRound(round, bets, totalPool);
+                return;
+            }
             round.completeSettlement(totalPool, 0L, totalPool);
             return;
         }
@@ -172,13 +177,13 @@ public class BetService {
         round.completeSettlement(totalPool, commission, winningPool);
     }
 
-    private void settleSinglePlayer(GameRound round, List<Bet> bets, long totalStake) {
+    private boolean settleSinglePlayer(GameRound round, List<Bet> bets, long totalStake) {
         long bonus = BigDecimal.valueOf(totalStake)
                 .multiply(new BigDecimal("0.25"))
                 .setScale(0, RoundingMode.HALF_UP)
                 .longValueExact();
         long totalPayout = Math.addExact(totalStake, bonus);
-        systemWalletService.debitPlatformForRound(round, bonus);
+        if (!systemWalletService.debitPlatformForRound(round, bonus)) return false;
 
         Long userId = bets.get(0).getUser().getId();
         User user = userRepository.findByIdForUpdate(userId)
@@ -205,6 +210,30 @@ public class BetService {
             bet.markWon(betPayout);
             betRepository.save(bet);
         }
+        return true;
+    }
+
+    private void cancelAndRefundRound(GameRound round, List<Bet> bets, long totalPool) {
+        Map<Long, Long> refundsByUser = new HashMap<>();
+        for (Bet bet : bets) {
+            refundsByUser.merge(bet.getUser().getId(), bet.getAmount(), Math::addExact);
+        }
+
+        for (Long userId : refundsByUser.keySet().stream().sorted().toList()) {
+            User user = userRepository.findByIdForUpdate(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+            long refund = refundsByUser.get(userId);
+            user.setVirtualPoints(Math.addExact(user.getVirtualPoints(), refund));
+            transactionRepository.save(new PointsTransaction(user, refund, "BET_REFUND",
+                    "ROUND_" + round.getId() + "_REFUND_USER_" + userId,
+                    "Stake refunded because the round was cancelled: insufficient Platform Wallet balance"));
+        }
+
+        for (Bet bet : bets) {
+            bet.markRefunded();
+            betRepository.save(bet);
+        }
+        round.completeCancellation(totalPool);
     }
 
     private void creditUsers(Map<Long, Long> payouts, Long roundId) {

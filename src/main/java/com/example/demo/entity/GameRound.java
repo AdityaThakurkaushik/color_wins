@@ -85,12 +85,23 @@ public class GameRound {
     }
 
     public void completeSettlement(long pool, long commission, long payoutPool) {
-        if ("SETTLED".equals(this.settlementStatus))
-            throw new IllegalStateException("Round already settled");
+        if (!"PENDING".equals(this.settlementStatus))
+            throw new IllegalStateException("Round settlement already completed");
         this.totalPool = pool;
         this.commissionAmount = commission;
         this.winningPool = payoutPool;
         this.settlementStatus = "SETTLED";
+        this.settledAt = OffsetDateTime.now();
+    }
+
+    public void completeCancellation(long pool) {
+        if (!"PENDING".equals(this.settlementStatus))
+            throw new IllegalStateException("Round settlement already completed");
+        this.totalPool = pool;
+        this.commissionAmount = 0L;
+        this.winningPool = 0L;
+        this.settlementStatus = "CANCELLED";
+        this.status = "CANCELLED";
         this.settledAt = OffsetDateTime.now();
     }
 }
