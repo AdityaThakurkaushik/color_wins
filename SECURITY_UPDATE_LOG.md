@@ -51,3 +51,23 @@ For every subsequent change, append:
 - Fixes and retest results:
 - Remaining risks:
 - Merge/deployment status:
+
+## CI / security / deployment controls update (2026-11-01)
+
+- Branch: `feature/game-settlement-wallets`
+- Pull request: #1 (draft; not merged)
+- Added:
+  - `.github/workflows/backend-ci.yml`: Java 21 Maven `clean verify`, ephemeral PostgreSQL 16 service, test report artifact.
+  - `.github/workflows/security.yml`: CodeQL Java scan using explicit Maven build, Gitleaks full-history secret scan, dependency review (high severity threshold), weekly scan schedule.
+  - `.github/dependabot.yml`: weekly Maven and GitHub Actions dependency update PRs.
+  - `.github/workflows/production-deploy.yml`: manual main-only Render deploy hook workflow; repeats tests against ephemeral PostgreSQL; protected `production` environment approval; bounded HTTP request timeout.
+  - `SECURITY_DEPLOYMENT_CONTROLS.md`: required manual GitHub / Render settings.
+- Initial observed CI run for earlier workflow revision:
+  - Backend CI: **FAILED**. Existing `DemoApplicationTests.contextLoads` could not load Spring context because CI had no configured datasource / PostgreSQL. Workflow revised to supply ephemeral PostgreSQL; revised run result still pending/not observed at time of this entry.
+  - CodeQL: **FAILED**. Automatic build could not complete; workflow revised to explicit Maven build; revised run result still pending/not observed at time of this entry.
+  - Dependency review: **FAILED / BLOCKED** because GitHub reports Dependency Graph is disabled for this repository. Enable Dependency Graph in repository Settings → Security & analysis before expecting this check to pass.
+- Code review #1 (workflow correctness): reviewed triggers, job dependencies, Java 21/Maven commands, PostgreSQL health check, artifact retention, CodeQL manual build, PR dependency review, manual main-only deployment, Environment approval dependency, and Render hook timeout. No workflow logic defect identified in the reviewed revision; CI rerun remains required.
+- Code review #2 (security): reviewed workflow permissions, PR-only dependency review, no privileged `pull_request_target`, no production secret in source, production secret scoped to the `production` Environment, manual deployment, and Gitleaks scan. No critical/high workflow-level issue identified in the reviewed revision. Residual risk: third-party Actions are referenced by major-version tags rather than immutable commit SHAs; repository settings and Render auto-deploy configuration remain external prerequisites.
+- Manual controls not yet confirmed enabled: main branch protection / required status checks, GitHub Dependency Graph, secret scanning and push protection (if available), production Environment reviewer and `RENDER_DEPLOY_HOOK_URL` secret, Render auto-deploy disabled.
+- Tests / revised workflow outcomes: **PENDING / NOT VERIFIED**. No merge or deployment authorized.
+- Production status: unchanged by this update.
