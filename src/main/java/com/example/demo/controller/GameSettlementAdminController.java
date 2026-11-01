@@ -4,7 +4,9 @@ import com.example.demo.service.GameCommissionService;
 import com.example.demo.service.SystemWalletService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotNull;\nimport jakarta.validation.constraints.Positive;\nimport jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,6 +29,9 @@ public class GameSettlementAdminController {
     public record CommissionRequest(
             @NotNull @DecimalMin("0.00") BigDecimal commissionPercent) {}
 
+    public record PlatformFundingRequest(
+            @NotNull @Positive Long amount,
+            @NotNull @Size(min = 1, max = 80) String requestId) {}
 
     @GetMapping("/settings")
     public Map<String, Object> getSettings() {
@@ -55,4 +60,13 @@ public class GameSettlementAdminController {
         return Map.of("wallets", walletService.getBalances());
     }
 
+    @PostMapping("/wallets/platform/fund")
+    public Map<String, Object> fundPlatformWallet(
+            @Valid @RequestBody PlatformFundingRequest request,
+            Authentication authentication) {
+        walletService.fundPlatformWallet(
+                request.amount(), request.requestId(), authentication.getName());
+        return Map.of("status", "SUCCESS", "walletType", "PLATFORM",
+                "fundedAmount", request.amount(), "wallets", walletService.getBalances());
+    }
 }
