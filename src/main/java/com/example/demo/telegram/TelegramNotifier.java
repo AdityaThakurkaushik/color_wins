@@ -1,5 +1,6 @@
 package com.example.demo.telegram;
 
+import com.example.demo.entity.Withdrawal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -29,14 +30,47 @@ public class TelegramNotifier {
         sendToAdmins(text, "Approve", "a:" + publicId, "Reject", "r:" + publicId);
     }
 
-    public void withdrawalRequested(String publicId, String username, long amount) {
+    public void withdrawalRequested(Withdrawal withdrawal) {
+        String payoutDetails;
+        if ("UPI".equalsIgnoreCase(withdrawal.getPayoutMethod())) {
+            payoutDetails = """
+                    Payout method: UPI
+                    Account holder: %s
+                    UPI ID: %s
+                    """.formatted(
+                    safe(withdrawal.getAccountHolderName()),
+                    safe(withdrawal.getUpiId()));
+        } else {
+            payoutDetails = """
+                    Payout method: Bank
+                    Account holder: %s
+                    Bank name: %s
+                    Account number: %s
+                    IFSC: %s
+                    """.formatted(
+                    safe(withdrawal.getAccountHolderName()),
+                    safe(withdrawal.getBankName()),
+                    safe(withdrawal.getBankAccountNumber()),
+                    safe(withdrawal.getBankIfsc()));
+        }
+
         String text = """
                 New withdrawal to check
                 %s
                 User: %s
                 Amount: %d coins
-                """.formatted(publicId, username, amount).strip();
-        sendToAdmins(text, "Mark paid", "p:" + publicId, "Reject", "x:" + publicId);
+                %s
+                """.formatted(
+                withdrawal.getPublicId(),
+                withdrawal.getUser().getUsername(),
+                withdrawal.getAmount(),
+                payoutDetails).strip();
+        sendToAdmins(text, "Mark paid", "p:" + withdrawal.getPublicId(),
+                "Reject", "x:" + withdrawal.getPublicId());
+    }
+
+    private String safe(String value) {
+        return value == null || value.isBlank() ? "Not provided" : value;
     }
 
     private void sendToAdmins(String text, String okLabel, String okData, String noLabel, String noData) {
