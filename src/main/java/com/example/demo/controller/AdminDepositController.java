@@ -3,6 +3,7 @@ package com.example.demo.controller;
 import com.example.demo.entity.Deposit;
 import com.example.demo.entity.PaymentMethod;
 import com.example.demo.service.DepositService;
+import com.example.demo.repository.DepositRepository;
 import com.example.demo.telegram.TelegramNotifier;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -17,10 +18,12 @@ import java.util.Map;
 public class AdminDepositController {
 
     private final DepositService depositService;
+    private final DepositRepository depositRepository;
     private final TelegramNotifier telegramNotifier;
 
-    public AdminDepositController(DepositService depositService, TelegramNotifier telegramNotifier) {
+    public AdminDepositController(DepositService depositService, DepositRepository depositRepository, TelegramNotifier telegramNotifier) {
         this.depositService = depositService;
+        this.depositRepository = depositRepository;
         this.telegramNotifier = telegramNotifier;
     }
 
@@ -35,7 +38,7 @@ public class AdminDepositController {
 
     @GetMapping("/deposits")
     public List<Map<String, Object>> submitted() {
-        return depositService.listSubmitted().stream().map(this::toAdminView).toList();
+        return depositRepository.findAllByOrderByCreatedAtDesc().stream().map(this::toAdminView).toList();
     }
 
     @PostMapping("/deposits/{publicId}/approve")
@@ -68,11 +71,15 @@ public class AdminDepositController {
         view.put("publicId", deposit.getPublicId());
         view.put("username", deposit.getUser().getUsername());
         view.put("amount", deposit.getAmountRequested());
+        view.put("amountConfirmed", deposit.getAmountConfirmed());
         view.put("status", deposit.getStatus());
         view.put("utr", deposit.getUtr());
         view.put("upiId", deposit.getPaymentMethod().getUpiId());
         view.put("methodLabel", deposit.getPaymentMethod().getLabel());
         view.put("rejectReason", deposit.getRejectReason());
+        view.put("submittedAt", deposit.getSubmittedAt());
+        view.put("createdAt", deposit.getCreatedAt());
+        view.put("expiresAt", deposit.getExpiresAt());
         return view;
     }
 }
