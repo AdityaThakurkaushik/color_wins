@@ -1231,15 +1231,23 @@ setResultPopup({
 
           {page === 'Home' && (
             <>
-<section className="relative overflow-hidden rounded-2xl border border-purple-700 bg-gradient-to-r from-purple-950 via-fuchsia-950 to-[#080817] px-3 py-3">                <p className="relative z-10 text-xs font-bold uppercase tracking-[0.25em] text-yellow-300">
-                  MILLIONAIRE HUB PRESENTS
-                </p>
-                <img src="/millionaire-hub-crown.svg" alt="" aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 h-20 w-28 -translate-y-1/2 object-contain drop-shadow-[0_0_12px_rgba(250,204,21,0.65)] sm:h-28 sm:w-36" />
-                <h2 className="mt-1 text-xl font-black">PREDICT COLORS</h2>
-                <p className="text-sm font-bold text-fuchsia-300">FREE-TO-PLAY</p>
-                <p className="mt-1 text-xs text-slate-300">
-                  Virtual points only · No real-money betting
-                </p>
+<section className="relative flex items-center justify-between gap-2 overflow-hidden rounded-2xl border border-purple-700 bg-gradient-to-r from-purple-950 via-fuchsia-950 to-[#080817] px-3 py-3 sm:px-4">
+                <div className="relative z-10 min-w-0 flex-1">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-yellow-300 sm:text-xs sm:tracking-[0.25em]">
+                    MILLIONAIRE HUB PRESENTS
+                  </p>
+                  <h2 className="mt-1 text-lg font-black leading-tight text-white sm:text-2xl">PLAY SMART. WIN BIG!</h2>
+                  <p className="mt-1 text-xs font-bold leading-snug text-fuchsia-300 sm:text-sm">
+                    Challenge Your Instincts &amp; Enjoy Every Round.
+                  </p>
+                  <p className="mt-1 text-[11px] leading-snug text-slate-200 sm:text-sm">
+                    Play with friends. Challenge your cousins. Make every round exciting!
+                  </p>
+                  <p className="mt-1 text-[10px] font-semibold leading-snug text-yellow-300 sm:text-xs">
+                    Join Telegram for Updates &amp; Exclusive Offers.
+                  </p>
+                </div>
+                <img src="/millionaire-hub-logo.svg" alt="Millionaire Hub" className="relative z-10 h-16 w-16 shrink-0 rounded-full object-contain drop-shadow-[0_0_10px_rgba(250,204,21,0.5)] sm:h-24 sm:w-24" />
               </section>
 
               {apiError && (
