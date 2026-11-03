@@ -106,8 +106,7 @@ public class UserController {
                 user.getId(), request.amount(), request.payoutMethod(),
                 request.accountHolderName(), request.upiId(), request.bankName(),
                 request.bankAccountNumber(), request.bankIfsc());
-        telegramNotifier.withdrawalRequested(
-                withdrawal.getPublicId(), user.getUsername(), withdrawal.getAmount());
+        telegramNotifier.withdrawalRequested(withdrawal);
         return ResponseEntity.ok(Map.of(
                 "publicId", withdrawal.getPublicId(),
                 "amount", withdrawal.getAmount(),
