@@ -45,5 +45,6 @@ public class ReviewAgent {
     public String getPasswordHash() { return passwordHash; }
     public String getKind() { return kind; }
     public boolean isActive() { return active; }
+    public void setActive(boolean active) { this.active = active; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
 }
