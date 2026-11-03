@@ -6,6 +6,7 @@ import com.example.demo.telegram.TelegramNotifier;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -16,6 +17,7 @@ import java.util.Map;
  * converter and returned only from this role-protected endpoint.
  */
 @RestController
+@Transactional
 @RequestMapping("/api/admin/withdrawals")
 public class AdminWithdrawalController {
 
