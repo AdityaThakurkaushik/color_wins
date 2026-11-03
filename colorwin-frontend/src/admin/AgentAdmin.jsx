@@ -20,6 +20,7 @@ export default function AgentAdmin({ kind }) {
   const [error, setError] = React.useState('')
   const [message, setMessage] = React.useState('')
   const [loading, setLoading] = React.useState(false)
+  const [updatingAgentId, setUpdatingAgentId] = React.useState(null)
 
   async function load(page = 0) {
     setLoading(true)
@@ -61,6 +62,34 @@ export default function AgentAdmin({ kind }) {
     setMessage(`${data.agentId} created. Share this ID and password.`)
     setForm({ agentId: '', password: '' })
     await load(0)
+  }
+
+  async function toggleAgentStatus(agent) {
+    const nextActive = !agent.active
+    const action = nextActive ? 'unblock' : 'block'
+    if (!window.confirm(`Are you sure you want to ${action} agent ${agent.agentId}?`)) return
+
+    setError('')
+    setMessage('')
+    setUpdatingAgentId(agent.id)
+    try {
+      const response = await fetch(
+        `${API}/admin/review/agents/${agent.id}/status?kind=${encodeURIComponent(kind)}`,
+        {
+          method: 'PATCH',
+          headers: { ...headers(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ active: nextActive }),
+        },
+      )
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.message || `Could not ${action} agent`)
+      setAgents((current) => current.map((item) => item.id === agent.id ? data : item))
+      setMessage(`Agent ${agent.agentId} ${nextActive ? 'unblocked' : 'blocked'} successfully.`)
+    } catch (err) {
+      setError(err.message || `Could not ${action} agent`)
+    } finally {
+      setUpdatingAgentId(null)
+    }
   }
 
   const activeCount = agents.filter((agent) => agent.active).length
@@ -119,6 +148,7 @@ export default function AgentAdmin({ kind }) {
                 <th className="px-3 py-3">Agent Type</th>
                 <th className="px-3 py-3">Created At</th>
                 <th className="px-3 py-3">Current Status</th>
+                <th className="px-3 py-3">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -133,13 +163,23 @@ export default function AgentAdmin({ kind }) {
                       {agent.active ? 'Active' : 'Blocked'}
                     </span>
                   </td>
+                  <td className="px-3 py-3">
+                    <button
+                      type="button"
+                      onClick={() => toggleAgentStatus(agent)}
+                      disabled={updatingAgentId === agent.id}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-50 ${agent.active ? 'bg-red-700 hover:bg-red-600' : 'bg-emerald-700 hover:bg-emerald-600'}`}
+                    >
+                      {updatingAgentId === agent.id ? 'Updating...' : agent.active ? 'Block' : 'Unblock'}
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
           {!loading && agents.length === 0 && <p className="py-6 text-center text-sm text-slate-400">No agents created yet.</p>}
         </div>
-        <p className="mt-3 text-xs text-slate-500">Agent records are displayed from the existing admin API. No agent is deleted or modified from this list.</p>
+        <p className="mt-3 text-xs text-slate-500">Blocking prevents future login and access to protected agent actions. Agent records and activity history are retained.</p>
       </div>
 
       <div className="rounded-xl border border-purple-900 bg-[#091126] p-4">
