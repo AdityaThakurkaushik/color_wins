@@ -335,6 +335,92 @@ useEffect(() => {
 
 
 
+function WalletPage({ currentUser, onDeposit, onWithdraw, onViewAll }) {
+  const [transactions, setTransactions] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadRecentTransactions() {
+      try {
+        setLoading(true)
+        setError('')
+        const savedToken = localStorage.getItem('colorwin_token')
+        const response = await fetch(`${API}/user/transactions`, {
+          headers: savedToken ? { Authorization: `Bearer ${savedToken}` } : {},
+          cache: 'no-store',
+        })
+        const data = await response.json()
+        if (!response.ok) throw new Error(data.message || 'Could not load transactions')
+        if (!cancelled) setTransactions(Array.isArray(data) ? data.slice(0, 3) : [])
+      } catch (err) {
+        if (!cancelled) setError(err.message || 'Could not load transactions')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    loadRecentTransactions()
+    return () => { cancelled = true }
+  }, [])
+
+  const balance = Number(currentUser?.virtualPoints ?? 0).toLocaleString('en-IN')
+
+  return (
+    <section className="space-y-4 pb-4">
+      <div className="overflow-hidden rounded-3xl border border-purple-500/40 bg-gradient-to-br from-[#24113d] via-[#160d2a] to-[#090914] p-5 shadow-xl shadow-purple-950/30">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-bold uppercase tracking-[0.22em] text-purple-200">My Wallet</p>
+          <span className="rounded-full border border-yellow-400/30 bg-yellow-400/10 px-3 py-1 text-xs font-bold text-yellow-300">COLORWIN</span>
+        </div>
+        <p className="mt-5 text-sm text-slate-300">Available Balance</p>
+        <div className="mt-1 flex flex-wrap items-baseline gap-2">
+          <h2 className="text-3xl font-black tracking-tight text-yellow-300">{balance}</h2>
+          <span className="text-sm font-semibold text-purple-200">Coins</span>
+        </div>
+        <p className="mt-1 text-xs text-slate-400">Your current virtual points balance</p>
+        <div className="mt-6 grid grid-cols-2 gap-3">
+          <button type="button" onClick={onDeposit} className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-yellow-400 to-amber-500 px-3 py-3 font-black text-[#211329] shadow-lg shadow-yellow-950/20">
+            <span className="text-lg">＋</span> Deposit
+          </button>
+          <button type="button" onClick={onWithdraw} className="flex items-center justify-center gap-2 rounded-xl border border-purple-400/50 bg-purple-950/60 px-3 py-3 font-black text-white">
+            <span className="text-lg">↗</span> Withdraw
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-purple-900 bg-[#0d0d1c] p-4">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div>
+            <h3 className="font-black text-white">Recent Transactions</h3>
+            <p className="mt-1 text-xs text-slate-400">Your latest wallet activity</p>
+          </div>
+          <button type="button" onClick={onViewAll} className="shrink-0 text-xs font-bold text-yellow-300 hover:text-yellow-200">View All →</button>
+        </div>
+
+        {loading && <p className="py-5 text-center text-sm text-slate-400">Loading transactions...</p>}
+        {!loading && error && <p className="rounded-lg border border-red-900 bg-red-950/30 p-3 text-sm text-red-300">{error}</p>}
+        {!loading && !error && transactions.length === 0 && <p className="py-5 text-center text-sm text-slate-400">No transactions yet.</p>}
+        {!loading && !error && transactions.map((row) => (
+          <div key={row.id} className="flex items-center justify-between gap-3 border-t border-purple-950 py-3 first:border-0">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-bold text-white">{row.title || row.kind || 'Transaction'}</p>
+              <p className="mt-1 truncate text-xs text-slate-400">{row.detail || (row.createdAt ? new Date(row.createdAt).toLocaleString() : '')}</p>
+              <p className="mt-1 text-[11px] uppercase text-slate-500">{row.status || '—'}</p>
+            </div>
+            <p className={`shrink-0 text-sm font-black ${row.direction === 'IN' ? 'text-emerald-300' : 'text-amber-300'}`}>
+              {row.direction === 'IN' ? '+' : '−'}{Number(row.amount ?? 0).toLocaleString('en-IN')}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+
 function GameApp() {
 
   const [selectedColor, setSelectedColor] = useState('')
@@ -1541,6 +1627,15 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
 )}
 
           
+{page === 'Wallet' && (
+  <WalletPage
+    currentUser={currentUser}
+    onDeposit={() => isAuthenticated ? setPage('Add Funds') : setPage('Login')}
+    onWithdraw={() => isAuthenticated ? setPage('Transaction History') : setPage('Login')}
+    onViewAll={() => isAuthenticated ? setPage('Transaction History') : setPage('Login')}
+  />
+)}
+
 {page === 'Add Funds' && (
   <AddFunds onBack={() => { setPage('Profile'); loadUserProfile() }} onBalanceChange={loadUserProfile} />
 )}
@@ -1754,9 +1849,10 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
 
         </main>
 
-        <nav className="fixed bottom-0 left-0 z-20 grid w-full grid-cols-4 border-t border-purple-900 bg-[#080817]">
+        <nav className="fixed bottom-0 left-0 z-20 grid w-full grid-cols-5 border-t border-purple-900 bg-[#080817]">
           {[
             ['Home', '⌂'],
+            ['Wallet', '◈'],
             ['Results', '▤'],
             ['Rewards', '♔'],
             ['Profile', '♙'],
