@@ -69,6 +69,7 @@ public class AdminDepositController {
     private Map<String, Object> toAdminView(Deposit deposit) {
         Map<String, Object> view = new LinkedHashMap<>();
         view.put("publicId", deposit.getPublicId());
+        view.put("userId", deposit.getUser().getId());
         view.put("username", deposit.getUser().getUsername());
         view.put("amount", deposit.getAmountRequested());
         view.put("amountConfirmed", deposit.getAmountConfirmed());
