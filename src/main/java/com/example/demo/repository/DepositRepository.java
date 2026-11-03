@@ -21,6 +21,8 @@ public interface DepositRepository extends JpaRepository<Deposit, Long> {
 
     List<Deposit> findByStatusOrderByCreatedAtAsc(String status);
 
+    List<Deposit> findAllByOrderByCreatedAtDesc();
+
     long countByUserIdAndStatusIn(Long userId, List<String> statuses);
 
     List<Deposit> findByStatusAndExpiresAtBefore(String status, OffsetDateTime time);
