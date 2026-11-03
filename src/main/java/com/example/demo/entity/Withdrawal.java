@@ -1,5 +1,6 @@
 package com.example.demo.entity;
 
+import com.example.demo.crypto.PayoutDataConverter;
 import jakarta.persistence.*;
 import java.time.OffsetDateTime;
 
@@ -24,19 +25,24 @@ public class Withdrawal {
     @Column(name = "payout_method", length = 10)
     private String payoutMethod;
 
-    @Column(name = "account_holder_name", length = 100)
+    @Convert(converter = PayoutDataConverter.class)
+    @Column(name = "account_holder_name", length = 512)
     private String accountHolderName;
 
-    @Column(name = "upi_id", length = 100)
+    @Convert(converter = PayoutDataConverter.class)
+    @Column(name = "upi_id", length = 512)
     private String upiId;
 
-    @Column(name = "bank_name", length = 100)
+    @Convert(converter = PayoutDataConverter.class)
+    @Column(name = "bank_name", length = 512)
     private String bankName;
 
-    @Column(name = "bank_account_number", length = 34)
+    @Convert(converter = PayoutDataConverter.class)
+    @Column(name = "bank_account_number", length = 512)
     private String bankAccountNumber;
 
-    @Column(name = "bank_ifsc", length = 11)
+    @Convert(converter = PayoutDataConverter.class)
+    @Column(name = "bank_ifsc", length = 512)
     private String bankIfsc;
 
     @Column(nullable = false, length = 20)
