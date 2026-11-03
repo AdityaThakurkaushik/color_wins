@@ -49,7 +49,7 @@ public class WalletHistoryService {
 
     @Transactional
     public Withdrawal requestWithdrawal(Long userId, long amount) {
-        return requestWithdrawal(userId, amount, null, null, null, null, null, null);
+        throw new IllegalArgumentException("Payout details are required for a withdrawal request");
     }
 
     @Transactional
