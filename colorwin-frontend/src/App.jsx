@@ -145,12 +145,12 @@ useEffect(() => {
 
   async function shareReferral() {
     const text =
-      `ColorWin join karein! Mere referral link se signup karein: ${referralLink}`
+      `MILLIONAIRE HUB join karein! Mere referral link se signup karein: ${referralLink}`
 
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Join ColorWin',
+          title: 'Join MILLIONAIRE HUB',
           text,
           url: referralLink,
         })
@@ -1088,18 +1088,17 @@ setResultPopup({
     <div className="min-h-screen bg-[#03030c] text-white">
       <div className="mx-auto min-h-screen w-full border-x border-purple-950 pb-24">
        
-<header className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-purple-900 bg-[#080817] px-3 py-3">
-  <button
-    aria-label="Menu"
-    onClick={() => setPage('Home')}
-    className="text-2xl"
-  >
-    ☰
-  </button>
-
-  <h1 className="text-lg font-black">
-    👑 Color<span className="text-fuchsia-400">Win</span>
-  </h1>
+<header className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-purple-900 bg-[#080817] px-2 py-2 sm:px-3 sm:py-3">
+  <div className="flex min-w-0 items-center gap-2">
+    <img
+      src="/millionaire-hub-logo.svg"
+      alt="Millionaire Hub"
+      className="h-10 w-10 shrink-0 rounded-full object-contain sm:h-12 sm:w-12"
+    />
+    <h1 className="min-w-0 text-[13px] font-black leading-tight text-yellow-300 sm:text-lg">
+      MILLIONAIRE<br className="sm:hidden" /> HUB
+    </h1>
+  </div>
 
  {isAuthenticated && (
   <div ref={notificationPanelRef} className="relative">
@@ -1204,8 +1203,16 @@ setResultPopup({
     </div>
   )}
 
-  <div className="rounded-full border border-yellow-500/50 bg-slate-900 px-2 py-2 text-xs text-yellow-300">
-    🪙 {(currentUser?.virtualPoints ?? 0).toLocaleString('en-IN')}
+  <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+    <div className="rounded-full border border-yellow-500/50 bg-slate-900 px-2 py-2 text-xs text-yellow-300">
+      🪙 {(currentUser?.virtualPoints ?? 0).toLocaleString('en-IN')}
+    </div>
+    <button
+      onClick={() => isAuthenticated ? setPage('Add Funds') : setPage('Login')}
+      className="shrink-0 rounded-full border border-yellow-300 bg-gradient-to-b from-yellow-300 to-amber-500 px-2.5 py-2 text-[11px] font-black text-black shadow-md shadow-yellow-500/20 sm:px-4 sm:text-sm"
+    >
+      + Add Funds
+    </button>
   </div>
 
   {!isAuthenticated && (
@@ -1224,9 +1231,10 @@ setResultPopup({
 
           {page === 'Home' && (
             <>
-<section className="rounded-2xl border border-purple-700 bg-gradient-to-r from-purple-950 via-fuchsia-950 to-[#080817] px-3 py-2">                <p className="text-xs font-bold uppercase tracking-[0.25em] text-yellow-300">
-                  ColorWin presents
+<section className="relative overflow-hidden rounded-2xl border border-purple-700 bg-gradient-to-r from-purple-950 via-fuchsia-950 to-[#080817] px-3 py-3">                <p className="relative z-10 text-xs font-bold uppercase tracking-[0.25em] text-yellow-300">
+                  MILLIONAIRE HUB PRESENTS
                 </p>
+                <span aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-5xl opacity-90 drop-shadow-[0_0_12px_rgba(250,204,21,0.6)] sm:text-6xl">♛</span>
                 <h2 className="mt-1 text-xl font-black">PREDICT COLORS</h2>
                 <p className="text-sm font-bold text-fuchsia-300">FREE-TO-PLAY</p>
                 <p className="mt-1 text-xs text-slate-300">
@@ -1786,7 +1794,7 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
 
     <h2 className="text-xl font-black text-white">Help &amp; Support</h2>
     <p className="text-sm text-slate-400">
-      Need help with ColorWin? Contact our support team.
+      Need help with MILLIONAIRE HUB? Contact our support team.
     </p>
 
     <div className="rounded-xl border border-slate-700 bg-[#101020] p-3">
@@ -1830,13 +1838,13 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
     </h2>
 
     <p className="text-sm text-slate-400">
-      Please read the rules for using ColorWin.
+      Please read the rules for using MILLIONAIRE HUB.
     </p>
 
     <div className="space-y-4 text-sm leading-6 text-slate-300">
       <div>
         <h3 className="font-bold text-white">1. Use of the App</h3>
-        <p>Users must follow the applicable rules and instructions of ColorWin.</p>
+        <p>Users must follow the applicable rules and instructions of MILLIONAIRE HUB.</p>
       </div>
 
       <div>
