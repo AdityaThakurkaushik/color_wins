@@ -34,15 +34,17 @@ public class ApprovalDeskController {
     public record RejectRequest(@NotBlank String reason) {}
 
     @GetMapping("/deposits")
-    public List<Map<String, Object>> waiting() {
+    public List<Map<String, Object>> waiting(Authentication authentication) {
+        agent(authentication);
         return depositService.listSubmitted().stream().map(this::view).toList();
     }
 
     @PostMapping("/deposits/{publicId}/approve")
     public Map<String, Object> approve(@PathVariable String publicId, Authentication authentication) {
+        ReviewAgent authorizedAgent = agent(authentication);
         Deposit deposit = depositService.approve(publicId);
         reviewAgentService.record(
-                agent(authentication),
+                authorizedAgent,
                 "DEPOSIT",
                 "APPROVE",
                 deposit.getPublicId(),
@@ -57,9 +59,10 @@ public class ApprovalDeskController {
             @PathVariable String publicId,
             @Valid @RequestBody RejectRequest request,
             Authentication authentication) {
+        ReviewAgent authorizedAgent = agent(authentication);
         Deposit deposit = depositService.reject(publicId, request.reason());
         reviewAgentService.record(
-                agent(authentication),
+                authorizedAgent,
                 "DEPOSIT",
                 "REJECT",
                 deposit.getPublicId(),
@@ -73,8 +76,11 @@ public class ApprovalDeskController {
     }
 
     private ReviewAgent agent(Authentication authentication) {
-        String name = authentication.getName();
-        long id = Long.parseLong(name.substring("agent:".length()));
+        if (authentication == null || authentication.getName() == null
+                || !authentication.getName().startsWith("agent:")) {
+            throw new org.springframework.security.access.AccessDeniedException("Approval agent access required");
+        }
+        long id = Long.parseLong(authentication.getName().substring("agent:".length()));
         return reviewAgentService.require(id, "APPROVAL");
     }
 

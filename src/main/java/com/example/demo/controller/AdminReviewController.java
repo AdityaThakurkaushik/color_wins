@@ -23,6 +23,7 @@ public class AdminReviewController {
     }
 
     public record CreateAgentRequest(@NotBlank String agentId, @NotBlank String password, @NotBlank String kind) {}
+    public record AgentStatusRequest(boolean active) {}
 
     @PostMapping("/agents")
     public Map<String, Object> create(@Valid @RequestBody CreateAgentRequest request) {
@@ -32,6 +33,14 @@ public class AdminReviewController {
     @GetMapping("/agents")
     public List<Map<String, Object>> agents(@RequestParam String kind) {
         return reviewAgentService.list(normalizeKind(kind)).stream().map(this::agentView).toList();
+    }
+
+    @PatchMapping("/agents/{id}/status")
+    public Map<String, Object> updateAgentStatus(
+            @PathVariable Long id,
+            @RequestParam String kind,
+            @Valid @RequestBody AgentStatusRequest request) {
+        return agentView(reviewAgentService.setActive(id, normalizeKind(kind), request.active()));
     }
 
     @GetMapping("/activity")

@@ -60,6 +60,17 @@ public class ReviewAgentService {
         return agentRepository.findByKindOrderByCreatedAtDesc(kind);
     }
 
+    @Transactional
+    public ReviewAgent setActive(Long id, String kind, boolean active) {
+        ReviewAgent agent = agentRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Agent not found"));
+        if (!agent.getKind().equals(kind)) {
+            throw new IllegalArgumentException("Agent not found");
+        }
+        agent.setActive(active);
+        return agentRepository.save(agent);
+    }
+
     @Transactional(readOnly = true)
     public ReviewAgent require(Long id, String kind) {
         ReviewAgent agent = agentRepository.findById(id)
