@@ -3,6 +3,7 @@ import React from 'react'
 import { API } from '../api.js'
 import FundRequests from './FundRequests.jsx'
 import AgentAdmin from './AgentAdmin.jsx'
+import AdminWithdrawals from './AdminWithdrawals.jsx'
 
 const menuItems = [
   'Dashboard',
@@ -16,6 +17,7 @@ const menuItems = [
   'Fund Requests',
   'Approval Agents',
   'Withdraw Agents',
+  'Withdrawals',
   'Rewards & Offers',
   'Live Activity Messages',
   'Announcements',
@@ -1305,6 +1307,8 @@ React.useEffect(() => {
               </div>
             )}
                  </section>
+        ) : activePage === 'Withdrawals' ? (
+          <AdminWithdrawals />
         ) : activePage === 'Announcements' ? (
           <section className="space-y-4">
            <div className="grid gap-4 xl:grid-cols-2">

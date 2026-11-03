@@ -16,6 +16,8 @@ public interface WithdrawalRepository extends JpaRepository<Withdrawal, Long> {
 
     List<Withdrawal> findByStatusOrderByCreatedAtAsc(String status);
 
+    List<Withdrawal> findAllByOrderByCreatedAtDesc();
+
     Optional<Withdrawal> findByPublicId(String publicId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
