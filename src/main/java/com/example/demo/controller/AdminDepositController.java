@@ -8,6 +8,7 @@ import com.example.demo.telegram.TelegramNotifier;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -37,6 +38,7 @@ public class AdminDepositController {
     public record RejectRequest(@NotBlank String reason) {}
 
     @GetMapping("/deposits")
+    @Transactional(readOnly = true)
     public List<Map<String, Object>> submitted() {
         return depositRepository.findAllByOrderByCreatedAtDesc().stream().map(this::toAdminView).toList();
     }
