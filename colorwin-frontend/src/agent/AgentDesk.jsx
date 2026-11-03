@@ -134,7 +134,22 @@ export default function AgentDesk({ panel }) {
             <div key={row.publicId} className="rounded-xl border border-purple-900 bg-[#091126] p-4">
               <p className="font-bold">{row.publicId} · {row.username}</p>
               <p className="text-sm text-slate-300">{row.amount} coins{row.utr ? ` · UTR ${row.utr}` : ''}</p>
-              {row.upiId && <p className="text-xs text-slate-400">{row.methodLabel} · {row.upiId}</p>}
+              {!approval && (
+                <div className="mt-2 rounded-lg border border-slate-700 bg-[#050817] p-3 text-sm">
+                  <p className="font-bold text-amber-200">Payout details</p>
+                  <p className="text-slate-300">Account holder: {row.accountHolderName || '—'}</p>
+                  <p className="text-slate-300">Method: {row.payoutMethod || '—'}</p>
+                  {row.payoutMethod === 'UPI' ? (
+                    <p className="break-all text-slate-300">UPI ID: {row.upiId || '—'}</p>
+                  ) : (
+                    <>
+                      <p className="text-slate-300">Bank: {row.bankName || '—'}</p>
+                      <p className="break-all text-slate-300">Account number: {row.bankAccountNumber || '—'}</p>
+                      <p className="text-slate-300">IFSC: {row.bankIfsc || '—'}</p>
+                    </>
+                  )}
+                </div>
+              )}
               <div className="mt-2 space-y-1">
                 {rejectReasons.map((reason) => (
                   <button key={reason} type="button" onClick={() => act(row.publicId, 'reject', reason)} className="block w-full rounded-lg border border-red-900 px-3 py-2 text-left text-xs text-red-200">{reason}</button>

@@ -19,6 +19,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Locale;
 
 @Service
 public class WalletHistoryService {
@@ -48,8 +49,44 @@ public class WalletHistoryService {
 
     @Transactional
     public Withdrawal requestWithdrawal(Long userId, long amount) {
+        throw new IllegalArgumentException("Payout details are required for a withdrawal request");
+    }
+
+    @Transactional
+    public Withdrawal requestWithdrawal(
+            Long userId, long amount, String payoutMethod, String accountHolderName,
+            String upiId, String bankName, String bankAccountNumber, String bankIfsc) {
         if (amount < MIN_WITHDRAWAL || amount > MAX_WITHDRAWAL) {
             throw new IllegalArgumentException("Withdrawal must be between 10 and 5000");
+        }
+
+        String method = payoutMethod == null ? "" : payoutMethod.trim().toUpperCase(Locale.ROOT);
+        String holder = accountHolderName == null ? "" : accountHolderName.trim();
+        String normalizedUpi = clean(upiId);
+        String normalizedBank = clean(bankName);
+        String normalizedAccount = clean(bankAccountNumber);
+        String normalizedIfsc = bankIfsc == null ? null : bankIfsc.trim().toUpperCase(Locale.ROOT);
+
+        if (holder.isBlank() || holder.length() > 100) {
+            throw new IllegalArgumentException("Enter a valid account holder name");
+        }
+        if ("UPI".equals(method)) {
+            if (normalizedUpi == null || normalizedUpi.length() > 100
+                    || !normalizedUpi.matches("[A-Za-z0-9._-]{2,}@[A-Za-z0-9.-]{2,}")) {
+                throw new IllegalArgumentException("Enter a valid UPI ID");
+            }
+            normalizedBank = null;
+            normalizedAccount = null;
+            normalizedIfsc = null;
+        } else if ("BANK".equals(method)) {
+            if (normalizedBank == null || normalizedBank.length() > 100
+                    || normalizedAccount == null || !normalizedAccount.matches("[0-9]{6,34}")
+                    || normalizedIfsc == null || !normalizedIfsc.matches("[A-Z]{4}0[A-Z0-9]{6}")) {
+                throw new IllegalArgumentException("Enter valid bank name, account number and IFSC");
+            }
+            normalizedUpi = null;
+        } else {
+            throw new IllegalArgumentException("Choose UPI or Bank payout method");
         }
 
         User user = userRepository.findByIdForUpdate(userId)
@@ -59,7 +96,8 @@ public class WalletHistoryService {
         }
 
         Withdrawal withdrawal = withdrawalRepository.save(
-                new Withdrawal(newPublicId(), user, amount));
+                new Withdrawal(newPublicId(), user, amount, method, holder,
+                        normalizedUpi, normalizedBank, normalizedAccount, normalizedIfsc));
 
         user.setVirtualPoints(user.getVirtualPoints() - amount);
         pointsTransactionRepository.save(new PointsTransaction(
@@ -69,6 +107,11 @@ public class WalletHistoryService {
                 "WITHDRAWAL_" + withdrawal.getPublicId(),
                 "Withdrawal " + withdrawal.getPublicId() + " requested"));
         return withdrawal;
+    }
+
+    private String clean(String value) {
+        if (value == null || value.isBlank()) return null;
+        return value.trim();
     }
 
     @Transactional(readOnly = true)
