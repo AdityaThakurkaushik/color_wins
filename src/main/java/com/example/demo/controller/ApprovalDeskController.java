@@ -41,9 +41,10 @@ public class ApprovalDeskController {
 
     @PostMapping("/deposits/{publicId}/approve")
     public Map<String, Object> approve(@PathVariable String publicId, Authentication authentication) {
+        ReviewAgent authorizedAgent = agent(authentication);
         Deposit deposit = depositService.approve(publicId);
         reviewAgentService.record(
-                agent(authentication),
+                authorizedAgent,
                 "DEPOSIT",
                 "APPROVE",
                 deposit.getPublicId(),
@@ -58,9 +59,10 @@ public class ApprovalDeskController {
             @PathVariable String publicId,
             @Valid @RequestBody RejectRequest request,
             Authentication authentication) {
+        ReviewAgent authorizedAgent = agent(authentication);
         Deposit deposit = depositService.reject(publicId, request.reason());
         reviewAgentService.record(
-                agent(authentication),
+                authorizedAgent,
                 "DEPOSIT",
                 "REJECT",
                 deposit.getPublicId(),
