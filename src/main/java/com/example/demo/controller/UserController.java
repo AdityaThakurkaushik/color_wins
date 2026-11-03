@@ -8,7 +8,9 @@ import com.example.demo.telegram.TelegramLinkService;
 import com.example.demo.telegram.TelegramNotifier;
 import com.example.demo.telegram.TelegramSettings;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -46,51 +48,40 @@ public class UserController {
         this.telegramNotifier = telegramNotifier;
     }
 
-    public record WithdrawRequest(@NotNull Long amount) {}
+    public record WithdrawRequest(
+            @NotNull Long amount,
+            @NotBlank @Size(max = 100) String accountHolderName,
+            @NotBlank String payoutMethod,
+            String upiId,
+            String bankName,
+            String bankAccountNumber,
+            String bankIfsc) {}
 
     @GetMapping("/me")
     public ResponseEntity<?> getCurrentUser(Authentication authentication) {
-
         String username = authentication.getName();
-
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() ->
-                        new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         return ResponseEntity.ok(Map.of(
                 "username", user.getUsername(),
                 "email", user.getEmail(),
-                "phoneNumber",user.getMobileNumber(),
+                "phoneNumber", user.getMobileNumber(),
                 "virtualPoints", user.getVirtualPoints(),
                 "role", user.getRole(),
-                "referralCode", user.getReferralCode() == null
-                        ? ""
-                        : user.getReferralCode()
+                "referralCode", user.getReferralCode() == null ? "" : user.getReferralCode()
         ));
     }
 
     @GetMapping("/referral-stats")
-    public ResponseEntity<?> getReferralStats(
-            Authentication authentication) {
-
+    public ResponseEntity<?> getReferralStats(Authentication authentication) {
         String username = authentication.getName();
-
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() ->
-                        new IllegalArgumentException("User not found"));
-
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
         String referralCode = user.getReferralCode();
-
-        long totalReferrals = referralCode == null
-                ? 0
-                : userRepository.countByReferredByCode(referralCode);
-
-        Long earnedCoins = pointsTransactionRepository
-                .sumReferralRewardsByUserId(user.getId());
-
-        if (earnedCoins == null) {
-            earnedCoins = 0L;
-        }
+        long totalReferrals = referralCode == null ? 0 : userRepository.countByReferredByCode(referralCode);
+        Long earnedCoins = pointsTransactionRepository.sumReferralRewardsByUserId(user.getId());
+        if (earnedCoins == null) earnedCoins = 0L;
 
         return ResponseEntity.ok(Map.of(
                 "totalReferrals", totalReferrals,
@@ -111,7 +102,10 @@ public class UserController {
             @Valid @RequestBody WithdrawRequest request,
             Authentication authentication) {
         User user = currentUser(authentication);
-        var withdrawal = walletHistoryService.requestWithdrawal(user.getId(), request.amount());
+        var withdrawal = walletHistoryService.requestWithdrawal(
+                user.getId(), request.amount(), request.payoutMethod(),
+                request.accountHolderName(), request.upiId(), request.bankName(),
+                request.bankAccountNumber(), request.bankIfsc());
         telegramNotifier.withdrawalRequested(
                 withdrawal.getPublicId(), user.getUsername(), withdrawal.getAmount());
         return ResponseEntity.ok(Map.of(
