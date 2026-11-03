@@ -1093,7 +1093,7 @@ setResultPopup({
     <img
       src="/millionaire-hub-logo.svg"
       alt="Millionaire Hub"
-      className="h-10 w-10 shrink-0 rounded-full object-contain sm:h-12 sm:w-12"
+      className="h-10 w-10 shrink-0 rounded-full object-contain ring-1 ring-yellow-500/60 sm:h-12 sm:w-12"
     />
     <h1 className="min-w-0 text-[13px] font-black leading-tight text-yellow-300 sm:text-lg">
       MILLIONAIRE<br className="sm:hidden" /> HUB
@@ -1234,7 +1234,7 @@ setResultPopup({
 <section className="relative overflow-hidden rounded-2xl border border-purple-700 bg-gradient-to-r from-purple-950 via-fuchsia-950 to-[#080817] px-3 py-3">                <p className="relative z-10 text-xs font-bold uppercase tracking-[0.25em] text-yellow-300">
                   MILLIONAIRE HUB PRESENTS
                 </p>
-                <span aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-5xl opacity-90 drop-shadow-[0_0_12px_rgba(250,204,21,0.6)] sm:text-6xl">♛</span>
+                <img src="/millionaire-hub-crown.svg" alt="" aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 h-20 w-28 -translate-y-1/2 object-contain drop-shadow-[0_0_12px_rgba(250,204,21,0.65)] sm:h-28 sm:w-36" />
                 <h2 className="mt-1 text-xl font-black">PREDICT COLORS</h2>
                 <p className="text-sm font-bold text-fuchsia-300">FREE-TO-PLAY</p>
                 <p className="mt-1 text-xs text-slate-300">
