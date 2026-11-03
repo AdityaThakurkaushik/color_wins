@@ -1792,7 +1792,7 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
 
 
 {page === 'Help & Support' && (
-  <section className="space-y-3 rounded-xl border border-purple-800 bg-[#0d0d1c] p-3">
+  <section className="space-y-4 rounded-2xl border border-purple-800 bg-[#0d0d1c] p-4">
     <button
       onClick={() => setPage('Profile')}
       className="text-sm font-semibold text-purple-300"
@@ -1800,33 +1800,69 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
       ← Back to Profile
     </button>
 
-    <h2 className="text-xl font-black text-white">Help &amp; Support</h2>
-    <p className="text-sm text-slate-400">
-      Need help with MILLIONAIRE HUB? Contact our support team.
-    </p>
-
-    <div className="rounded-xl border border-slate-700 bg-[#101020] p-3">
-      <p className="font-bold text-white">Email Support</p>
-      <p className="mt-1 break-all text-purple-300">
-        YOUR_SUPPORT_EMAIL
-      </p>
-      <p className="mt-1 text-xs text-slate-400">
-        Replace this with your official support email.
-      </p>
+    <div className="flex items-center gap-3">
+      <img src="/millionaire-hub-logo.svg" alt="Millionaire Hub" className="h-12 w-12 shrink-0 rounded-full object-contain" />
+      <div>
+        <h2 className="text-xl font-black text-white">Help &amp; Support</h2>
+        <p className="text-sm text-slate-400">We are here to help. Choose a support channel below.</p>
+      </div>
     </div>
 
-    <div className="rounded-xl border border-slate-700 bg-[#101020] p-3">
-      <p className="font-bold text-white">Phone Support</p>
-      <p className="mt-2 text-purple-300">YOUR_SUPPORT_PHONE</p>
-      <p className="mt-1 text-xs text-slate-400">
-        Replace this with your official support number.
-      </p>
-    </div>
+    <a
+      href="https://t.me/+AOUyE2vVTNM0MmNI"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex w-full items-center gap-3 rounded-xl border border-sky-700/70 bg-[#101a2b] p-4 transition hover:border-sky-400 hover:bg-[#14243a] focus:outline-none focus:ring-2 focus:ring-sky-400"
+    >
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sky-500/15 text-sky-300">
+        <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor" aria-hidden="true"><path d="M21.7 4.3 18.5 20c-.2 1.1-.9 1.4-1.8.9l-5-3.7-2.4 2.3c-.3.3-.5.5-1 .5l.4-5.1 9.3-8.4c.4-.4-.1-.6-.6-.2L6 13.5l-4.9-1.5c-1.1-.3-1.1-1 .2-1.5L20 3.2c.9-.3 1.9.2 1.7 1.1Z"/></svg>
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-bold text-white">Join Telegram Group</span>
+        <span className="mt-1 block text-xs text-slate-400">Community updates, announcements and offers</span>
+      </span>
+      <span className="text-lg text-sky-300">↗</span>
+    </a>
 
-    <div className="rounded-xl border border-slate-700 bg-[#101020] p-3">
-      <p className="font-bold text-white">Frequently Asked Questions</p>
+    <a
+      href="https://t.me/MillionaireHub_support"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex w-full items-center gap-3 rounded-xl border border-sky-700/70 bg-[#101a2b] p-4 transition hover:border-sky-400 hover:bg-[#14243a] focus:outline-none focus:ring-2 focus:ring-sky-400"
+    >
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sky-500/15 text-sky-300">
+        <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor" aria-hidden="true"><path d="M21.7 4.3 18.5 20c-.2 1.1-.9 1.4-1.8.9l-5-3.7-2.4 2.3c-.3.3-.5.5-1 .5l.4-5.1 9.3-8.4c.4-.4-.1-.6-.6-.2L6 13.5l-4.9-1.5c-1.1-.3-1.1-1 .2-1.5L20 3.2c.9-.3 1.9.2 1.7 1.1Z"/></svg>
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-bold text-white">Telegram Support</span>
+        <span className="mt-1 block break-all text-xs text-slate-400">@MillionaireHub_support</span>
+      </span>
+      <span className="text-lg text-sky-300">↗</span>
+    </a>
+
+    <a
+      href="https://wa.me/918292216726"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex w-full items-center gap-3 rounded-xl border border-emerald-700/70 bg-[#102019] p-4 transition hover:border-emerald-400 hover:bg-[#142b20] focus:outline-none focus:ring-2 focus:ring-emerald-400"
+    >
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300">
+        <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor" aria-hidden="true"><path d="M20.5 3.5A11.8 11.8 0 0 0 2 17.7L.5 23.5l6-1.6A11.8 11.8 0 0 0 20.5 3.5ZM12 21a9.7 9.7 0 0 1-4.9-1.3l-.4-.2-3.6 1 1-3.5-.2-.4A9.7 9.7 0 1 1 12 21Zm5.3-7.3c-.3-.1-1.6-.8-1.9-.9-.3-.1-.4-.1-.6.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1a7.9 7.9 0 0 1-2.3-1.4 8.6 8.6 0 0 1-1.6-2c-.2-.3 0-.4.1-.6l.4-.5c.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5l-.9-2.1c-.2-.5-.5-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.3.3-1 1-1 2.4s1 2.8 1.1 3c.1.2 2 3.1 4.8 4.3 2.4 1 2.9.8 3.4.8.5-.1 1.6-.7 1.8-1.3.2-.6.2-1.1.2-1.3-.1-.2-.3-.3-.5-.4Z"/></svg>
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-bold text-white">WhatsApp Support</span>
+        <span className="mt-1 block text-xs text-slate-400">Chat with our support team</span>
+      </span>
+      <span className="text-lg text-emerald-300">↗</span>
+    </a>
+
+    <div className="rounded-xl border border-purple-800/70 bg-[#101020] p-4">
+      <div className="flex items-center gap-2">
+        <img src="/millionaire-hub-logo.svg" alt="" aria-hidden="true" className="h-7 w-7 rounded-full object-contain" />
+        <p className="font-bold text-white">Frequently Asked Questions</p>
+      </div>
       <p className="mt-2 text-sm text-slate-300">
-        For account or game-related issues, contact our support team.
+        For account, deposit, withdrawal or game-related issues, contact us through Telegram or WhatsApp support.
       </p>
     </div>
   </section>
