@@ -1091,7 +1091,7 @@ setResultPopup({
 <header className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-purple-900 bg-[#080817] px-2 py-2 sm:px-3 sm:py-3">
   <div className="flex min-w-0 items-center gap-2">
     <img
-      src="/millionaire-hub-logo.png"
+      src="/millionaire-hub-logo.svg"
       alt="Millionaire Hub"
       className="h-10 w-10 shrink-0 rounded-full object-contain sm:h-12 sm:w-12"
     />
