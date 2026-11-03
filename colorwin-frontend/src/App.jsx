@@ -1536,6 +1536,31 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
             </section>
           )}
 
+          {page === 'Wallet' && (
+  <section className="space-y-4 pb-4">
+    <div className="rounded-2xl border border-purple-700 bg-gradient-to-r from-purple-950 to-[#101020] p-5">
+      <p className="text-sm text-purple-300">Available Balance</p>
+      <h2 className="mt-2 text-3xl font-black text-yellow-300">
+        {(currentUser?.virtualPoints ?? 0).toLocaleString('en-IN')} Points
+      </h2>
+    </div>
+
+    <button
+      onClick={() => isAuthenticated ? setPage('Add Funds') : setPage('Login')}
+      className="w-full rounded-xl border border-purple-700 bg-[#101020] p-4 text-left font-bold text-white"
+    >
+      Add Funds — UPI / QR
+    </button>
+
+    <button
+      onClick={() => isAuthenticated ? setPage('Transaction History') : setPage('Login')}
+      className="w-full rounded-xl border border-purple-700 bg-[#101020] p-4 text-left font-bold text-white"
+    >
+      Transaction History & Withdrawals
+    </button>
+  </section>
+)}
+
           {page === 'Rewards' && (
   <ReferralPage currentUser={currentUser} />
 )}
@@ -1754,25 +1779,34 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
 
         </main>
 
-        <nav className="fixed bottom-0 left-0 z-20 grid w-full grid-cols-4 border-t border-purple-900 bg-[#080817]">
-          {[
-            ['Home', '⌂'],
-            ['Results', '▤'],
-            ['Rewards', '♔'],
-            ['Profile', '♙'],
-          ].map(([name, icon]) => (
-            <button
-              key={name}
-              onClick={() => setPage(name)}
-              className={`flex flex-col items-center gap-1 py-3 text-xs ${
-                page === name ? 'text-fuchsia-400' : 'text-slate-400'
-              }`}
-            >
-              <span className="text-xl">{icon}</span>
-              {name}
-            </button>
-          ))}
-        </nav>
+       <nav className="fixed bottom-0 left-0 z-20 grid w-full grid-cols-5 border-t border-purple-900 bg-[#080817]">
+  {[
+    ['Home', '⌂'],
+    ['Results', '▤'],
+    ['Wallet', '▣'],
+    ['Rewards', '♔'],
+    ['Profile', '♙'],
+  ].map(([name, icon]) => (
+    <button
+      key={name}
+      onClick={() => setPage(name)}
+      className={`flex flex-col items-center justify-center gap-1 py-3 text-xs ${
+        page === name ? 'text-fuchsia-400' : 'text-slate-400'
+      }`}
+    >
+      <span
+        className={`text-xl ${
+          name === 'Wallet'
+            ? '-mt-5 flex h-12 w-12 items-center justify-center rounded-full border-2 border-purple-400 bg-purple-700 text-white shadow-lg'
+            : ''
+        }`}
+      >
+        {icon}
+      </span>
+      {name}
+    </button>
+  ))}
+</nav>
       </div>
 
       {/* WIN / LOST result popup */}
