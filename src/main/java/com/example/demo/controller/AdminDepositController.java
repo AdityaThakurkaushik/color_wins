@@ -3,6 +3,7 @@ package com.example.demo.controller;
 import com.example.demo.entity.Deposit;
 import com.example.demo.entity.PaymentMethod;
 import com.example.demo.service.DepositService;
+import com.example.demo.telegram.TelegramNotifier;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.web.bind.annotation.*;
@@ -16,9 +17,11 @@ import java.util.Map;
 public class AdminDepositController {
 
     private final DepositService depositService;
+    private final TelegramNotifier telegramNotifier;
 
-    public AdminDepositController(DepositService depositService) {
+    public AdminDepositController(DepositService depositService, TelegramNotifier telegramNotifier) {
         this.depositService = depositService;
+        this.telegramNotifier = telegramNotifier;
     }
 
     public record PaymentMethodRequest(
@@ -43,6 +46,9 @@ public class AdminDepositController {
     @PostMapping("/deposits/{publicId}/reject")
     public Map<String, Object> reject(@PathVariable String publicId, @Valid @RequestBody RejectRequest request) {
         Deposit deposit = depositService.reject(publicId, request.reason());
+        telegramNotifier.tellUser(
+                deposit.getUser().getTelegramId(),
+                deposit.getPublicId() + " was rejected.\\nReason: " + request.reason().trim());
         return toAdminView(deposit);
     }
 
