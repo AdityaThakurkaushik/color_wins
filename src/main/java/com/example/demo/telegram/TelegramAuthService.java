@@ -61,21 +61,31 @@ public class TelegramAuthService {
             throw new IllegalArgumentException("Telegram bot is not configured");
         }
         String token = randomToken();
-        tokenRepository.save(new TelegramLinkToken(
+        tokenRepository.saveAndFlush(new TelegramLinkToken(
                 token,
                 user,
                 OffsetDateTime.now().plusMinutes(20)));
         return "https://t.me/" + settings.username() + "?start=" + prefix + token;
     }
 
-    private User consumeToken(String token, long telegramId) {
+    private User consumeToken(String rawToken, long telegramId) {
+        String token = rawToken == null ? "" : rawToken.trim().toUpperCase();
         TelegramLinkToken link = tokenRepository.findById(token)
-                .orElseThrow(() -> new IllegalArgumentException("This Telegram link is invalid"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "This Telegram link is invalid. Website pe naya Forgot/Verify link open karo."));
         if (link.getUsedAt() != null) {
-            throw new IllegalArgumentException("This Telegram link was already used");
+            // Same Telegram account can retry within expiry to get a fresh reset/verify action.
+            User linkedUser = link.getUser();
+            if (linkedUser != null
+                    && linkedUser.getTelegramId() != null
+                    && linkedUser.getTelegramId() == telegramId
+                    && OffsetDateTime.now().isBefore(link.getExpiresAt())) {
+                return linkedUser;
+            }
+            throw new IllegalArgumentException("This Telegram link was already used. Website se naya link lo.");
         }
         if (!OffsetDateTime.now().isBefore(link.getExpiresAt())) {
-            throw new IllegalArgumentException("This Telegram link has expired");
+            throw new IllegalArgumentException("This Telegram link has expired. Website se naya link lo.");
         }
 
         userRepository.findByTelegramId(telegramId).ifPresent(other -> {

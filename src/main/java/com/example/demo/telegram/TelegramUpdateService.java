@@ -162,8 +162,14 @@ public class TelegramUpdateService {
                     deposit.getPublicId() + "\nAmount: " + deposit.getAmountRequested()
                             + " coins\nPay the UPI on the website, then send the UTR here.");
         }
+        if (payload == null || payload.isBlank()) {
+            return BotTurn.say(chatId,
+                    "Millionaire Hub bot ready.\n"
+                            + "Password reset / verify ke liye website wala Open Telegram button use karo.\n"
+                            + "Yahan sirf /start mat bhejo — deep link se Start dabao.");
+        }
         return BotTurn.say(chatId,
-                "ColorWin payments.\nConnect from Add Funds, then send your UTR here.");
+                "Unknown start link.\nWebsite se naya Forgot Password / Verify link open karo.");
     }
 
     private BotTurn onUtr(long chatId, long fromId, String utr) {

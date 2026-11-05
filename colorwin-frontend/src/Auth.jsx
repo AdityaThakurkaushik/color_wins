@@ -452,14 +452,19 @@ export default function Auth({ onLogin }) {
           )}
 
           {isReset && telegramDeepLink && (
-            <a
-              href={telegramDeepLink}
-              target="_blank"
-              rel="noreferrer"
-              className="block w-full rounded-2xl border border-sky-200 bg-gradient-to-b from-sky-300 to-blue-600 py-3.5 text-center font-black text-black shadow-[0_4px_0_#1e3a8a]"
-            >
-              Open Telegram for reset code
-            </a>
+            <div className="space-y-2 rounded-2xl border border-sky-400/30 bg-[#07111f] p-4">
+              <p className="text-sm font-bold text-sky-100">1) Neeche button se Telegram kholo</p>
+              <p className="text-sm font-bold text-sky-100">2) Bot me Start / Open dabao (manual /start mat likho)</p>
+              <p className="text-sm font-bold text-sky-100">3) Jo 6-digit code aaye yahan daalo</p>
+              <a
+                href={telegramDeepLink}
+                target="_blank"
+                rel="noreferrer"
+                className="block w-full rounded-2xl border border-sky-200 bg-gradient-to-b from-sky-300 to-blue-600 py-3.5 text-center font-black text-black shadow-[0_4px_0_#1e3a8a]"
+              >
+                Open Telegram for reset code
+              </a>
+            </div>
           )}
 
           {isReset && (
