@@ -32,7 +32,22 @@ public class User {
     private String referredByCode;
 
     @Column(name = "virtual_points", nullable = false)
-    private Long virtualPoints = 1000L;
+    private Long virtualPoints = 0L;
+
+    @Column(name = "display_name", length = 40)
+    private String displayName;
+
+    @Column(name = "profile_image")
+    private String profileImage;
+
+    @Column(length = 60)
+    private String state;
+
+    @Column
+    private Short age;
+
+    @Column(name = "email_verified", nullable = false)
+    private Boolean emailVerified = false;
 
     @Column(nullable = false, length = 20)
     private String role = "USER";
@@ -129,6 +144,50 @@ public class User {
             throw new IllegalArgumentException("Invalid virtual points balance");
         }
         this.virtualPoints = virtualPoints;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public void setDisplayName(String displayName) {
+        this.displayName = displayName;
+    }
+
+    public String getProfileImage() {
+        return profileImage;
+    }
+
+    public void setProfileImage(String profileImage) {
+        this.profileImage = profileImage;
+    }
+
+    public String getState() {
+        return state;
+    }
+
+    public void setState(String state) {
+        this.state = state;
+    }
+
+    public Short getAge() {
+        return age;
+    }
+
+    public void setAge(Short age) {
+        this.age = age;
+    }
+
+    public Boolean getEmailVerified() {
+        return emailVerified;
+    }
+
+    public boolean isEmailVerified() {
+        return Boolean.TRUE.equals(emailVerified);
+    }
+
+    public void setEmailVerified(Boolean emailVerified) {
+        this.emailVerified = emailVerified;
     }
 
     public String getRole() {

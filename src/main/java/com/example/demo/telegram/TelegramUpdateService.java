@@ -6,7 +6,10 @@ import com.example.demo.entity.Withdrawal;
 import com.example.demo.repository.DepositRepository;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.service.DepositService;
+import com.example.demo.service.EmailOtpService;
+import com.example.demo.service.RegistrationService;
 import com.example.demo.service.WalletHistoryService;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
@@ -20,27 +23,36 @@ public class TelegramUpdateService {
 
     private final TelegramSettings settings;
     private final TelegramLinkService linkService;
+    private final TelegramAuthService authService;
     private final TelegramChatRepository chatRepository;
     private final UserRepository userRepository;
     private final DepositRepository depositRepository;
     private final DepositService depositService;
     private final WalletHistoryService walletHistoryService;
+    private final RegistrationService registrationService;
+    private final EmailOtpService emailOtpService;
 
     public TelegramUpdateService(
             TelegramSettings settings,
             TelegramLinkService linkService,
+            TelegramAuthService authService,
             TelegramChatRepository chatRepository,
             UserRepository userRepository,
             DepositRepository depositRepository,
             DepositService depositService,
-            WalletHistoryService walletHistoryService) {
+            WalletHistoryService walletHistoryService,
+            @Lazy RegistrationService registrationService,
+            EmailOtpService emailOtpService) {
         this.settings = settings;
         this.linkService = linkService;
+        this.authService = authService;
         this.chatRepository = chatRepository;
         this.userRepository = userRepository;
         this.depositRepository = depositRepository;
         this.depositService = depositService;
         this.walletHistoryService = walletHistoryService;
+        this.registrationService = registrationService;
+        this.emailOtpService = emailOtpService;
     }
 
     public BotTurn onMessage(long chatId, long fromId, String text) {
@@ -99,6 +111,31 @@ public class TelegramUpdateService {
     }
 
     private BotTurn onStart(long chatId, long fromId, String payload) {
+        if (payload.startsWith("verify_")) {
+            try {
+                User user = authService.consumeVerify(payload.substring("verify_".length()), fromId);
+                registrationService.completeEmailVerification(user.getEmail());
+                remember(chatId, user, null);
+                return BotTurn.say(chatId,
+                        "Millionaire Hub account verified.\n"
+                                + "Welcome " + (user.getDisplayName() != null ? user.getDisplayName() : user.getUsername())
+                                + ".\nAb website pe Login karo.");
+            } catch (IllegalArgumentException ex) {
+                return BotTurn.say(chatId, ex.getMessage());
+            }
+        }
+        if (payload.startsWith("reset_")) {
+            try {
+                User user = authService.consumeReset(payload.substring("reset_".length()), fromId);
+                String code = emailOtpService.issueCode(user.getEmail(), EmailOtpService.PURPOSE_RESET);
+                remember(chatId, user, null);
+                return BotTurn.say(chatId,
+                        "Millionaire Hub password reset code: " + code
+                                + "\nYeh code website pe daalo. 10 minute valid hai.");
+            } catch (IllegalArgumentException ex) {
+                return BotTurn.say(chatId, ex.getMessage());
+            }
+        }
         if (payload.startsWith("link_")) {
             try {
                 String username = linkService.consume(payload.substring("link_".length()), fromId);

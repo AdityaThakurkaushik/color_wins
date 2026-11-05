@@ -1,15 +1,19 @@
 package com.example.demo.controller;
 
+import com.example.demo.entity.PlatformWalletPolicyAudit;
 import com.example.demo.entity.ReferralSettings;
 import com.example.demo.repository.BetRepository;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.service.BetService;
 import com.example.demo.service.CommissionSettingService;
 import com.example.demo.service.ReferralSettingsService;
+import com.example.demo.service.WalletPolicyService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -21,19 +25,22 @@ public class AdminController {
     private final ReferralSettingsService referralSettingsService;
     private final CommissionSettingService commissionSettingService;
     private final BetService betService;
+    private final WalletPolicyService walletPolicyService;
 
     public AdminController(
             UserRepository userRepository,
             BetRepository betRepository,
             ReferralSettingsService referralSettingsService,
             CommissionSettingService commissionSettingService,
-            BetService betService) {
+            BetService betService,
+            WalletPolicyService walletPolicyService) {
 
         this.userRepository = userRepository;
         this.betRepository = betRepository;
         this.referralSettingsService = referralSettingsService;
         this.commissionSettingService = commissionSettingService;
         this.betService = betService;
+        this.walletPolicyService = walletPolicyService;
     }
 
     @GetMapping("/health")
@@ -131,6 +138,47 @@ public class AdminController {
         ));
     }
 
+    @GetMapping("/wallet-policy")
+    public Map<String, Object> getWalletPolicy() {
+        return walletPolicyService.globalView();
+    }
+
+    @PutMapping("/wallet-policy")
+    public Map<String, Object> updateWalletPolicy(
+            Authentication authentication,
+            @RequestBody WalletPolicyRequest request) {
+        return walletPolicyService.updateGlobal(actor(authentication), request.toUpdate());
+    }
+
+    @GetMapping("/wallet-policy/users/{userId}")
+    public Map<String, Object> getUserWalletPolicy(@PathVariable Long userId) {
+        return walletPolicyService.userView(userId);
+    }
+
+    @PutMapping("/wallet-policy/users/{userId}")
+    public Map<String, Object> updateUserWalletPolicy(
+            Authentication authentication,
+            @PathVariable Long userId,
+            @RequestBody WalletPolicyRequest request) {
+        return walletPolicyService.updateUserOverride(actor(authentication), userId, request.toUpdate());
+    }
+
+    @DeleteMapping("/wallet-policy/users/{userId}")
+    public Map<String, Object> clearUserWalletPolicy(
+            Authentication authentication,
+            @PathVariable Long userId) {
+        return walletPolicyService.clearUserOverride(actor(authentication), userId);
+    }
+
+    @GetMapping("/wallet-policy/audit")
+    public List<PlatformWalletPolicyAudit> walletPolicyAudit() {
+        return walletPolicyService.recentAudit();
+    }
+
+    private String actor(Authentication authentication) {
+        return authentication == null ? "admin" : authentication.getName();
+    }
+
     public record ReferralSettingsRequest(
             Boolean enabled,
             Long referrerReward,
@@ -142,5 +190,31 @@ public class AdminController {
     public record CommissionSettingRequest(
             BigDecimal commissionPercent
     ) {
+    }
+
+    public record WalletPolicyRequest(
+            Boolean signupBonusEnabled,
+            Long signupBonusAmount,
+            Boolean firstWithdrawalCheckEnabled,
+            Long firstWithdrawalMinDeposits,
+            Boolean minWithdrawalEnabled,
+            Long minWithdrawalAmount,
+            Boolean clearSignupBonus,
+            Boolean clearFirstWithdrawal,
+            Boolean clearMinWithdrawal
+    ) {
+        WalletPolicyService.PolicyUpdate toUpdate() {
+            return new WalletPolicyService.PolicyUpdate(
+                    signupBonusEnabled,
+                    signupBonusAmount,
+                    firstWithdrawalCheckEnabled,
+                    firstWithdrawalMinDeposits,
+                    minWithdrawalEnabled,
+                    minWithdrawalAmount,
+                    Boolean.TRUE.equals(clearSignupBonus),
+                    Boolean.TRUE.equals(clearFirstWithdrawal),
+                    Boolean.TRUE.equals(clearMinWithdrawal)
+            );
+        }
     }
 }

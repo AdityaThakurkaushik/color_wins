@@ -15,12 +15,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.SecureRandom;
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Locale;
 
 @Service
 public class DepositService {
 
-    private static final long MIN_AMOUNT = 10L;
+    private static final long MIN_AMOUNT = 100L;
     private static final long MAX_AMOUNT = 5000L;
     private static final int EXPIRY_MINUTES = 15;
     private static final int MAX_OPEN = 3;
@@ -51,7 +50,7 @@ public class DepositService {
         expireOld();
 
         if (amount < MIN_AMOUNT || amount > MAX_AMOUNT) {
-            throw new IllegalArgumentException("Amount must be between 10 and 5000");
+            throw new IllegalArgumentException("Amount must be between 100 and 5000");
         }
 
         long open = depositRepository.countByUserIdAndStatusIn(
@@ -264,9 +263,9 @@ public class DepositService {
     }
 
     private String normalizeUtr(String raw) {
-        String utr = raw == null ? "" : raw.trim().toUpperCase(Locale.ROOT);
-        if (!utr.matches("^[A-Z0-9]{10,22}$")) {
-            throw new IllegalArgumentException("UTR must be 10 to 22 letters or digits");
+        String utr = raw == null ? "" : raw.replaceAll("[\\s-]", "");
+        if (!utr.matches("^[0-9]{12}$") || utr.chars().distinct().count() < 3) {
+            throw new IllegalArgumentException("Enter a valid 12-digit UTR");
         }
         return utr;
     }

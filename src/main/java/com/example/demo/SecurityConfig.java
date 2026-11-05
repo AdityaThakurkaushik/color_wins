@@ -13,6 +13,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -35,6 +36,7 @@ public class SecurityConfig {
 
         configuration.setAllowedOrigins(
                 List.of(
+                        "https://millionairehub.tech",
                         "http://localhost:5173",
                         "http://localhost:5174",
                         "http://127.0.0.1:5173",
@@ -92,13 +94,20 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/api/health",
-                                "/api/auth/register",
-                                "/api/auth/login",
-                                "/api/game/current",
-                                "/api/game/results",
-                                "/api/referral-settings",
-                                "/api/agent/login"
+                                AntPathRequestMatcher.antMatcher("/api/health"),
+                                AntPathRequestMatcher.antMatcher("/api/auth/register"),
+                                AntPathRequestMatcher.antMatcher("/api/auth/login"),
+                                AntPathRequestMatcher.antMatcher("/api/auth/verify-email"),
+                                AntPathRequestMatcher.antMatcher("/api/auth/verification-status"),
+                                AntPathRequestMatcher.antMatcher("/api/auth/resend-otp"),
+                                AntPathRequestMatcher.antMatcher("/api/auth/forgot-password"),
+                                AntPathRequestMatcher.antMatcher("/api/auth/reset-password"),
+                                AntPathRequestMatcher.antMatcher("/api/game/current"),
+                                AntPathRequestMatcher.antMatcher("/api/game/results"),
+                                AntPathRequestMatcher.antMatcher("/api/leaderboard"),
+                                AntPathRequestMatcher.antMatcher("/api/leaderboard/**"),
+                                AntPathRequestMatcher.antMatcher("/api/referral-settings"),
+                                AntPathRequestMatcher.antMatcher("/api/agent/login")
                         ).permitAll()
                         .requestMatchers("/api/approval/**").hasRole("APPROVAL_AGENT")
                         .requestMatchers("/api/withdraw-agent/**").hasRole("WITHDRAW_AGENT")

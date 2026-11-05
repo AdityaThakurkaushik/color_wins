@@ -1,0 +1,11 @@
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+target/
+**/node_modules/
+colorwin-frontend/dist/
+*.log
+.idea/
+.vscode/

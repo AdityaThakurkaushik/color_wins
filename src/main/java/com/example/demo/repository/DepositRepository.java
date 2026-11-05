@@ -30,4 +30,12 @@ public interface DepositRepository extends JpaRepository<Deposit, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT d FROM Deposit d WHERE d.publicId = :publicId")
     Optional<Deposit> findByPublicIdForUpdate(@Param("publicId") String publicId);
+
+    @Query("""
+        SELECT COALESCE(SUM(d.amountConfirmed), 0)
+        FROM Deposit d
+        WHERE d.user.id = :userId
+          AND d.status = 'APPROVED'
+        """)
+    long sumApprovedDeposits(@Param("userId") Long userId);
 }

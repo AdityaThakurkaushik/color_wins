@@ -1,0 +1,2 @@
+ALTER TABLE leaderboard_player
+    ADD COLUMN IF NOT EXISTS total_bet BIGINT NOT NULL DEFAULT 0;

@@ -23,4 +23,6 @@ public interface WithdrawalRepository extends JpaRepository<Withdrawal, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT w FROM Withdrawal w WHERE w.publicId = :publicId")
     Optional<Withdrawal> findByPublicIdForUpdate(@Param("publicId") String publicId);
+
+    boolean existsByUserIdAndStatus(Long userId, String status);
 }

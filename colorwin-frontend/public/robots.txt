@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /approval-agent
+Disallow: /withdraw-agent
+
+Sitemap: https://millionairehub.tech/sitemap.xml

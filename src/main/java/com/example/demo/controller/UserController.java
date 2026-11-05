@@ -4,7 +4,10 @@ import com.example.demo.entity.User;
 import com.example.demo.repository.PointsTransactionRepository;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.service.WalletHistoryService;
+import com.example.demo.service.WalletPolicyService;
 import com.example.demo.telegram.TelegramLinkService;
+import com.example.demo.util.DisplayNames;
+import com.example.demo.util.ImageDataUrls;
 import com.example.demo.telegram.TelegramNotifier;
 import com.example.demo.telegram.TelegramSettings;
 import jakarta.validation.Valid;
@@ -15,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -32,6 +36,7 @@ public class UserController {
     private final TelegramSettings telegramSettings;
     private final TelegramLinkService telegramLinkService;
     private final TelegramNotifier telegramNotifier;
+    private final WalletPolicyService walletPolicyService;
 
     public UserController(
             UserRepository userRepository,
@@ -39,13 +44,15 @@ public class UserController {
             WalletHistoryService walletHistoryService,
             TelegramSettings telegramSettings,
             TelegramLinkService telegramLinkService,
-            TelegramNotifier telegramNotifier) {
+            TelegramNotifier telegramNotifier,
+            WalletPolicyService walletPolicyService) {
         this.userRepository = userRepository;
         this.pointsTransactionRepository = pointsTransactionRepository;
         this.walletHistoryService = walletHistoryService;
         this.telegramSettings = telegramSettings;
         this.telegramLinkService = telegramLinkService;
         this.telegramNotifier = telegramNotifier;
+        this.walletPolicyService = walletPolicyService;
     }
 
     public record WithdrawRequest(
@@ -57,20 +64,27 @@ public class UserController {
             String bankAccountNumber,
             String bankIfsc) {}
 
+    public record ProfileUpdateRequest(String displayName, String profileImage) {}
+
     @GetMapping("/me")
     public ResponseEntity<?> getCurrentUser(Authentication authentication) {
-        String username = authentication.getName();
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        return ResponseEntity.ok(profileView(currentUser(authentication)));
+    }
 
-        return ResponseEntity.ok(Map.of(
-                "username", user.getUsername(),
-                "email", user.getEmail(),
-                "phoneNumber", user.getMobileNumber(),
-                "virtualPoints", user.getVirtualPoints(),
-                "role", user.getRole(),
-                "referralCode", user.getReferralCode() == null ? "" : user.getReferralCode()
-        ));
+    @PutMapping("/profile")
+    public ResponseEntity<?> updateProfile(
+            @RequestBody ProfileUpdateRequest request,
+            Authentication authentication) {
+        User user = currentUser(authentication);
+        if (request.displayName() != null) {
+            String name = request.displayName().trim();
+            user.setDisplayName(name.isEmpty() ? null : DisplayNames.normalize(request.displayName()));
+        }
+        if (request.profileImage() != null) {
+            user.setProfileImage(ImageDataUrls.normalize(request.profileImage()));
+        }
+        userRepository.save(user);
+        return ResponseEntity.ok(profileView(user));
     }
 
     @GetMapping("/referral-stats")
@@ -134,4 +148,21 @@ public class UserController {
         return userRepository.findByUsername(authentication.getName())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
     }
+
+    private Map<String, Object> profileView(User user) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("username", user.getUsername());
+        body.put("displayName", user.getDisplayName() == null ? "" : user.getDisplayName());
+        body.put("profileImage", user.getProfileImage() == null ? "" : user.getProfileImage());
+        body.put("email", user.getEmail());
+        body.put("phoneNumber", user.getMobileNumber());
+        body.put("virtualPoints", user.getVirtualPoints());
+        WalletPolicyService.ResolvedPolicy policy = walletPolicyService.resolve(user.getId());
+        body.put("minWithdrawalEnabled", policy.minWithdrawalEnabled());
+        body.put("minWithdrawalAmount", policy.minWithdrawalAmount());
+        body.put("role", user.getRole());
+        body.put("referralCode", user.getReferralCode() == null ? "" : user.getReferralCode());
+        return body;
+    }
+
 }

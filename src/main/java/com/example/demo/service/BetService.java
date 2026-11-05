@@ -15,7 +15,7 @@ import java.util.*;
 @Service
 public class BetService {
 
-    private static final long MIN_BET = 10L;
+    private static final long MIN_BET = 6L;
     private static final long MAX_BET = 10000L;
     private static final BigDecimal DEFAULT_COMMISSION =
             new BigDecimal("5.00");
@@ -52,6 +52,16 @@ public class BetService {
                 platformWalletTransactionRepository;
     }
 
+    static void validateBetAmount(Long amount) {
+        if (amount == null || amount <= 5L) {
+            throw new IllegalArgumentException("Please enter above 5");
+        }
+        if (amount < MIN_BET || amount > MAX_BET) {
+            throw new IllegalArgumentException(
+                    "Bet must be between 6 and 10000 tokens");
+        }
+    }
+
     // ================= PLACE BET =================
 
     @Transactional
@@ -67,12 +77,7 @@ public class BetService {
                     "User and period are required");
         }
 
-        if (amount == null
-                || amount < MIN_BET
-                || amount > MAX_BET) {
-            throw new IllegalArgumentException(
-                    "Bet must be between 10 and 10000 tokens");
-        }
+        validateBetAmount(amount);
 
         String selectedColor = normalizeColor(color);
 

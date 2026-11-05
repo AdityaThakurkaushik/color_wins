@@ -4,15 +4,81 @@ import AdminDashboard from './admin/AdminDashboard.jsx'
 import AgentDesk from './agent/AgentDesk.jsx'
 import AddFunds from './AddFunds.jsx'
 import TransactionHistory from './TransactionHistory.jsx'
+import LeaderboardBoard from './LeaderboardBoard.jsx'
 import { API } from './api.js'
 
 const colors = [
-  { name: 'RED', value: 'RED', style: 'bg-red-600' },
-  { name: 'GREEN', value: 'GREEN', style: 'bg-emerald-600' },
-  { name: 'BLUE', value: 'BLUE', style: 'bg-blue-600' },
+  { name: 'RED', value: 'RED', gem: 'from-red-300 via-red-500 to-red-900', glow: 'shadow-[0_10px_28px_rgba(239,68,68,0.45)]' },
+  { name: 'GREEN', value: 'GREEN', gem: 'from-emerald-200 via-emerald-500 to-emerald-900', glow: 'shadow-[0_10px_28px_rgba(16,185,129,0.45)]' },
+  { name: 'BLUE', value: 'BLUE', gem: 'from-sky-200 via-blue-500 to-blue-900', glow: 'shadow-[0_10px_28px_rgba(59,130,246,0.45)]' },
 ]
 
-const amounts = [10, 50, 100, 500, 1000]
+const amounts = [10, 20, 30, 40, 50, 100, 1000, 10000]
+const DEFAULT_AVATAR = '/millionaire-hub-logo.svg'
+
+function AccountRibbon({ name }) {
+  const label = (name && String(name).trim()) || 'Guest'
+  return (
+    <span className="pointer-events-none absolute bottom-2 right-2 z-20 max-w-[72%] truncate rounded-full border border-yellow-300/80 bg-gradient-to-r from-amber-100 via-yellow-300 to-amber-400 px-3 py-1 font-serif text-[17px] italic tracking-wide text-amber-950 shadow-[0_0_12px_rgba(250,204,21,0.5)]">
+      Welcome, {label}
+    </span>
+  )
+}
+const HERO_SLIDES = [
+  {
+    kicker: 'Millionaire Hub Presents',
+    title: 'CONTROL YOUR GREED. WIN BIG.',
+    line: 'The smartest move is knowing when to stop.',
+    chip: 'Play with a cool head.',
+  },
+  {
+    kicker: 'Play Smart',
+    title: 'GREED LOSES. DISCIPLINE WINS.',
+    line: 'Chase every round and you give it all back.',
+    chip: 'Stay in control of your points.',
+  },
+  {
+    kicker: 'Win With Patience',
+    title: 'DON\'T FEED THE GREED.',
+    line: 'One clean win beats ten hungry bets.',
+    chip: 'Walk away while you are ahead.',
+  },
+  {
+    kicker: 'Stay In Charge',
+    title: 'MASTER YOUR URGE. TAKE THE WIN.',
+    line: 'Big rewards belong to players who stay calm.',
+    chip: 'Control your greed and win big.',
+  },
+]
+
+function compressProfilePhoto(file) {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type.startsWith('image/')) {
+      reject(new Error('Choose a photo'))
+      return
+    }
+    const image = new Image()
+    const url = URL.createObjectURL(file)
+    image.onload = () => {
+      const canvas = document.createElement('canvas')
+      const size = 256
+      canvas.width = size
+      canvas.height = size
+      const ctx = canvas.getContext('2d')
+      const scale = Math.max(size / image.width, size / image.height)
+      const w = image.width * scale
+      const h = image.height * scale
+      ctx.drawImage(image, (size - w) / 2, (size - h) / 2, w, h)
+      URL.revokeObjectURL(url)
+      resolve(canvas.toDataURL('image/jpeg', 0.82))
+    }
+    image.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('Could not read photo'))
+    }
+    image.src = url
+  })
+}
 
 
 
@@ -72,7 +138,7 @@ useEffect(() => {
 }, [])
 
   const referralLink =
-    `https://color-wins.vercel.app/register?ref=${referralCode}`
+    `https://millionairehub.tech/?ref=${referralCode}`
 
   useEffect(() => {
     let cancelled = false
@@ -172,156 +238,107 @@ useEffect(() => {
 
   return (
     <div className="space-y-3 pb-4">
-      <section className="overflow-hidden rounded-2xl border border-purple-700 bg-gradient-to-r from-purple-950 via-[#180b38] to-[#080817] p-4">
-        <p className="text-xs font-bold uppercase tracking-widest text-purple-300">
-          Rewards · Referral
-        </p>
+      <section className="relative overflow-hidden rounded-3xl border border-yellow-400/40 bg-[linear-gradient(120deg,#3b0764_0%,#6b21a8_40%,#1a0b2e_100%)] p-5 shadow-[0_12px_32px_rgba(88,28,135,0.4)]">
+        <div className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-yellow-400/20 blur-2xl" />
+        <p className="text-[11px] font-black uppercase tracking-[0.22em] text-yellow-300">Rewards · Referral</p>
         <h2 className="mt-2 text-2xl font-black">
-          Invite Friends &amp;
-          <span className="block text-yellow-300">Earn Coins</span>
+          Invite Friends
+          <span className="mt-1 block text-yellow-300">Earn Coins</span>
         </h2>
-        <p className="mt-2 text-sm text-slate-300">
-          Apna referral link share karein aur eligible signup par
-          coins earn karein.
-        </p>
+        <p className="mt-2 text-sm font-bold text-fuchsia-200">Share your link and earn coins on eligible signups.</p>
       </section>
 
-      <section className="space-y-3 rounded-2xl border border-purple-900 bg-[#0d0d1c] p-3">
+      <section className="space-y-3 rounded-3xl border border-yellow-400/25 bg-[#0d0d1c] p-4">
         <div>
-          <label className="mb-1 block text-sm text-slate-300">
-            Your Referral Code
-          </label>
+          <label className="mb-1 block text-sm font-bold text-slate-300">Your Referral Code</label>
           <div className="flex gap-2">
-            <div className="min-w-0 flex-1 break-all rounded-lg border border-slate-700 bg-[#080817] p-3 font-bold">
-              {referralCode}
+            <div className="min-w-0 flex-1 break-all rounded-2xl border border-yellow-400/30 bg-[#080817] p-3 font-black text-yellow-300">
+              {referralCode || 'Login to see code'}
             </div>
             <button
+              type="button"
               onClick={() => copyText(referralCode, 'code')}
-              className="rounded-lg bg-purple-600 px-4 font-bold"
+              className="rounded-2xl border border-yellow-200 bg-gradient-to-b from-yellow-300 to-amber-500 px-4 font-black text-black shadow-[0_4px_0_#92400e] active:translate-y-0.5 active:shadow-[0_2px_0_#92400e]"
             >
-              {copied === 'code' ? 'Copied' : 'Copy'}
+              {copied === 'code' ? '✓ Copied' : '📋 Copy'}
             </button>
           </div>
         </div>
 
         <div>
-          <label className="mb-1 block text-sm text-slate-300">
-            Your Referral Link
-          </label>
+          <label className="mb-1 block text-sm font-bold text-slate-300">Your Referral Link</label>
           <div className="flex gap-2">
-            <div className="min-w-0 flex-1 break-all rounded-lg border border-slate-700 bg-[#080817] p-3 text-xs">
+            <div className="min-w-0 flex-1 break-all rounded-2xl border border-yellow-400/30 bg-[#080817] p-3 text-xs text-slate-200">
               {referralLink}
             </div>
             <button
+              type="button"
               onClick={() => copyText(referralLink, 'link')}
-              className="rounded-lg bg-purple-600 px-4 font-bold"
+              className="rounded-2xl border border-yellow-200 bg-gradient-to-b from-yellow-300 to-amber-500 px-4 font-black text-black shadow-[0_4px_0_#92400e] active:translate-y-0.5 active:shadow-[0_2px_0_#92400e]"
             >
-              {copied === 'link' ? 'Copied' : 'Copy'}
+              {copied === 'link' ? '✓ Copied' : '📋 Copy'}
             </button>
           </div>
         </div>
 
         <button
+          type="button"
           onClick={shareReferral}
-          className="w-full rounded-xl bg-gradient-to-r from-purple-700 to-fuchsia-600 p-3 font-bold"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-gradient-to-b from-emerald-300 to-green-700 py-3.5 font-black text-white shadow-[0_4px_0_#14532d,0_0_16px_rgba(16,185,129,0.35)] active:translate-y-0.5 active:shadow-[0_2px_0_#14532d]"
         >
-          Share Referral Link
+          🎁 Share Referral Link
         </button>
 
         {shareMessage && (
-          <p role="status" className="text-sm text-yellow-300">
-            {shareMessage}
-          </p>
+          <p role="status" className="text-sm text-yellow-300">{shareMessage}</p>
         )}
       </section>
 
-      <section className="rounded-2xl border border-yellow-600 bg-gradient-to-br from-[#211333] to-[#0d0d1c] p-3">
+      <section className="rounded-3xl border border-yellow-400/30 bg-[#0d0d1c] p-4">
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-lg font-black">Referral Reward</h3>
-          <span className="rounded-full bg-purple-800 px-3 py-1 text-xs">
-            Per successful referral
-          </span>
+          <span className="rounded-2xl border border-yellow-300/70 bg-gradient-to-b from-[#2a1d12] to-[#120b24] px-3 py-1 text-[10px] font-black text-yellow-300 shadow-[0_3px_0_#6b4a00]">Per signup</span>
         </div>
-
         <div className="mt-3 grid grid-cols-2 gap-3">
-  <div className="rounded-xl border border-purple-800 bg-[#101020] p-3">
-    <p className="text-sm text-slate-300">You Get</p>
-    <p className="mt-1 text-xl font-black text-yellow-300">
-      {referralSettingsLoading
-        ? 'Loading...'
-        : referralSettings
-          ? `${referralSettings.referrerReward} Coins`
-          : 'Unavailable'}
-    </p>
-    <p className="mt-1 text-xs text-slate-400">
-      Referrer reward per eligible signup.
-    </p>
-  </div>
-
-  <div className="rounded-xl border border-purple-800 bg-[#101020] p-3">
-    <p className="text-sm text-slate-300">Your Friend Gets</p>
-    <p className="mt-1 text-xl font-black text-yellow-300">
-      {referralSettingsLoading
-        ? 'Loading...'
-        : referralSettings
-          ? `${referralSettings.referredUserReward} Coins`
-          : 'Unavailable'}
-    </p>
-    <p className="mt-1 text-xs text-slate-400">
-      New user referral reward.
-    </p>
-  </div>
-</div>
+          <div className="rounded-2xl border border-emerald-400/40 bg-gradient-to-b from-[#102418] to-[#0b0b18] p-3 shadow-[0_3px_0_#14532d]">
+            <p className="text-sm font-bold text-emerald-200">You Get</p>
+            <p className="mt-1 text-xl font-black text-emerald-300">
+              {referralSettingsLoading ? 'Loading...' : referralSettings ? `💰 ${referralSettings.referrerReward}` : 'Unavailable'}
+            </p>
+            <p className="mt-1 text-xs text-slate-400">Coins per eligible friend</p>
+          </div>
+          <div className="rounded-2xl border border-yellow-400/40 bg-gradient-to-b from-[#2a1d12] to-[#0b0b18] p-3 shadow-[0_3px_0_#6b4a00]">
+            <p className="text-sm font-bold text-yellow-200">Friend Gets</p>
+            <p className="mt-1 text-xl font-black text-yellow-300">
+              {referralSettingsLoading ? 'Loading...' : referralSettings ? `🎁 ${referralSettings.referredUserReward}` : 'Unavailable'}
+            </p>
+            <p className="mt-1 text-xs text-slate-400">Welcome coins</p>
+          </div>
+        </div>
       </section>
 
-      <section className="rounded-2xl border border-purple-900 bg-[#0d0d1c] p-3">
+      <section className="rounded-3xl border border-yellow-400/25 bg-[#0d0d1c] p-4">
         <h3 className="text-lg font-black">Your Referral Stats</h3>
-
-        {statsLoading && (
-          <p className="mt-2 text-sm text-slate-400">
-            Referral stats load ho rahe hain...
-          </p>
-        )}
-
-        {statsError && (
-          <p role="alert" className="mt-2 text-sm text-red-400">
-            {statsError}
-          </p>
-        )}
-
+        {statsLoading && <p className="mt-2 text-sm text-slate-400">Loading stats...</p>}
+        {statsError && <p role="alert" className="mt-2 text-sm text-red-400">{statsError}</p>}
         <div className="mt-3 grid grid-cols-2 gap-2">
           {statCards.map(({ label, value }) => (
-            <div
-              key={label}
-              className="rounded-lg border border-slate-800 bg-[#101020] p-3"
-            >
-              <p className="text-xs text-slate-400">{label}</p>
-              <p className="mt-1 text-lg font-bold">
-                {statsLoading ? '...' : value.toLocaleString('en-IN')}
-              </p>
+            <div key={label} className="rounded-2xl border border-yellow-400/20 bg-gradient-to-b from-[#1a1430] to-[#0b0b18] p-3 shadow-[0_3px_0_#3b0764]">
+              <p className="text-xs font-bold text-slate-400">{label}</p>
+              <p className="mt-1 text-lg font-black text-yellow-300">{statsLoading ? '...' : value.toLocaleString('en-IN')}</p>
             </div>
           ))}
-                </div>
-
-        {referralSettingsError && (
-          <p className="mt-2 text-sm text-red-400">
-            Referral settings load nahi hui.
-          </p>
-        )}
-
-        {referralSettings && !referralSettings.enabled && (
-          <p className="mt-2 text-sm text-yellow-400">
-            Referral program is currently disabled.
-          </p>
-        )}
+        </div>
+        {referralSettingsError && <p className="mt-2 text-sm text-red-400">Referral settings load nahi hui.</p>}
+        {referralSettings && !referralSettings.enabled && <p className="mt-2 text-sm text-yellow-400">Referral program is currently disabled.</p>}
       </section>
 
-      <section className="rounded-2xl border border-purple-900 bg-[#0d0d1c] p-3">
+      <section className="rounded-3xl border border-yellow-400/25 bg-[#0d0d1c] p-4">
         <h3 className="text-lg font-black">How It Works</h3>
-        <ol className="mt-3 space-y-3 text-sm text-slate-300">
-          <li>1. Apna referral code ya link share karein.</li>
-          <li>2. Friend aapke link se account banaye.</li>
-          <li>3. Referral reward record hone par stats update honge.</li>
+        <ol className="mt-3 space-y-2 text-sm font-bold text-slate-300">
+          <li className="rounded-2xl border border-yellow-400/20 bg-[#101020] px-3 py-2">1. Share your code or link</li>
+          <li className="rounded-2xl border border-yellow-400/20 bg-[#101020] px-3 py-2">2. Friend signs up with your link</li>
+          <li className="rounded-2xl border border-yellow-400/20 bg-[#101020] px-3 py-2">3. Coins credit when the referral qualifies</li>
         </ol>
       </section>
     </div>
@@ -369,51 +386,52 @@ function WalletPage({ currentUser, onDeposit, onWithdraw, onViewAll }) {
   const balance = Number(currentUser?.virtualPoints ?? 0).toLocaleString('en-IN')
 
   return (
-    <section className="space-y-4 pb-4">
-      <div className="overflow-hidden rounded-3xl border border-purple-500/40 bg-gradient-to-br from-[#24113d] via-[#160d2a] to-[#090914] p-5 shadow-xl shadow-purple-950/30">
+    <section className="space-y-3 pb-4">
+      <div className="relative overflow-hidden rounded-3xl border border-yellow-400/40 bg-[linear-gradient(120deg,#3b0764_0%,#6b21a8_40%,#1a0b2e_100%)] p-5 shadow-[0_12px_32px_rgba(88,28,135,0.4)]">
+        <div className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-yellow-400/20 blur-2xl" />
         <div className="flex items-center justify-between">
-          <p className="text-xs font-bold uppercase tracking-[0.22em] text-purple-200">My Wallet</p>
-          <span className="rounded-full border border-yellow-400/30 bg-yellow-400/10 px-3 py-1 text-xs font-bold text-yellow-300">COLORWIN</span>
+          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-yellow-300">My Wallet</p>
+          <span className="rounded-2xl border border-yellow-300/70 bg-gradient-to-b from-yellow-300 to-amber-500 px-3 py-1 text-[10px] font-black text-black shadow-[0_3px_0_#92400e]">LIVE</span>
         </div>
-        <p className="mt-5 text-sm text-slate-300">Available Balance</p>
+        <p className="mt-5 text-sm font-bold text-fuchsia-200">Available Balance</p>
         <div className="mt-1 flex flex-wrap items-baseline gap-2">
-          <h2 className="text-3xl font-black tracking-tight text-yellow-300">{balance}</h2>
-          <span className="text-sm font-semibold text-purple-200">Coins</span>
+          <h2 className="text-4xl font-black tracking-tight text-yellow-300 drop-shadow-[0_0_18px_rgba(250,204,21,0.35)]">{balance}</h2>
+          <span className="text-sm font-black text-amber-100">Coins</span>
         </div>
-        <p className="mt-1 text-xs text-slate-400">Your current virtual points balance</p>
+        <p className="mt-1 text-xs text-slate-300">Your current virtual points</p>
         <div className="mt-6 grid grid-cols-2 gap-3">
-          <button type="button" onClick={onDeposit} className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-yellow-400 to-amber-500 px-3 py-3 font-black text-[#211329] shadow-lg shadow-yellow-950/20">
-            <span className="text-lg">＋</span> Deposit
+          <button type="button" onClick={onDeposit} className="flex items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-gradient-to-b from-emerald-300 to-green-700 px-3 py-3.5 font-black text-white shadow-[0_4px_0_#14532d,0_0_16px_rgba(16,185,129,0.4)] active:translate-y-0.5 active:shadow-[0_2px_0_#14532d]">
+            💰 Deposit
           </button>
-          <button type="button" onClick={onWithdraw} className="flex items-center justify-center gap-2 rounded-xl border border-purple-400/50 bg-purple-950/60 px-3 py-3 font-black text-white">
-            <span className="text-lg">↗</span> Withdraw
+          <button type="button" onClick={onWithdraw} className="flex items-center justify-center gap-1.5 rounded-2xl border border-red-900/60 bg-gradient-to-b from-[#3a1518] to-[#1a0a0c] px-3 py-3.5 font-black text-red-300/80 shadow-[0_4px_0_#450a0a] active:translate-y-0.5 active:shadow-[0_2px_0_#450a0a]">
+            🔻 Withdraw
           </button>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-purple-900 bg-[#0d0d1c] p-4">
+      <div className="rounded-3xl border border-yellow-400/25 bg-[#0d0d1c] p-4">
         <div className="mb-3 flex items-center justify-between gap-2">
           <div>
             <h3 className="font-black text-white">Recent Transactions</h3>
-            <p className="mt-1 text-xs text-slate-400">Your latest wallet activity</p>
+            <p className="mt-1 text-xs text-slate-400">Latest wallet activity</p>
           </div>
-          <button type="button" onClick={onViewAll} className="shrink-0 text-xs font-bold text-yellow-300 hover:text-yellow-200">View All →</button>
+          <button type="button" onClick={onViewAll} className="shrink-0 rounded-2xl border border-yellow-300/70 bg-gradient-to-b from-[#2a1d12] to-[#120b24] px-3 py-2 text-xs font-black text-yellow-300 shadow-[0_3px_0_#6b4a00] active:translate-y-0.5 active:shadow-[0_1px_0_#6b4a00]">View All</button>
         </div>
 
         {loading && <p className="py-5 text-center text-sm text-slate-400">Loading transactions...</p>}
-        {!loading && error && <p className="rounded-lg border border-red-900 bg-red-950/30 p-3 text-sm text-red-300">{error}</p>}
+        {!loading && error && <p className="rounded-2xl border border-red-900 bg-red-950/30 p-3 text-sm text-red-300">{error}</p>}
         {!loading && !error && transactions.length === 0 && <p className="py-5 text-center text-sm text-slate-400">No transactions yet.</p>}
         {!loading && !error && transactions.map((row) => (
-          <div key={row.id} className="flex items-center justify-between gap-3 border-t border-purple-950 py-3 first:border-0">
+          <button type="button" key={row.id} onClick={onViewAll} className="mb-2 flex w-full items-center justify-between gap-3 rounded-2xl border border-yellow-400/20 bg-gradient-to-b from-[#1a1430] to-[#0b0b18] px-3 py-3 text-left shadow-[0_3px_0_#3b0764] active:translate-y-0.5 active:shadow-[0_1px_0_#3b0764]">
             <div className="min-w-0">
-              <p className="truncate text-sm font-bold text-white">{row.title || row.kind || 'Transaction'}</p>
+              <p className="truncate text-sm font-black text-white">{row.title || row.kind || 'Transaction'}</p>
               <p className="mt-1 truncate text-xs text-slate-400">{row.detail || (row.createdAt ? new Date(row.createdAt).toLocaleString() : '')}</p>
               <p className="mt-1 text-[11px] uppercase text-slate-500">{row.status || '—'}</p>
             </div>
             <p className={`shrink-0 text-sm font-black ${row.direction === 'IN' ? 'text-emerald-300' : 'text-amber-300'}`}>
               {row.direction === 'IN' ? '+' : '−'}{Number(row.amount ?? 0).toLocaleString('en-IN')}
             </p>
-          </div>
+          </button>
         ))}
       </div>
     </section>
@@ -421,10 +439,77 @@ function WalletPage({ currentUser, onDeposit, onWithdraw, onViewAll }) {
 }
 
 
+function NavIcon({ name }) {
+  const props = {
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.75,
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round',
+    className: 'h-6 w-6',
+    'aria-hidden': true,
+  }
+  if (name === 'Home') {
+    return (
+      <svg {...props}>
+        <path d="M4 10.5 12 4l8 6.5" />
+        <path d="M6.5 9.8V20h11V9.8" />
+        <path d="M10 20v-5h4v5" />
+      </svg>
+    )
+  }
+  if (name === 'Results') {
+    return (
+      <svg {...props}>
+        <path d="M5 19V10" />
+        <path d="M12 19V5" />
+        <path d="M19 19v-7" />
+        <path d="M4 19h16" />
+      </svg>
+    )
+  }
+  if (name === 'Rewards') {
+    return (
+      <svg {...props}>
+        <circle cx="12" cy="9" r="4.5" />
+        <path d="M8.2 12.6 6.5 20l5.5-2.4L17.5 20l-1.7-7.4" />
+      </svg>
+    )
+  }
+  return (
+    <svg {...props}>
+      <circle cx="12" cy="8" r="3.2" />
+      <path d="M5.5 19.5c1.2-3 3.4-4.5 6.5-4.5s5.3 1.5 6.5 4.5" />
+    </svg>
+  )
+}
+
 function GameApp() {
 
   const [selectedColor, setSelectedColor] = useState('')
+  const [heroSlide, setHeroSlide] = useState(0)
+  const [hubBlink, setHubBlink] = useState(false)
+  const [angerCount, setAngerCount] = useState(() => {
+    const saved = Number(localStorage.getItem('mh_anger_count'))
+    return Number.isFinite(saved) && saved > 0 ? saved : 0
+  })
+  const [angerHit, setAngerHit] = useState(0)
+  const [angerLabel, setAngerLabel] = useState('LET IT OUT')
   const [amount, setAmount] = useState(50)
+  useEffect(() => {
+    let clearBlink
+    const blink = () => {
+      setHubBlink(true)
+      clearBlink = window.setTimeout(() => setHubBlink(false), 480)
+    }
+    const id = window.setInterval(blink, 10000)
+    return () => {
+      window.clearInterval(id)
+      window.clearTimeout(clearBlink)
+    }
+  }, [])
+
   const [page, setPage] = useState(() =>
   new URLSearchParams(window.location.search).get('ref')
     ? 'Login'
@@ -451,6 +536,17 @@ const [notificationTotalPages, setNotificationTotalPages] = useState(0)
   const [notificationsLoading, setNotificationsLoading] = useState(false)
   const [notificationError, setNotificationError] = useState('')
   const notificationPanelRef = useRef(null)
+  const profileFileRef = useRef(null)
+  const [profileName, setProfileName] = useState('')
+  const [profileBusy, setProfileBusy] = useState(false)
+  const [profileNotice, setProfileNotice] = useState('')
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setHeroSlide((current) => (current + 1) % HERO_SLIDES.length)
+    }, 4000)
+    return () => clearInterval(timer)
+  }, [])
 
   const [pendingBetId, setPendingBetId] = useState(null)
   const [resultPopup, setResultPopup] = useState(null)
@@ -466,6 +562,31 @@ const currentPendingBet =
   )
 
 const token = () => localStorage.getItem('colorwin_token')
+
+useEffect(() => {
+  if (!isAuthenticated) {
+    setAngerLabel('LET IT OUT')
+    return
+  }
+  let cancelled = false
+  async function loadAngerLabel() {
+    try {
+      const response = await fetch(`${API}/user/anger-button`, {
+        headers: { Authorization: `Bearer ${token()}` },
+        cache: 'no-store',
+      })
+      if (!response.ok) return
+      const data = await response.json()
+      if (!cancelled && data.label) setAngerLabel(String(data.label))
+    } catch {
+      // Keep the last label if the setting request fails.
+    }
+  }
+  loadAngerLabel()
+  return () => {
+    cancelled = true
+  }
+}, [isAuthenticated])
 
 const authHeaders = () => ({
   Authorization: `Bearer ${token()}`,
@@ -669,11 +790,51 @@ const loadUserProfile = useCallback(async () => {
       throw new Error(`Profile API: ${response.status}`)
     }
 
-    setCurrentUser(await response.json())
+    const profile = await response.json()
+    setCurrentUser(profile)
+    setProfileName(profile.displayName || profile.username || '')
   } catch (error) {
     console.error('Profile loading failed:', error)
   }
 }, [])
+
+  async function saveProfile(payload) {
+    const savedToken = token()
+    if (!savedToken) {
+      setPage('Login')
+      return
+    }
+    setProfileBusy(true)
+    setProfileNotice('')
+    try {
+      const response = await fetch(`${API}/user/profile`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${savedToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.message || 'Could not save profile')
+      setCurrentUser(data)
+      setProfileName(data.displayName || data.username || '')
+      setProfileNotice('Profile saved')
+    } catch (error) {
+      setProfileNotice(error.message)
+    } finally {
+      setProfileBusy(false)
+    }
+  }
+
+  async function onProfilePhotoPicked(event) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    try {
+      const profileImage = await compressProfilePhoto(file)
+      await saveProfile({ profileImage })
+    } catch (error) {
+      setProfileNotice(error.message)
+    }
+  }
 
 
   useEffect(() => {
@@ -975,8 +1136,9 @@ setResultPopup({
       return
     }
 
-    if (!Number.isSafeInteger(Number(amount)) || Number(amount) < 1) {
-      setBetMessage('Valid points amount enter karo.')
+    const parsedAmount = Number(amount)
+    if (!Number.isInteger(parsedAmount) || parsedAmount <= 5) {
+      setBetMessage('Please enter above 5')
       setBetError(true)
       return
     }
@@ -1080,6 +1242,16 @@ setResultPopup({
     return 'bg-purple-600'
   }
 
+  function releaseAnger() {
+    setAngerCount((count) => {
+      const next = count + 1
+      localStorage.setItem('mh_anger_count', String(next))
+      return next
+    })
+    setAngerHit((hit) => hit + 1)
+  }
+
+  const showAnger = pendingBetId != null && !resultPopup
   const won = resultPopup?.status === 'WON'
   const isRefunded = resultPopup?.status === 'REFUNDED'
   const popupColor = won ? 'emerald' : 'red'
@@ -1088,17 +1260,22 @@ setResultPopup({
     <div className="min-h-screen bg-[#03030c] text-white">
       <div className="mx-auto min-h-screen w-full border-x border-purple-950 pb-24">
        
-<header className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-purple-900 bg-[#080817] px-2 py-2 sm:px-3 sm:py-3">
-  <div className="flex min-w-0 items-center gap-2">
+<header className="sticky top-0 isolate z-40 flex items-center justify-between gap-2 border-b border-yellow-400/30 bg-[linear-gradient(180deg,#1c1433_0%,#080817_100%)] px-2 py-2 shadow-[0_8px_24px_rgba(0,0,0,0.45)] sm:px-3 sm:py-2.5">
+  <button
+    type="button"
+    onClick={() => setPage('Home')}
+    className="flex min-w-0 items-center gap-2 rounded-2xl border border-yellow-300/70 bg-gradient-to-b from-[#2a1d12] to-[#120b24] px-2 py-1.5 shadow-[0_4px_0_#6b4a00,0_0_18px_rgba(250,204,21,0.28)] active:translate-y-0.5 active:shadow-[0_2px_0_#6b4a00]"
+  >
     <img
       src="/millionaire-hub-logo.svg"
-      alt="Millionaire Hub"
-      className="h-10 w-10 shrink-0 rounded-full object-contain ring-1 ring-yellow-500/60 sm:h-12 sm:w-12"
+      alt=""
+      className="h-10 w-10 shrink-0 rounded-full object-contain ring-2 ring-yellow-300 sm:h-11 sm:w-11"
     />
-    <h1 className="min-w-0 text-[13px] font-black leading-tight text-yellow-300 sm:text-lg">
-      MILLIONAIRE<br className="sm:hidden" /> HUB
+    <h1 className="min-w-0 text-left text-[13px] font-black leading-tight tracking-wide text-yellow-300 sm:text-lg">
+      MILLIONAIRE<br className="sm:hidden" />{' '}
+      <span className={`mh-hub${hubBlink ? ' is-blinking' : ''}`}>HUB</span>
     </h1>
-  </div>
+  </button>
 
  {isAuthenticated && (
   <div ref={notificationPanelRef} className="relative">
@@ -1113,24 +1290,31 @@ setResultPopup({
             loadUnreadCount()
           }
         }}
-        className="relative rounded-xl border border-purple-700 bg-[#151027] px-3 py-2 text-xl"
+        className={`relative rounded-2xl border px-3 py-2 text-xl shadow-[0_4px_0_#3b0764] active:translate-y-0.5 active:shadow-[0_2px_0_#3b0764] ${
+          unreadCount > 0
+            ? 'border-yellow-400/70 bg-gradient-to-b from-[#2a1a08] to-[#1a1230] shadow-[0_4px_0_#6b4a00,0_0_16px_rgba(250,204,21,0.35)]'
+            : 'border-purple-500/60 bg-gradient-to-b from-[#2a1a4a] to-[#151027]'
+        }`}
       >
         🔔
         {unreadCount > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-xs font-bold text-white">
+          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-gradient-to-b from-yellow-300 to-amber-500 px-1 text-xs font-black text-black">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
       </button>
 
       {notificationsOpen && (
-        <div className="fixed left-1/2 top-28 z-50 w-[min(90vw,360px)] -translate-x-1/2 overflow-hidden rounded-xl border border-purple-700 bg-[#101020] shadow-2xl sm:absolute sm:left-auto sm:right-0 sm:top-12 sm:translate-x-0">
-          <div className="flex items-center justify-between border-b border-purple-900 p-3">
-            <h3 className="font-bold text-white">Notifications</h3>
+        <div className="fixed left-1/2 top-24 z-[80] w-[min(92vw,380px)] isolate -translate-x-1/2 overflow-hidden rounded-2xl border border-yellow-400/25 bg-[#0b0b18] shadow-[0_24px_60px_rgba(0,0,0,0.9)] sm:absolute sm:left-auto sm:right-0 sm:top-12 sm:w-80 sm:translate-x-0">
+          <div className="flex items-center justify-between border-b border-yellow-400/20 bg-[linear-gradient(90deg,#2a1a08_0%,#151027_100%)] p-3">
+            <div>
+              <p className="text-[10px] font-black tracking-[0.2em] text-yellow-400/90">INBOX</p>
+              <h3 className="font-black text-white">Notifications</h3>
+            </div>
             <button
               onClick={handleMarkAllNotificationsRead}
               disabled={unreadCount === 0}
-              className="text-xs font-semibold text-fuchsia-300 disabled:opacity-40"
+              className="text-xs font-semibold text-yellow-300 disabled:opacity-40"
             >
               Mark all read
             </button>
@@ -1158,10 +1342,10 @@ setResultPopup({
                       handleMarkNotificationRead(notification.id)
                     }
                   }}
-                  className={`block w-full border-b border-purple-900 p-3 text-left ${
+                  className={`block w-full border-b border-white/5 p-3 text-left ${
                     notification.isRead
-                      ? 'bg-transparent'
-                      : 'bg-purple-900/20'
+                      ? 'bg-[#0b0b18]'
+                      : 'bg-gradient-to-r from-yellow-400/10 to-[#1a1630]'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -1194,7 +1378,7 @@ setResultPopup({
   setPage('Notifications')
   
 }}
-            className="w-full border-t border-purple-900 p-3 text-center text-sm font-bold text-fuchsia-300 hover:bg-purple-900/30"
+            className="w-full border-t border-yellow-400/20 bg-[#151027] p-3 text-center text-sm font-black text-yellow-300 hover:bg-yellow-400/10"
           >
             See All Notifications
           </button>
@@ -1204,12 +1388,17 @@ setResultPopup({
   )}
 
   <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-    <div className="rounded-full border border-yellow-500/50 bg-slate-900 px-2 py-2 text-xs text-yellow-300">
-      🪙 {(currentUser?.virtualPoints ?? 0).toLocaleString('en-IN')}
-    </div>
     <button
+      type="button"
+      onClick={() => setPage(isAuthenticated ? 'Wallet' : 'Login')}
+      className="mh-soft rounded-2xl border border-yellow-400/70 bg-gradient-to-b from-[#2a1d12] to-[#101020] px-2.5 py-2 text-xs font-black text-yellow-300 shadow-[0_4px_0_#6b4a00,0_0_12px_rgba(250,204,21,0.25)] active:translate-y-0.5 active:shadow-[0_2px_0_#6b4a00]" style={{ animationDelay: '-1.4s' }}
+    >
+      🪙 {(currentUser?.virtualPoints ?? 0).toLocaleString('en-IN')}
+    </button>
+    <button
+      type="button"
       onClick={() => isAuthenticated ? setPage('Add Funds') : setPage('Login')}
-      className="shrink-0 rounded-full border border-yellow-300 bg-gradient-to-b from-yellow-300 to-amber-500 px-2.5 py-2 text-[11px] font-black text-black shadow-md shadow-yellow-500/20 sm:px-4 sm:text-sm"
+      className="mh-soft shrink-0 rounded-2xl border border-yellow-200 bg-gradient-to-b from-yellow-300 to-amber-500 px-2.5 py-2 text-[11px] font-black text-black shadow-[0_4px_0_#92400e,0_0_14px_rgba(250,204,21,0.35)] active:translate-y-0.5 active:shadow-[0_2px_0_#92400e] sm:px-4 sm:text-sm" style={{ animationDelay: '-2.8s' }}
     >
       + Add Funds
     </button>
@@ -1217,8 +1406,9 @@ setResultPopup({
 
   {!isAuthenticated && (
     <button
+      type="button"
       onClick={() => setPage('Login')}
-      className="rounded-lg bg-purple-600 px-3 py-2 text-sm font-bold"
+      className="mh-soft rounded-2xl border border-fuchsia-300/70 bg-gradient-to-b from-fuchsia-500 to-purple-700 px-3 py-2 text-sm font-black shadow-[0_4px_0_#4a044e] active:translate-y-0.5 active:shadow-[0_2px_0_#4a044e]" style={{ animationDelay: '-4s' }}
     >
       Login
     </button>
@@ -1226,28 +1416,58 @@ setResultPopup({
 </header>
 
 
-        <main className="mx-auto w-full max-w-5xl space-y-2 p-2 pb-4">
+        <main key={page} className="mh-rise mx-auto w-full max-w-5xl space-y-2 p-2 pb-4">
           {page === 'Login' && <Auth onLogin={handleLogin} />}
 
           {page === 'Home' && (
             <>
-<section className="relative flex items-center justify-between gap-2 overflow-hidden rounded-2xl border border-purple-700 bg-gradient-to-r from-purple-950 via-fuchsia-950 to-[#080817] px-3 py-3 sm:px-4">
-                <div className="relative z-10 min-w-0 flex-1">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-yellow-300 sm:text-xs sm:tracking-[0.25em]">
-                    MILLIONAIRE HUB PRESENTS
-                  </p>
-                  <h2 className="mt-1 text-lg font-black leading-tight text-white sm:text-2xl">PLAY SMART. WIN BIG!</h2>
-                  <p className="mt-1 text-xs font-bold leading-snug text-fuchsia-300 sm:text-sm">
-                    Challenge Your Instincts &amp; Enjoy Every Round.
-                  </p>
-                  <p className="mt-1 text-[11px] leading-snug text-slate-200 sm:text-sm">
-                    Play with friends. Challenge your cousins. Make every round exciting!
-                  </p>
-                  <p className="mt-1 text-[10px] font-semibold leading-snug text-yellow-300 sm:text-xs">
-                    Join Telegram for Updates &amp; Exclusive Offers.
-                  </p>
+<section className="relative overflow-hidden rounded-3xl border border-yellow-400/35 bg-[linear-gradient(120deg,#3b0764_0%,#6b21a8_28%,#9d174d_58%,#1a0b2e_100%)] px-4 py-4 pb-8 shadow-[0_18px_40px_rgba(88,28,135,0.45)] sm:px-5 sm:py-5 sm:pb-8">
+                <div className="mh-orb pointer-events-none absolute -left-10 -top-16 h-40 w-40 rounded-full bg-yellow-400/25 blur-3xl" />
+                <div className="mh-orb mh-orb-late pointer-events-none absolute -right-8 bottom-[-30px] h-36 w-36 rounded-full bg-fuchsia-500/35 blur-3xl" />
+                <div className="mh-sheen pointer-events-none absolute inset-y-0 left-0" />
+                <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-yellow-200/80 to-transparent" />
+                <div className="relative z-10 flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="relative h-[168px] overflow-hidden sm:h-[176px]">
+                      {HERO_SLIDES.map((slide, index) => (
+                        <div
+                          key={slide.title}
+                          className={`absolute inset-0 transition-[opacity,transform] duration-500 ease-out ${index === heroSlide ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-1 opacity-0'}`}
+                          aria-hidden={index !== heroSlide}
+                        >
+                          <p className="truncate text-[10px] font-black uppercase tracking-[0.28em] text-yellow-300 sm:text-xs">
+                            {slide.kicker}
+                          </p>
+                          <h2 className="mt-1 line-clamp-2 min-h-[3.6rem] bg-gradient-to-r from-white via-yellow-100 to-fuchsia-200 bg-clip-text text-2xl font-black leading-tight text-transparent sm:min-h-[4.5rem] sm:text-3xl">
+                            {slide.title}
+                          </h2>
+                          <p className="mt-1.5 line-clamp-2 min-h-[2.5rem] text-sm font-bold leading-snug text-fuchsia-200">
+                            {slide.line}
+                          </p>
+                          <p className="mt-2 inline-flex max-w-full truncate rounded-full border border-yellow-400/40 bg-black/25 px-3 py-1 text-[10px] font-bold text-yellow-200 sm:text-xs">
+                            {slide.chip}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-3 flex gap-1.5">
+                      {HERO_SLIDES.map((_, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => setHeroSlide(index)}
+                          className={`h-1.5 rounded-full ${index === heroSlide ? 'w-6 bg-yellow-300' : 'w-1.5 bg-white/30'}`}
+                          aria-label={`Slide ${index + 1}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="relative shrink-0 pt-1">
+                    <span className="absolute inset-0 rounded-full bg-yellow-400/40 blur-xl" />
+                    <img src="/millionaire-hub-logo.svg" alt="Millionaire Hub" className="mh-logo-glow relative h-[72px] w-[72px] rounded-full object-contain ring-2 ring-yellow-300/80 sm:h-28 sm:w-28" />
+                  </div>
                 </div>
-                <img src="/millionaire-hub-logo.svg" alt="Millionaire Hub" className="relative z-10 h-16 w-16 shrink-0 rounded-full object-contain drop-shadow-[0_0_10px_rgba(250,204,21,0.5)] sm:h-24 sm:w-24" />
+                <AccountRibbon name={currentUser?.displayName || currentUser?.username} />
               </section>
 
               {apiError && (
@@ -1257,94 +1477,127 @@ setResultPopup({
               )}
 
               <section className="grid grid-cols-3 gap-2 text-center">
-                <div className="min-w-0 rounded-xl border border-purple-900 bg-[#101020] p-1">
-                  <p className="text-xs text-slate-400">Current Period</p>
-                  <p className="mt-2 break-all text-xs font-bold">
+                <div className="min-w-0 rounded-2xl border border-yellow-400/20 bg-[#101020] p-2 shadow-[inset_0_0_18px_rgba(250,204,21,0.06)]">
+                  <p className="text-[10px] uppercase tracking-widest text-slate-400">Current Period</p>
+                  <p className="mt-2 break-all text-[11px] font-bold text-white">
                     {currentRound?.periodNumber ?? 'Loading...'}
                   </p>
                 </div>
-
-                <div className="rounded-xl border border-fuchsia-700 bg-[#151027] p-1.5">
-                  <p className="text-xs text-slate-400">Time Left</p>
-                  <p className="mt-1 text-xl font-black text-fuchsia-300">
+                <div className={`relative overflow-hidden rounded-2xl border p-2 ${
+                  secondsLeft > 0 && secondsLeft <= 10
+                    ? 'border-amber-300/70 bg-[#2a1520] shadow-[0_0_24px_rgba(251,191,36,0.28)]'
+                    : 'border-fuchsia-400/45 bg-[#1a102d] shadow-[0_0_22px_rgba(232,121,249,0.28)]'
+                }`}>
+                  <span className="pointer-events-none absolute inset-x-4 top-0 h-6 rounded-full bg-white/10 blur-md" />
+                  <p className="relative text-[10px] uppercase tracking-widest text-slate-400">Time Left</p>
+                  <p className={`relative mt-1 text-2xl font-black tabular-nums ${
+                    secondsLeft > 0 && secondsLeft <= 10 ? 'mh-urgent text-amber-300' : 'text-fuchsia-300'
+                  }`}>
                     {formatTime(secondsLeft)}
                   </p>
                 </div>
-
-                <div className="rounded-xl border border-purple-900 bg-[#101020] p-1.5">
-                  <p className="text-xs text-slate-400">Round Status</p>
-                  <p className="mt-2 text-sm font-bold text-emerald-400">
+                <div className="min-w-0 rounded-2xl border border-emerald-400/25 bg-[#101020] p-2">
+                  <p className="text-[10px] uppercase tracking-widest text-slate-400">Round Status</p>
+                  <p className="mt-2 text-sm font-black text-emerald-400">
                     {currentRound?.status ?? 'Loading...'}
                   </p>
                 </div>
               </section>
 
               <section>
-                <h3 className="mb-3 font-bold">Select Your Color</h3>
+                <h3 className="mb-2 text-sm font-black tracking-wide text-white">Select Your Color</h3>
                 <div className="grid grid-cols-3 gap-2">
-                  {colors.map((color) => (
-                    <button
-                      key={color.value}
-                      onClick={() => setSelectedColor(color.value)}
-                      className={`${color.style} rounded-xl p-0.5 text-center font-black ${
-                        selectedColor === color.value
-                          ? 'ring-2 ring-white ring-offset-2 ring-offset-[#03030c]'
-                          : 'opacity-90'
-                      }`}
-                    >
-                      <span className="block text-2xl">
-                        {color.value === 'RED'
-                          ? '🔴'
-                          : color.value === 'GREEN'
-                            ? '🟢'
-                            : '🟣'}
+                  {colors.map((color) => {
+                    const on = selectedColor === color.value
+                    return (
+                      <button
+                        key={color.value}
+                        onClick={() => setSelectedColor(color.value)}
+                        className={`mh-gem mh-gem-${color.value.toLowerCase()} ${on ? 'is-on' : ''} relative overflow-hidden rounded-2xl border p-3 text-center font-black text-white transition-transform duration-200 ${
+                          on
+                            ? '-translate-y-1 border-yellow-300 ring-2 ring-yellow-300/80'
+                            : 'border-white/15'
+                        } bg-gradient-to-b ${color.gem}`}
+                      >
+                        <span className="mh-gem-sheen" />
+                        <span className="pointer-events-none absolute inset-x-3 top-0 h-8 rounded-full bg-white/25 blur-md" />
+                        <span className={`mh-gem-orb relative mx-auto mt-1 block h-8 w-8 rounded-full bg-gradient-to-br ${color.gem} ring-2 ${on ? 'ring-yellow-200' : 'ring-white/50'}`} />
+                        <span className="relative mt-2 block tracking-wide">{color.name}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </section>
+
+              <section className={`overflow-hidden rounded-2xl p-3 ${showAnger ? 'border border-red-900/80 bg-[radial-gradient(circle_at_top,#3b0a0f_0%,#120608_55%,#050203_100%)]' : 'border border-yellow-400/20 bg-[#0d0d1c]'}`}>
+                {showAnger ? (
+                  <div key="anger" className="mh-swap-in mh-anger-panel relative overflow-hidden">
+                    <div className="mh-anger-fog pointer-events-none absolute inset-0" aria-hidden="true">
+                      <span className="mh-anger-emoji e1">😈</span>
+                      <span className="mh-anger-emoji e2">💀</span>
+                      <span className="mh-anger-emoji e3">🔥</span>
+                      <span className="mh-anger-emoji e4">👁️</span>
+                      <span className="mh-anger-emoji e5">👹</span>
+                      <span className="mh-anger-emoji e6">🩸</span>
+                    </div>
+                    <div className="relative mb-3 flex items-center justify-between gap-2">
+                      <h3 className="font-black tracking-wide text-red-100 drop-shadow-[0_0_10px_rgba(248,113,113,0.45)]">Let it out</h3>
+                      <span key={angerCount} className="mh-pop rounded-full border border-red-500/40 bg-red-950/80 px-2 py-0.5 text-sm font-black text-red-300">
+                        {angerCount}
                       </span>
-                      <span className="mt-1 block">{color.name}</span>
-                      <span className="text-xs">Virtual play</span>
-                    </button>
-                  ))}
-                </div>
-              </section>
-
-              <section className="rounded-xl border border-purple-900 bg-[#0d0d1c] p-1.5">
-                <div className="mb-1 flex items-center justify-between gap-2">
-                  <h3 className="font-bold">Virtual Points</h3>
-                  <span className="text-sm text-yellow-300">
-                    {amount} points
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-3 gap-1">
-                  {amounts.map((value) => (
+                    </div>
                     <button
-                      key={value}
-                      onClick={() => setAmount(value)}
-                      className={`rounded-lg border px-2 py-1 font-bold ${
-                        amount === value
-                          ? 'border-fuchsia-400 bg-fuchsia-600'
-                          : 'border-slate-700 bg-slate-900'
-                      }`}
+                      type="button"
+                      key={angerHit}
+                      onClick={releaseAnger}
+                      className="mh-anger relative z-[1] flex h-24 w-full items-center justify-center rounded-2xl border border-red-400/50 bg-gradient-to-b from-[#9f1239] via-[#7f1d1d] to-[#2a0609] px-3 text-center text-lg font-black leading-tight tracking-[0.08em] text-red-50 shadow-[0_4px_0_#2a0508,0_0_24px_rgba(220,38,38,0.35)] active:translate-y-0.5 active:shadow-[0_2px_0_#2a0508]"
                     >
-                      {value}
+                      {angerLabel}
                     </button>
-                  ))}
-                </div>
-
-                <label className="mt-1 block text-sm text-slate-300">
-                  Custom amount
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={amount}
-                    onChange={(event) =>
-                      setAmount(Math.max(1, Number(event.target.value) || 1))
-                    }
-className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text-white outline-none focus:border-fuchsia-500"                  />
-                </label>
+                    <p className="relative z-[1] mt-2 text-center text-xs font-bold text-red-300/70">
+                      Tap until the result lands.
+                    </p>
+                  </div>
+                ) : (
+                  <div key="points" className="mh-swap-in">
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <h3 className="font-black text-white">Virtual Points</h3>
+                      <span key={amount} className="mh-pop rounded-full bg-yellow-400/15 px-2 py-0.5 text-sm font-black text-yellow-300">
+                        {amount} points
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {amounts.map((value, index) => (
+                        <button
+                          key={value}
+                          onClick={() => setAmount(value)}
+                          style={{ animationDelay: `${index * -0.55}s` }}
+                          className={`mh-amt rounded-xl border py-2 font-black ${
+                            Number(amount) === value
+                              ? 'is-on border-yellow-300 bg-fuchsia-600 text-white'
+                              : 'border-white/10 bg-slate-900 text-slate-200'
+                          }`}
+                        >
+                          {value}
+                        </button>
+                      ))}
+                    </div>
+                    <label className="mt-2 block text-xs text-slate-400">
+                      Custom amount
+                      <input
+                        type="number"
+                        min="6"
+                        step="1"
+                        value={amount}
+                        onChange={(event) => setAmount(event.target.value)}
+                        className="mt-1 w-full rounded-xl border border-purple-900 bg-[#050510] p-2.5 text-white outline-none focus:border-yellow-400"
+                      />
+                    </label>
+                  </div>
+                )}
               </section>
 
-              <section className="rounded-xl border border-purple-900 bg-[#0d0d1c] p-2">
+              <section className="mh-results relative overflow-hidden rounded-xl border border-purple-900 p-2">
                 {currentPendingBet && (
   <section className="rounded-2xl border-2 border-fuchsia-500 bg-gradient-to-br from-[#21102d] to-[#0d0d1c] p-3 shadow-lg shadow-fuchsia-500/20">
 
@@ -1398,7 +1651,7 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
                     <div
                       key={result.periodNumber}
                       title={`${result.periodNumber}: ${result.resultColor}`}
-                      className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-black ${colorBadgeClass(result.resultColor)}`}
+                      className={`mh-pop flex h-10 w-10 items-center justify-center rounded-full text-sm font-black ${colorBadgeClass(result.resultColor)}`}
                     >
                       {result.resultNumber}
                     </div>
@@ -1428,13 +1681,15 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
               <button
                 onClick={handlePlaceBet}
                 disabled={
-                  submittingBet ||
-                  pendingBetId != null ||
-                  !currentRound ||
-                  currentRound.status !== 'OPEN' ||
-                  secondsLeft <= 0
+                  isAuthenticated && (
+                    submittingBet ||
+                    pendingBetId != null ||
+                    !currentRound ||
+                    currentRound.status !== 'OPEN' ||
+                    secondsLeft <= 0
+                  )
                 }
-                className="w-full rounded-xl bg-fuchsia-600 py-2 font-black disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-300"
+                className={`mh-cta w-full rounded-2xl border border-yellow-200 bg-gradient-to-b from-yellow-300 to-amber-500 py-3.5 font-black text-black shadow-[0_4px_0_#92400e,0_0_16px_rgba(250,204,21,0.3)] active:translate-y-0.5 active:shadow-[0_2px_0_#92400e] disabled:cursor-not-allowed disabled:border-slate-600 disabled:bg-slate-700 disabled:from-slate-600 disabled:to-slate-800 disabled:text-slate-300 disabled:shadow-none ${!isAuthenticated ? 'mh-login' : ''}`}
               >
                 {submittingBet
                   ? 'PLACING BET...'
@@ -1447,31 +1702,25 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
                         : `PLAY ${selectedColor || 'SELECT COLOR'} · ${amount} POINTS`}
               </button>
 
-              <p className="text-center text-xs text-slate-500">
-                Virtual points. Add funds from Profile. No cash withdrawals.
-              </p>
+              <LeaderboardBoard />
             </>
           )}
           {page === 'Notifications' && (
-            <section className="rounded-2xl border border-purple-800 bg-[#101020] p-4">
-              <div className="mb-4 flex items-center justify-between gap-2">
-                <h2 className="text-xl font-black text-white">
-                  All Notifications
-                </h2>
-
-                <div className="flex items-center gap-2">
+            <section className="space-y-3 pb-4">
+              <div className="relative overflow-hidden rounded-3xl border border-yellow-400/40 bg-[linear-gradient(120deg,#3b0764_0%,#6b21a8_40%,#1a0b2e_100%)] p-5 shadow-[0_12px_32px_rgba(88,28,135,0.4)]">
+                <div className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-yellow-400/20 blur-2xl" />
+                <p className="text-[11px] font-black tracking-[0.22em] text-yellow-300">INBOX</p>
+                <h2 className="mt-1 text-2xl font-black text-white">All Notifications</h2>
+                <div className="mt-4 flex gap-2">
                   <button
+                    type="button"
                     onClick={handleMarkAllNotificationsRead}
                     disabled={unreadCount === 0}
-                    className="rounded-lg bg-fuchsia-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-40"
+                    className="rounded-2xl border border-yellow-200 bg-gradient-to-b from-yellow-300 to-amber-500 px-3 py-2 text-xs font-black text-black shadow-[0_3px_0_#92400e] disabled:opacity-40"
                   >
                     Mark All Read
                   </button>
-
-                  <button
-                    onClick={() => setPage('Home')}
-                    className="rounded-lg bg-purple-800 px-3 py-2 text-sm font-bold text-white"
-                  >
+                  <button type="button" onClick={() => setPage('Home')} className="rounded-2xl border border-yellow-300/70 bg-gradient-to-b from-[#2a1d12] to-[#120b24] px-3 py-2 text-sm font-black text-yellow-300 shadow-[0_3px_0_#6b4a00]">
                     Back
                   </button>
                 </div>
@@ -1499,10 +1748,10 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
                           handleMarkNotificationRead(notification.id)
                         }
                       }}
-                      className={`w-full rounded-xl border border-purple-900 p-3 text-left ${
+                      className={`w-full rounded-2xl border p-3 text-left shadow-[0_3px_0_#3b0764] active:translate-y-0.5 ${
                         notification.isRead
-                          ? 'bg-transparent'
-                          : 'bg-purple-900/30'
+                          ? 'border-yellow-400/15 bg-gradient-to-b from-[#1a1430] to-[#0b0b18]'
+                          : 'border-yellow-300/50 bg-gradient-to-b from-[#2a1d12] to-[#1a1430]'
                       }`}
                     >
                       <div className="flex items-center justify-between">
@@ -1532,7 +1781,7 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
                 <button
                   disabled={notificationPage <= 0 || notificationsLoading}
                   onClick={() => loadAllNotifications(notificationPage - 1)}
-                  className="rounded-lg bg-purple-800 px-4 py-2 text-sm font-bold disabled:opacity-40"
+                  className="rounded-2xl border border-yellow-300/70 bg-gradient-to-b from-[#2a1d12] to-[#120b24] px-4 py-2 text-sm font-black text-yellow-300 shadow-[0_3px_0_#6b4a00] disabled:opacity-40"
                 >
                   Previous
                 </button>
@@ -1549,7 +1798,7 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
                     notificationsLoading
                   }
                   onClick={() => loadAllNotifications(notificationPage + 1)}
-                  className="rounded-lg bg-purple-800 px-4 py-2 text-sm font-bold disabled:opacity-40"
+                  className="rounded-2xl border border-yellow-300/70 bg-gradient-to-b from-[#2a1d12] to-[#120b24] px-4 py-2 text-sm font-black text-yellow-300 shadow-[0_3px_0_#6b4a00] disabled:opacity-40"
                 >
                   Next
                 </button>
@@ -1557,33 +1806,37 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
             </section>
           )}
           {page === 'Results' && (
-            <section className="space-y-4">
-              <h2 className="text-xl font-black">Results &amp; History</h2>
+            <section className="space-y-3 pb-4">
+              <div className="relative overflow-hidden rounded-3xl border border-yellow-400/40 bg-[linear-gradient(120deg,#3b0764_0%,#6b21a8_40%,#1a0b2e_100%)] p-5 shadow-[0_12px_32px_rgba(88,28,135,0.4)]">
+                <div className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-yellow-400/20 blur-2xl" />
+                <p className="flex items-center gap-3.5 text-[11px] font-black uppercase tracking-[0.22em] text-yellow-300">
+                  Live Arena
+                  <span className="live-dot inline-block h-2.5 w-2.5 rounded-full bg-[#5a040c]" />
+                </p>
+                <h2 className="mt-1 text-2xl font-black text-white">Results &amp; History</h2>
+                <p className="mt-1 text-sm font-bold text-fuchsia-200">Latest rounds and your bets</p>
+              </div>
 
-              <h3 className="font-bold">Recent Game Results</h3>
-
+              <h3 className="px-1 font-black text-white">Recent Game Results</h3>
+              {results.length === 0 && (
+                <p className="rounded-2xl border border-yellow-400/20 bg-[#101020] p-4 text-sm text-slate-400">No results yet.</p>
+              )}
               {results.map((result) => (
                 <div
                   key={result.periodNumber}
-                  className="grid grid-cols-3 items-center gap-2 rounded-xl border border-purple-900 bg-[#101020] p-3"
+                  className="grid grid-cols-3 items-center gap-2 rounded-2xl border border-yellow-400/25 bg-gradient-to-b from-[#1a1430] to-[#0b0b18] p-3 shadow-[0_3px_0_#3b0764]"
                 >
                   <div>
-                    <p className="text-xs text-slate-400">Period</p>
-                    <p className="mt-1 break-all text-xs font-bold">
-                      {result.periodNumber}
-                    </p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Period</p>
+                    <p className="mt-1 break-all text-xs font-black text-white">{result.periodNumber}</p>
                   </div>
-
                   <div className="text-center">
-                    <p className="text-xs text-slate-400">Number</p>
-                    <p className={`mt-1 text-2xl font-black ${colorTextClass(result.resultColor)}`}>
-                      {result.resultNumber}
-                    </p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Number</p>
+                    <p className={`mt-1 text-3xl font-black ${colorTextClass(result.resultColor)}`}>{result.resultNumber}</p>
                   </div>
-
                   <div className="text-right">
-                    <p className="text-xs text-slate-400">Color</p>
-                    <span className={`mt-1 inline-block rounded-md px-2 py-1 text-xs font-bold ${colorBadgeClass(result.resultColor)}`}>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Color</p>
+                    <span className={`mt-1 inline-block rounded-xl px-2.5 py-1 text-xs font-black shadow-[0_2px_0_rgba(0,0,0,0.35)] ${colorBadgeClass(result.resultColor)}`}>
                       {result.resultColor}
                     </span>
                   </div>
@@ -1591,77 +1844,54 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
               ))}
 
               <div className="flex items-center justify-between gap-2">
-                <h3 className="font-bold">My Bet History</h3>
+                <h3 className="font-black text-white">My Bet History</h3>
                 <button
+                  type="button"
                   onClick={loadMyBets}
                   disabled={historyLoading || !isAuthenticated}
-                  className="rounded-lg border border-purple-700 px-3 py-2 text-sm disabled:opacity-50"
+                  className="rounded-2xl border border-yellow-200 bg-gradient-to-b from-yellow-300 to-amber-500 px-4 py-2 text-sm font-black text-black shadow-[0_4px_0_#92400e] active:translate-y-0.5 active:shadow-[0_2px_0_#92400e] disabled:opacity-50"
                 >
-                  {historyLoading ? 'Loading...' : 'Refresh'}
+                  {historyLoading ? 'Loading...' : '↻ Refresh'}
                 </button>
               </div>
 
               {!isAuthenticated && (
-                <p className="text-sm text-slate-400">
-                  Login to view your bet history.
-                </p>
+                <p className="rounded-2xl border border-yellow-400/20 bg-[#101020] p-4 text-sm text-slate-400">Login to view your bet history.</p>
               )}
-
               {isAuthenticated && myBets.length === 0 && !historyLoading && (
-                <p className="rounded-xl border border-purple-900 p-4 text-sm text-slate-400">
-                  No bets found.
-                </p>
+                <p className="rounded-2xl border border-yellow-400/20 bg-[#101020] p-4 text-sm text-slate-400">No bets found.</p>
               )}
 
-              {myBets.map((bet) => (
-                <div
-                  key={bet.betId}
-                  className="rounded-xl border border-purple-900 bg-[#101020] p-3"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className={`font-bold ${colorTextClass(bet.color)}`}>
-                      {bet.color}
-                    </span>
-                    <span className="text-sm font-bold">{bet.status}</span>
+              {myBets.map((bet) => {
+                const won = bet.status === 'WON'
+                const lost = bet.status === 'LOST'
+                return (
+                  <div
+                    key={bet.betId}
+                    className={`rounded-2xl border p-3 shadow-[0_3px_0_#3b0764] ${
+                      won
+                        ? 'border-emerald-400/50 bg-gradient-to-b from-[#102418] to-[#0b0b18]'
+                        : lost
+                          ? 'border-red-900/50 bg-gradient-to-b from-[#3a1518] to-[#0b0b18]'
+                          : 'border-yellow-400/25 bg-gradient-to-b from-[#1a1430] to-[#0b0b18]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={`font-black ${colorTextClass(bet.color)}`}>{bet.color}</span>
+                      <span className={`rounded-xl px-2 py-0.5 text-xs font-black ${won ? 'bg-emerald-500/20 text-emerald-300' : lost ? 'bg-red-950 text-red-300/80' : 'bg-yellow-400/15 text-yellow-300'}`}>
+                        {won ? '💰 ' : lost ? '🔻 ' : ''}{bet.status}
+                      </span>
+                    </div>
+                    <p className="mt-2 break-all text-xs font-bold text-slate-400">Period: {bet.periodNumber}</p>
+                    <div className="mt-2 flex justify-between text-sm font-black">
+                      <span>Stake: {bet.amount}</span>
+                      <span className={won ? 'text-emerald-300' : 'text-yellow-300'}>Payout: {bet.pointsPayout ?? 0}</span>
+                    </div>
                   </div>
-
-                  <p className="mt-2 break-all text-xs text-slate-400">
-                    Period: {bet.periodNumber}
-                  </p>
-
-                  <div className="mt-2 flex justify-between text-sm">
-                    <span>Stake: {bet.amount} points</span>
-                    <span>Payout: {bet.pointsPayout ?? 0} points</span>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </section>
           )}
-
-          {page === 'Wallet' && (
-  <section className="space-y-4 pb-4">
-    <div className="rounded-2xl border border-purple-700 bg-gradient-to-r from-purple-950 to-[#101020] p-5">
-      <p className="text-sm text-purple-300">Available Balance</p>
-      <h2 className="mt-2 text-3xl font-black text-yellow-300">
-        {(currentUser?.virtualPoints ?? 0).toLocaleString('en-IN')} Points
-      </h2>
-    </div>
-
-    <button
-      onClick={() => isAuthenticated ? setPage('Add Funds') : setPage('Login')}
-      className="w-full rounded-xl border border-purple-700 bg-[#101020] p-4 text-left font-bold text-white"
-    >
-      Add Funds — UPI / QR
-    </button>
-
-    <button
-      onClick={() => isAuthenticated ? setPage('Transaction History') : setPage('Login')}
-      className="w-full rounded-xl border border-purple-700 bg-[#101020] p-4 text-left font-bold text-white"
-    >
-      Transaction History & Withdrawals
-    </button>
-  </section>
-)}
 
           {page === 'Rewards' && (
   <ReferralPage currentUser={currentUser} />
@@ -1686,101 +1916,136 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
 )}
 
 {page === 'Profile' && (
-  <section className="space-y-2 pb-2">
-    <div className="rounded-2xl border border-purple-700 bg-gradient-to-b from-[#17102d] to-[#0d0d1c] p-3 text-center">
-      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border-4 border-yellow-400 bg-purple-950 text-3xl text-yellow-300">
-        ♛
-      </div>
+  <section className="space-y-3 pb-3">
+    <div className="relative overflow-hidden rounded-3xl border border-yellow-400/40 bg-[linear-gradient(120deg,#3b0764_0%,#6b21a8_40%,#1a0b2e_100%)] p-5 text-center shadow-[0_12px_32px_rgba(88,28,135,0.4)]">
+      <div className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-yellow-400/20 blur-2xl" />
+      <button
+        type="button"
+        onClick={() => isAuthenticated ? profileFileRef.current?.click() : setPage('Login')}
+        className="mx-auto block rounded-full p-[3px] shadow-[0_4px_0_#6b4a00,0_0_28px_rgba(250,204,21,0.45)] active:translate-y-0.5"
+        aria-label="Change profile photo"
+      >
+        <span className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-[#120b24] ring-2 ring-yellow-300">
+          <img
+            src={currentUser?.profileImage || DEFAULT_AVATAR}
+            alt=""
+            className={currentUser?.profileImage ? 'h-full w-full object-cover' : 'h-[72%] w-[72%] object-contain'}
+          />
+        </span>
+      </button>
+      <input
+        ref={profileFileRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={onProfilePhotoPicked}
+      />
+      <p className="mt-2 text-xs font-bold text-fuchsia-200">Tap the circle to set your photo</p>
+      <p className="mt-2 text-[11px] font-black tracking-[0.28em] text-yellow-300">MILLIONAIRE HUB</p>
+      {isAuthenticated ? (
+        <div className="mt-3 text-left">
+          <label className="text-[11px] font-black uppercase tracking-[0.16em] text-yellow-200/80">Name</label>
+          <div className="mt-1 flex gap-2">
+            <input
+              value={profileName}
+              maxLength={40}
+              onChange={(event) => setProfileName(event.target.value)}
+              className="min-w-0 flex-1 rounded-2xl border border-yellow-400/30 bg-black/30 px-3 py-2 text-lg font-black text-white outline-none focus:border-yellow-300"
+            />
+            <button
+              type="button"
+              disabled={profileBusy}
+              onClick={() => saveProfile({ displayName: profileName })}
+              className="rounded-2xl border border-yellow-200 bg-gradient-to-b from-yellow-300 to-amber-500 px-4 py-2 text-sm font-black text-black shadow-[0_4px_0_#92400e] active:translate-y-0.5 active:shadow-[0_2px_0_#92400e] disabled:opacity-50"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      ) : (
+        <h2 className="mt-1 text-2xl font-black tracking-wide text-white">Guest user</h2>
+      )}
+      {profileNotice && <p className="mt-2 text-sm text-yellow-200">{profileNotice}</p>}
 
-      <h2 className="mt-2 text-xl font-black text-white">
-        {currentUser?.username || 'Guest user'}
-      </h2>
-
-      <div className="mt-2 rounded-xl border border-purple-600 bg-[#101020] p-3 text-left">
-        <p className="text-sm text-slate-400">Virtual Points Balance</p>
-        <p className="mt-1 text-xl font-black text-yellow-300">
-          {(currentUser?.virtualPoints ?? 0).toLocaleString('en-IN')} points
+      <button
+        type="button"
+        onClick={() => setPage(isAuthenticated ? 'Wallet' : 'Login')}
+        className="mt-4 w-full rounded-2xl border border-yellow-300/70 bg-gradient-to-b from-[#2a1d12] to-[#101020] px-4 py-3 text-left shadow-[0_4px_0_#6b4a00] active:translate-y-0.5 active:shadow-[0_2px_0_#6b4a00]"
+      >
+        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-yellow-200/80">Virtual Points</p>
+        <p className="mt-1 text-3xl font-black text-yellow-300">
+          {(currentUser?.virtualPoints ?? 0).toLocaleString('en-IN')}
+          <span className="ml-1 text-sm font-semibold text-yellow-500/80">pts</span>
         </p>
-      </div>
+      </button>
 
-      <div className="mt-3 divide-y divide-purple-900 overflow-hidden rounded-xl border border-purple-900 bg-[#0b0b19] text-left">
-        <div className="p-3">
-          <p className="text-sm text-slate-400">Name</p>
-          <p className="font-semibold text-white">
-            {currentUser?.username || 'Guest user'}
-          </p>
+      <div className="mt-4 divide-y divide-yellow-400/15 overflow-hidden rounded-2xl border border-yellow-400/25 bg-[#0b0b19]/80 text-left">
+        <div className="px-4 py-3">
+          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">Email ID</p>
+          <p className="mt-1 break-all font-bold text-white">{currentUser?.email || 'Not available'}</p>
         </div>
-
-        <div className="p-4">
-          <p className="text-sm text-slate-400">Email ID</p>
-          <p className="break-all font-semibold text-white">
-            {currentUser?.email || 'Not available'}
-          </p>
-        </div>
-
-        <div className="p-4">
-          <p className="text-sm text-slate-400">Phone Number</p>
-          <p className="font-semibold text-white">
-            {currentUser?.phoneNumber || currentUser?.phone || 'Not available'}
-          </p>
+        <div className="px-4 py-3">
+          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">Phone Number</p>
+          <p className="mt-1 font-bold text-white">{currentUser?.phoneNumber || currentUser?.phone || 'Not available'}</p>
         </div>
       </div>
     </div>
 
     <button
+      type="button"
       onClick={() => isAuthenticated ? setPage('Add Funds') : setPage('Login')}
-      className="flex w-full items-center gap-4 rounded-2xl border border-yellow-600 bg-[#0d0d1c] p-4 text-left"
+      className="flex w-full items-center gap-4 rounded-2xl border border-emerald-200 bg-gradient-to-b from-emerald-300 to-green-700 p-4 text-left font-black text-white shadow-[0_4px_0_#14532d,0_0_14px_rgba(16,185,129,0.3)] active:translate-y-0.5 active:shadow-[0_2px_0_#14532d]"
     >
-      <span className="text-2xl text-yellow-300">🪙</span>
+      <span className="text-2xl">💰</span>
       <span className="flex-1">
-        <span className="block font-bold text-white">Add Funds</span>
-        <span className="text-sm text-slate-400">Pay by UPI. 1 rupee = 1 coin</span>
+        <span className="block">Add Funds</span>
+        <span className="text-sm font-bold text-emerald-100">Pay by UPI. 1 rupee = 1 coin</span>
       </span>
-      <span className="text-xl text-slate-300">›</span>
     </button>
 
     <button
+      type="button"
       onClick={() => isAuthenticated ? setPage('Transaction History') : setPage('Login')}
-      className="flex w-full items-center gap-4 rounded-2xl border border-slate-700 bg-[#0d0d1c] p-4 text-left"
+      className="flex w-full items-center gap-4 rounded-2xl border border-yellow-300/70 bg-gradient-to-b from-[#2a1d12] to-[#120b24] p-4 text-left shadow-[0_4px_0_#6b4a00] active:translate-y-0.5 active:shadow-[0_2px_0_#6b4a00]"
     >
-      <span className="text-2xl text-emerald-300">☰</span>
+      <span className="text-2xl">📜</span>
       <span className="flex-1">
-        <span className="block font-bold text-white">Transaction History</span>
-        <span className="text-sm text-slate-400">Deposits, withdrawals, and game coins</span>
+        <span className="block font-black text-white">Transaction History</span>
+        <span className="text-sm font-bold text-yellow-100/70">Deposits, withdrawals, and game coins</span>
       </span>
-      <span className="text-xl text-slate-300">›</span>
     </button>
 
     <button
-      onClick={() => setPage('Help & Support')}
-      className="flex w-full items-center gap-4 rounded-2xl border border-slate-700 bg-[#0d0d1c] p-4 text-left"
+      type="button"
+      onClick={() => window.open('https://t.me/millionairehub_group', '_blank', 'noopener,noreferrer')}
+      className="flex w-full items-center gap-4 rounded-2xl border border-fuchsia-300/60 bg-gradient-to-b from-fuchsia-600 to-purple-800 p-4 text-left font-black text-white shadow-[0_4px_0_#4a044e] active:translate-y-0.5 active:shadow-[0_2px_0_#4a044e]"
     >
-      <span className="text-2xl text-blue-300">☏</span>
+      <span className="text-2xl">💬</span>
       <span className="flex-1">
-        <span className="block font-bold text-white">Help &amp; Support</span>
-        <span className="text-sm text-slate-400">Get help and contact us</span>
+        <span className="block">Help &amp; Support</span>
+        <span className="text-sm font-bold text-fuchsia-100">Get help and contact us</span>
       </span>
-      <span className="text-xl text-slate-300">›</span>
     </button>
 
     <button
+      type="button"
       onClick={() => setPage('Terms & Conditions')}
-      className="flex w-full items-center gap-4 rounded-2xl border border-slate-700 bg-[#0d0d1c] p-4 text-left"
+      className="flex w-full items-center gap-4 rounded-2xl border border-yellow-400/25 bg-gradient-to-b from-[#1a1430] to-[#0b0b18] p-4 text-left shadow-[0_4px_0_#3b0764] active:translate-y-0.5 active:shadow-[0_2px_0_#3b0764]"
     >
-      <span className="text-2xl text-purple-300">▤</span>
+      <span className="text-2xl">📋</span>
       <span className="flex-1">
-        <span className="block font-bold text-white">Terms &amp; Conditions</span>
-        <span className="text-sm text-slate-400">Read rules and conditions</span>
+        <span className="block font-black text-white">Terms &amp; Conditions</span>
+        <span className="text-sm font-bold text-slate-400">Read rules and conditions</span>
       </span>
-      <span className="text-xl text-slate-300">›</span>
     </button>
 
     {isAuthenticated && (
       <button
+        type="button"
         onClick={handleLogout}
-        className="w-full rounded-xl border border-red-700 bg-red-950/40 py-3 font-bold text-red-300"
+        className="w-full rounded-2xl border border-red-900/60 bg-gradient-to-b from-[#3a1518] to-[#1a0a0c] py-3.5 font-black text-red-300/80 shadow-[0_4px_0_#450a0a] active:translate-y-0.5 active:shadow-[0_2px_0_#450a0a]"
       >
-        ⇥ Logout
+        🔻 Logout
       </button>
     )}
   </section>
@@ -1792,27 +2057,18 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
 
 
 {page === 'Help & Support' && (
-  <section className="space-y-4 rounded-2xl border border-purple-800 bg-[#0d0d1c] p-4">
-    <button
-      onClick={() => setPage('Profile')}
-      className="text-sm font-semibold text-purple-300"
-    >
-      ← Back to Profile
-    </button>
-
-    <div className="flex items-center gap-3">
-      <img src="/millionaire-hub-logo.svg" alt="Millionaire Hub" className="h-12 w-12 shrink-0 rounded-full object-contain" />
-      <div>
-        <h2 className="text-xl font-black text-white">Help &amp; Support</h2>
-        <p className="text-sm text-slate-400">We are here to help. Choose a support channel below.</p>
-      </div>
+  <section className="space-y-3 pb-4">
+    <button type="button" onClick={() => setPage('Profile')} className="rounded-2xl border border-yellow-300/70 bg-gradient-to-b from-[#2a1d12] to-[#120b24] px-4 py-2 text-sm font-black text-yellow-300 shadow-[0_3px_0_#6b4a00] active:translate-y-0.5">‹ Back</button>
+    <div className="relative overflow-hidden rounded-3xl border border-yellow-400/40 bg-[linear-gradient(120deg,#3b0764_0%,#6b21a8_40%,#1a0b2e_100%)] p-5">
+      <h2 className="text-2xl font-black text-white">💬 Help &amp; Support</h2>
+      <p className="mt-1 text-sm font-bold text-fuchsia-200">Choose a support channel</p>
     </div>
 
     <a
-      href="https://t.me/+AOUyE2vVTNM0MmNI"
+      href="https://t.me/millionairehub_group"
       target="_blank"
       rel="noopener noreferrer"
-      className="flex w-full items-center gap-3 rounded-xl border border-sky-700/70 bg-[#101a2b] p-4 transition hover:border-sky-400 hover:bg-[#14243a] focus:outline-none focus:ring-2 focus:ring-sky-400"
+      className="flex w-full items-center gap-3 rounded-2xl border border-fuchsia-300/60 bg-gradient-to-b from-fuchsia-600 to-purple-800 p-4 font-black text-white shadow-[0_4px_0_#4a044e] active:translate-y-0.5"
     >
       <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sky-500/15 text-sky-300">
         <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor" aria-hidden="true"><path d="M21.7 4.3 18.5 20c-.2 1.1-.9 1.4-1.8.9l-5-3.7-2.4 2.3c-.3.3-.5.5-1 .5l.4-5.1 9.3-8.4c.4-.4-.1-.6-.6-.2L6 13.5l-4.9-1.5c-1.1-.3-1.1-1 .2-1.5L20 3.2c.9-.3 1.9.2 1.7 1.1Z"/></svg>
@@ -1828,7 +2084,7 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
       href="https://t.me/MillionaireHub_support"
       target="_blank"
       rel="noopener noreferrer"
-      className="flex w-full items-center gap-3 rounded-xl border border-sky-700/70 bg-[#101a2b] p-4 transition hover:border-sky-400 hover:bg-[#14243a] focus:outline-none focus:ring-2 focus:ring-sky-400"
+      className="flex w-full items-center gap-3 rounded-2xl border border-fuchsia-300/60 bg-gradient-to-b from-fuchsia-600 to-purple-800 p-4 font-black text-white shadow-[0_4px_0_#4a044e] active:translate-y-0.5"
     >
       <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sky-500/15 text-sky-300">
         <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor" aria-hidden="true"><path d="M21.7 4.3 18.5 20c-.2 1.1-.9 1.4-1.8.9l-5-3.7-2.4 2.3c-.3.3-.5.5-1 .5l.4-5.1 9.3-8.4c.4-.4-.1-.6-.6-.2L6 13.5l-4.9-1.5c-1.1-.3-1.1-1 .2-1.5L20 3.2c.9-.3 1.9.2 1.7 1.1Z"/></svg>
@@ -1844,7 +2100,7 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
       href="https://wa.me/918292216726"
       target="_blank"
       rel="noopener noreferrer"
-      className="flex w-full items-center gap-3 rounded-xl border border-emerald-700/70 bg-[#102019] p-4 transition hover:border-emerald-400 hover:bg-[#142b20] focus:outline-none focus:ring-2 focus:ring-emerald-400"
+      className="flex w-full items-center gap-3 rounded-2xl border border-emerald-200 bg-gradient-to-b from-emerald-300 to-green-700 p-4 font-black text-white shadow-[0_4px_0_#14532d] active:translate-y-0.5"
     >
       <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300">
         <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor" aria-hidden="true"><path d="M20.5 3.5A11.8 11.8 0 0 0 2 17.7L.5 23.5l6-1.6A11.8 11.8 0 0 0 20.5 3.5ZM12 21a9.7 9.7 0 0 1-4.9-1.3l-.4-.2-3.6 1 1-3.5-.2-.4A9.7 9.7 0 1 1 12 21Zm5.3-7.3c-.3-.1-1.6-.8-1.9-.9-.3-.1-.4-.1-.6.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1a7.9 7.9 0 0 1-2.3-1.4 8.6 8.6 0 0 1-1.6-2c-.2-.3 0-.4.1-.6l.4-.5c.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5l-.9-2.1c-.2-.5-.5-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.3.3-1 1-1 2.4s1 2.8 1.1 3c.1.2 2 3.1 4.8 4.3 2.4 1 2.9.8 3.4.8.5-.1 1.6-.7 1.8-1.3.2-.6.2-1.1.2-1.3-.1-.2-.3-.3-.5-.4Z"/></svg>
@@ -1856,7 +2112,7 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
       <span className="text-lg text-emerald-300">↗</span>
     </a>
 
-    <div className="rounded-xl border border-purple-800/70 bg-[#101020] p-4">
+    <div className="rounded-2xl border border-yellow-400/25 bg-[#101020] p-4">
       <div className="flex items-center gap-2">
         <img src="/millionaire-hub-logo.svg" alt="" aria-hidden="true" className="h-7 w-7 rounded-full object-contain" />
         <p className="font-bold text-white">Frequently Asked Questions</p>
@@ -1869,47 +2125,25 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
 )}
 
 {page === 'Terms & Conditions' && (
-  <section className="space-y-4 rounded-2xl border border-purple-800 bg-[#0d0d1c] p-4">
-    <button
-      onClick={() => setPage('Profile')}
-      className="text-sm font-semibold text-purple-300"
-    >
-      ← Back to Profile
-    </button>
-
-    <h2 className="text-2xl font-black text-white">
-      Terms &amp; Conditions
-    </h2>
-
-    <p className="text-sm text-slate-400">
-      Please read the rules for using MILLIONAIRE HUB.
-    </p>
-
-    <div className="space-y-4 text-sm leading-6 text-slate-300">
-      <div>
-        <h3 className="font-bold text-white">1. Use of the App</h3>
-        <p>Users must follow the applicable rules and instructions of MILLIONAIRE HUB.</p>
-      </div>
-
-      <div>
-        <h3 className="font-bold text-white">2. Account Responsibility</h3>
-        <p>Keep your account credentials private and report unauthorized access.</p>
-      </div>
-
-      <div>
-        <h3 className="font-bold text-white">3. Virtual Points</h3>
-        <p>Virtual points are displayed according to the app's account records. Their use is subject to the applicable game rules.</p>
-      </div>
-
-      <div>
-        <h3 className="font-bold text-white">4. Fair Use</h3>
-        <p>Do not exploit bugs, manipulate results, or interfere with other users.</p>
-      </div>
-
-      <div>
-        <h3 className="font-bold text-white">5. Updates</h3>
-        <p>Applicable terms may be updated. Review this page for the latest version.</p>
-      </div>
+  <section className="space-y-3 pb-4">
+    <button type="button" onClick={() => setPage('Profile')} className="rounded-2xl border border-yellow-300/70 bg-gradient-to-b from-[#2a1d12] to-[#120b24] px-4 py-2 text-sm font-black text-yellow-300 shadow-[0_3px_0_#6b4a00] active:translate-y-0.5">‹ Back</button>
+    <div className="relative overflow-hidden rounded-3xl border border-yellow-400/40 bg-[linear-gradient(120deg,#3b0764_0%,#6b21a8_40%,#1a0b2e_100%)] p-5">
+      <h2 className="text-2xl font-black text-white">📋 Terms &amp; Conditions</h2>
+      <p className="mt-1 text-sm font-bold text-fuchsia-200">Rules for using MILLIONAIRE HUB</p>
+    </div>
+    <div className="space-y-3 text-sm leading-6 text-slate-300">
+      {[
+        ['1. Use of the App', 'Users must follow the applicable rules and instructions of MILLIONAIRE HUB.'],
+        ['2. Account Responsibility', 'Keep your account credentials private and report unauthorized access.'],
+        ['3. Virtual Points', "Virtual points are displayed according to the app's account records. Their use is subject to the applicable game rules."],
+        ['4. Fair Use', 'Do not exploit bugs, manipulate results, or interfere with other users.'],
+        ['5. Updates', 'Applicable terms may be updated. Review this page for the latest version.'],
+      ].map(([title, body]) => (
+        <div key={title} className="rounded-2xl border border-yellow-400/20 bg-gradient-to-b from-[#1a1430] to-[#0b0b18] p-4 shadow-[0_3px_0_#3b0764]">
+          <h3 className="font-black text-yellow-300">{title}</h3>
+          <p className="mt-1 font-bold">{body}</p>
+        </div>
+      ))}
     </div>
   </section>
 )}
@@ -1926,29 +2160,26 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
 
         </main>
 
-<nav className="fixed bottom-0 left-0 z-20 grid w-full grid-cols-5 border-t border-purple-900 bg-[#080817]">
-  {[
-    ['Home', '⌂'],
-    ['Results', '▤'],
-    ['Wallet', '◈'],
-    ['Rewards', '♔'],
-    ['Profile', '♙'],
-  ].map(([name, icon]) => (
+<nav className="fixed bottom-0 left-0 z-20 grid w-full grid-cols-5 border-t border-yellow-400/30 bg-[linear-gradient(180deg,#1c1433_0%,#080817_100%)]">
+  {['Home', 'Results', 'Wallet', 'Rewards', 'Profile'].map((name) => (
     <button
       key={name}
       onClick={() => setPage(name)}
-      className={`flex flex-col items-center justify-center gap-1 py-3 text-xs ${
-        page === name ? 'text-fuchsia-400' : 'text-slate-400'
+      className={`mh-nav m-1 flex flex-col items-center justify-center gap-1 rounded-2xl py-2 text-xs font-black ${
+        page === name
+          ? 'is-on border border-yellow-200 bg-gradient-to-b from-yellow-300 to-amber-500 text-black shadow-[0_3px_0_#92400e]'
+          : 'text-slate-400'
       }`}
+      style={{ animationDelay: name === 'Results' ? '-1.5s' : name === 'Wallet' ? '-3s' : undefined }}
     >
       <span
-        className={`text-xl ${
+        className={
           name === 'Wallet'
-            ? '-mt-5 flex h-12 w-12 items-center justify-center rounded-full border-2 border-purple-400 bg-purple-700 text-white shadow-lg'
-            : ''
-        }`}
+            ? 'mh-wallet -mt-5 flex h-12 w-12 items-center justify-center rounded-full border-2 border-purple-400 bg-purple-700 text-[2.35rem] font-black leading-none text-white'
+            : 'text-xl'
+        }
       >
-        {icon}
+        {name === 'Wallet' ? <span className="mh-dollar-roll">$</span> : <NavIcon name={name} />}
       </span>
       {name}
     </button>
@@ -2108,7 +2339,7 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
               <div className="mt-5 grid grid-cols-2 gap-3">
                 <button
                   onClick={() => setResultPopup(null)}
-                  className="rounded-xl border border-slate-600 bg-slate-800 px-3 py-3 font-bold hover:bg-slate-700"
+                  className="rounded-2xl border border-yellow-400/25 bg-gradient-to-b from-[#1a1430] to-[#0b0b18] px-3 py-3 font-black text-white shadow-[0_3px_0_#3b0764]"
                 >
                   Close
                 </button>
@@ -2119,7 +2350,7 @@ className="mt-1 w-full rounded-lg border border-purple-900 bg-[#050510] p-2 text
                     setPage('Results')
                     loadMyBets()
                   }}
-                  className="rounded-xl bg-gradient-to-r from-yellow-400 to-amber-500 px-3 py-3 font-black text-black hover:brightness-110"
+                  className="rounded-2xl border border-yellow-200 bg-gradient-to-b from-yellow-300 to-amber-500 px-3 py-3 font-black text-black shadow-[0_4px_0_#92400e]"
                 >
                   View Results
                 </button>

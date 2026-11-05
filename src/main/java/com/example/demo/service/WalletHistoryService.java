@@ -24,7 +24,6 @@ import java.util.Locale;
 @Service
 public class WalletHistoryService {
 
-    private static final long MIN_WITHDRAWAL = 10L;
     private static final long MAX_WITHDRAWAL = 5000L;
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -33,18 +32,21 @@ public class WalletHistoryService {
     private final WithdrawalRepository withdrawalRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final WalletPolicyService walletPolicyService;
 
     public WalletHistoryService(
             PointsTransactionRepository pointsTransactionRepository,
             DepositRepository depositRepository,
             WithdrawalRepository withdrawalRepository,
             UserRepository userRepository,
-            NotificationService notificationService) {
+            NotificationService notificationService,
+            WalletPolicyService walletPolicyService) {
         this.pointsTransactionRepository = pointsTransactionRepository;
         this.depositRepository = depositRepository;
         this.withdrawalRepository = withdrawalRepository;
         this.userRepository = userRepository;
         this.notificationService = notificationService;
+        this.walletPolicyService = walletPolicyService;
     }
 
     @Transactional
@@ -56,8 +58,16 @@ public class WalletHistoryService {
     public Withdrawal requestWithdrawal(
             Long userId, long amount, String payoutMethod, String accountHolderName,
             String upiId, String bankName, String bankAccountNumber, String bankIfsc) {
-        if (amount < MIN_WITHDRAWAL || amount > MAX_WITHDRAWAL) {
-            throw new IllegalArgumentException("Withdrawal must be between 10 and 5000");
+        WalletPolicyService.ResolvedPolicy policy = walletPolicyService.resolve(userId);
+        if (policy.minWithdrawalEnabled() && amount < policy.minWithdrawalAmount()) {
+            throw new IllegalArgumentException(
+                    "Withdrawal must be at least " + policy.minWithdrawalAmount());
+        }
+        if (amount > MAX_WITHDRAWAL) {
+            throw new IllegalArgumentException("Withdrawal must be at most " + MAX_WITHDRAWAL);
+        }
+        if (amount <= 0) {
+            throw new IllegalArgumentException("Withdrawal amount must be greater than 0");
         }
 
         String method = payoutMethod == null ? "" : payoutMethod.trim().toUpperCase(Locale.ROOT);
@@ -91,6 +101,7 @@ public class WalletHistoryService {
 
         User user = userRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        walletPolicyService.enforceFirstWithdrawal(userId, policy);
         if (user.getVirtualPoints() < amount) {
             throw new IllegalArgumentException("Insufficient coins");
         }

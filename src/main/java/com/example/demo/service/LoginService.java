@@ -1,4 +1,3 @@
-
 package com.example.demo.service;
 
 import com.example.demo.JwtService;
@@ -36,9 +35,16 @@ public class LoginService {
                         new IllegalArgumentException(
                                 "Invalid username/email or password"));
 
-        if (!user.isActive()
-                || !passwordEncoder.matches(
-                        request.getPassword(), user.getPasswordHash())) {
+        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+            throw new IllegalArgumentException(
+                    "Invalid username/email or password");
+        }
+
+        if (!user.isEmailVerified()) {
+            throw new IllegalArgumentException("Verify your Telegram first");
+        }
+
+        if (!user.isActive()) {
             throw new IllegalArgumentException(
                     "Invalid username/email or password");
         }

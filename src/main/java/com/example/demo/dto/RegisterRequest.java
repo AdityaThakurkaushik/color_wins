@@ -1,27 +1,38 @@
-
 package com.example.demo.dto;
 
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public class RegisterRequest {
 
-    @NotBlank(message = "Username is required")
-    @Size(min = 3, max = 30, message = "Username must be 3 to 30 characters")
-    private String username;
+    @NotBlank(message = "Name is required")
+    @Size(min = 2, max = 40, message = "Name must be 2 to 40 characters")
+    private String name;
 
-    @NotBlank(message = "Email is required")
-    @Email(message = "Enter a valid email address")
+    @NotBlank(message = "State is required")
+    @Size(max = 60, message = "State is too long")
+    private String state;
+
+    @NotBlank(message = "Gmail is required")
+    @Email(message = "Enter a valid Gmail address")
     private String email;
 
     @NotBlank(message = "Mobile number is required")
     @Pattern(
-        regexp = "^[0-9]{10,20}$",
-        message = "Mobile number must contain 10 to 20 digits"
+        regexp = "^[6-9][0-9]{9}$",
+        message = "Mobile number must be a 10-digit Indian number"
     )
     private String mobileNumber;
+
+    @NotNull(message = "Age is required")
+    @Min(value = 18, message = "You must be at least 18")
+    @Max(value = 99, message = "Age must be 99 or less")
+    private Integer age;
 
     @NotBlank(message = "Password is required")
     @Size(min = 8, max = 72, message = "Password must be 8 to 72 characters")
@@ -29,12 +40,20 @@ public class RegisterRequest {
 
     private String referralCode;
 
-    public String getUsername() {
-        return username;
+    public String getName() {
+        return name;
     }
 
-    public void setUsername(String username) {
-        this.username = username;
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getState() {
+        return state;
+    }
+
+    public void setState(String state) {
+        this.state = state;
     }
 
     public String getEmail() {
@@ -51,6 +70,14 @@ public class RegisterRequest {
 
     public void setMobileNumber(String mobileNumber) {
         this.mobileNumber = mobileNumber;
+    }
+
+    public Integer getAge() {
+        return age;
+    }
+
+    public void setAge(Integer age) {
+        this.age = age;
     }
 
     public String getPassword() {

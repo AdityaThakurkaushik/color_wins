@@ -5,6 +5,9 @@ import FundRequests from './FundRequests.jsx'
 import AgentAdmin from './AgentAdmin.jsx'
 import AdminWithdrawals from './AdminWithdrawals.jsx'
 import AdminDeposits from './AdminDeposits.jsx'
+import AdminWalletPolicy from './AdminWalletPolicy.jsx'
+import AdminLeaderboard from './AdminLeaderboard.jsx'
+import AdminAngerButton from './AdminAngerButton.jsx'
 
 const menuItems = [
   'Dashboard',
@@ -15,6 +18,9 @@ const menuItems = [
   'Wallet & Transactions',
   'Referral Management',
   'Commission Settings',
+  'Wallet Policy',
+  'Leaderboard',
+  'Anger Button',
   'Fund Requests',
   'Deposits',
   'Approval Agents',
@@ -993,6 +999,12 @@ React.useEffect(() => {
           <AgentAdmin kind="APPROVAL" />
         ) : activePage === 'Withdraw Agents' ? (
           <AgentAdmin kind="WITHDRAW" />
+        ) : activePage === 'Wallet Policy' ? (
+          <AdminWalletPolicy />
+        ) : activePage === 'Leaderboard' ? (
+          <AdminLeaderboard />
+        ) : activePage === 'Anger Button' ? (
+          <AdminAngerButton />
         ) : activePage === 'Commission Settings' ? (
   <section className="mx-auto max-w-2xl rounded-xl border border-purple-900 bg-[#091126] p-4 md:p-6">
     <h3 className="text-lg font-bold">Game Commission Settings</h3>

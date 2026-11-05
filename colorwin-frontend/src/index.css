@@ -1,2 +1,272 @@
 
 @import "tailwindcss";
+
+@keyframes live-blink {
+  0%, 100% {
+    opacity: 0.28;
+    box-shadow: 0 0 3px 1px #ff2a3a, 0 0 8px 4px rgba(90, 4, 12, 0.45);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 8px 3px #ff2a3a, 0 0 18px 10px rgba(255, 20, 40, 0.9), 0 0 32px 16px rgba(120, 0, 10, 0.65);
+  }
+}
+
+.live-dot {
+  animation: live-blink 2.8s ease-in-out infinite;
+}
+
+@keyframes mh-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes mh-pop {
+  from { opacity: 0.35; transform: scale(0.86); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes mh-sheen {
+  0% { transform: translateX(-130%) skewX(-16deg); }
+  100% { transform: translateX(280%) skewX(-16deg); }
+}
+
+@keyframes mh-glow {
+  0%, 100% { filter: drop-shadow(0 0 4px rgba(250, 204, 21, 0.35)); }
+  50% { filter: drop-shadow(0 0 12px rgba(250, 204, 21, 0.8)); }
+}
+
+@keyframes mh-orb {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(10px, 8px, 0); }
+}
+
+@keyframes mh-urgent {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+.mh-rise { animation: mh-rise 0.36s ease-out both; }
+.mh-pop { animation: mh-pop 0.32s ease-out both; }
+
+.mh-sheen {
+  width: 38%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+  animation: mh-sheen 7.5s ease-in-out infinite;
+}
+
+.mh-logo-glow { animation: mh-glow 3.8s ease-in-out infinite; }
+.mh-orb { animation: mh-orb 9s ease-in-out infinite; }
+.mh-orb-late { animation-delay: -4.5s; }
+.mh-urgent { animation: mh-urgent 0.85s ease-in-out infinite; }
+
+@keyframes mh-gem-red {
+  0%, 100% { box-shadow: 0 8px 16px rgba(239, 68, 68, 0.28); }
+  50% { box-shadow: 0 14px 30px rgba(239, 68, 68, 0.72); }
+}
+@keyframes mh-gem-green {
+  0%, 100% { box-shadow: 0 8px 16px rgba(16, 185, 129, 0.28); }
+  50% { box-shadow: 0 14px 30px rgba(16, 185, 129, 0.72); }
+}
+@keyframes mh-gem-blue {
+  0%, 100% { box-shadow: 0 8px 16px rgba(59, 130, 246, 0.28); }
+  50% { box-shadow: 0 14px 30px rgba(59, 130, 246, 0.72); }
+}
+@keyframes mh-gem-orb {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.mh-gem-red { animation: mh-gem-red 3.2s ease-in-out infinite; }
+.mh-gem-green { animation: mh-gem-green 3.2s ease-in-out infinite; animation-delay: -1.05s; }
+.mh-gem-blue { animation: mh-gem-blue 3.2s ease-in-out infinite; animation-delay: -2.1s; }
+.mh-gem.is-on { animation-duration: 1.45s; }
+
+.mh-gem-orb { animation: mh-gem-orb 2.8s ease-in-out infinite; }
+.mh-gem-green .mh-gem-orb { animation-delay: -0.9s; }
+.mh-gem-blue .mh-gem-orb { animation-delay: -1.8s; }
+.mh-gem.is-on .mh-gem-orb { animation-duration: 1.15s; }
+
+.mh-gem-sheen {
+  position: absolute;
+  inset: 0 auto 0 -45%;
+  width: 42%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.38), transparent);
+  animation: mh-sheen 4.6s ease-in-out infinite;
+  pointer-events: none;
+}
+.mh-gem-green .mh-gem-sheen { animation-delay: -1.5s; }
+.mh-gem-blue .mh-gem-sheen { animation-delay: -3s; }
+.mh-gem.is-on .mh-gem-sheen { animation-duration: 2s; }
+
+@keyframes mh-login-glow {
+  0%, 100% { box-shadow: 0 4px 0 #92400e, 0 0 12px rgba(250, 204, 21, 0.3); }
+  50% { box-shadow: 0 4px 0 #92400e, 0 0 28px rgba(250, 204, 21, 0.85); }
+}
+
+.mh-login { animation: mh-login-glow 2.1s ease-in-out infinite; }
+
+.mh-cta { position: relative; overflow: hidden; }
+.mh-cta:not(:disabled)::after,
+.mh-login::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 32%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.42), transparent);
+  animation: mh-sheen 3.4s ease-in-out infinite;
+  pointer-events: none;
+}
+.mh-login::after { animation-duration: 2.4s; }
+
+@keyframes mh-results-shift {
+  0% { transform: translateX(-30%) rotate(0deg); }
+  100% { transform: translateX(30%) rotate(360deg); }
+}
+
+.mh-results { background: #14081f; }
+.mh-results::before {
+  content: "";
+  position: absolute;
+  inset: -55%;
+  background: conic-gradient(
+    from 90deg,
+    transparent 0%,
+    rgba(250, 204, 21, 0.55) 10%,
+    transparent 22%,
+    rgba(232, 121, 249, 0.45) 46%,
+    transparent 60%,
+    rgba(56, 189, 248, 0.4) 78%,
+    transparent 100%
+  );
+  animation: mh-results-shift 7s linear infinite;
+  pointer-events: none;
+}
+.mh-results > * { position: relative; z-index: 1; }
+
+@keyframes mh-amt {
+  0%, 100% { border-color: rgba(255, 255, 255, 0.16); box-shadow: none; }
+  50% { border-color: #fde047; box-shadow: 0 0 16px rgba(250, 204, 21, 0.7); }
+}
+@keyframes mh-amt-on {
+  0%, 100% { box-shadow: 0 0 8px rgba(217, 70, 239, 0.45); }
+  50% { box-shadow: 0 0 22px rgba(250, 204, 21, 0.95); }
+}
+.mh-amt { animation: mh-amt 2.4s ease-in-out infinite; }
+.mh-amt.is-on { animation: mh-amt-on 1.6s ease-in-out infinite; }
+
+.mh-soft { position: relative; overflow: hidden; }
+.mh-soft::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 -40%;
+  width: 45%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.72), transparent);
+  animation: mh-sheen 2.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes mh-nav-glow {
+  0%, 100% { color: #94a3b8; }
+  50% { color: #fde047; }
+}
+.mh-nav:not(.is-on) { animation: mh-nav-glow 2.6s ease-in-out infinite; }
+@keyframes mh-nav-on {
+  0%, 100% { box-shadow: 0 3px 0 #92400e, 0 0 0 rgba(250, 204, 21, 0); }
+  50% { box-shadow: 0 3px 0 #92400e, 0 0 18px rgba(250, 204, 21, 0.85); }
+}
+.mh-nav.is-on { animation: mh-nav-on 1.8s ease-in-out infinite; }
+
+@keyframes mh-wallet {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 rgba(192, 132, 252, 0.2); }
+  50% { transform: scale(1.1); box-shadow: 0 0 22px rgba(216, 180, 254, 0.95); }
+}
+.mh-wallet {
+  animation: mh-wallet 2.2s ease-in-out infinite;
+  perspective: 140px;
+}
+.mh-dollar-roll {
+  display: inline-block;
+  transform-origin: center;
+  animation: mh-dollar-roll 1.4s linear infinite;
+}
+@keyframes mh-dollar-roll {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(360deg); }
+}
+
+.mh-hub {
+  display: inline-block;
+  transform-origin: center;
+}
+.mh-hub.is-blinking { animation: mh-eye-blink 0.42s ease-in-out; }
+@keyframes mh-swap-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+.mh-swap-in { animation: mh-swap-in 0.38s ease-out both; }
+@keyframes mh-anger-hit {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-5px) scale(0.98); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(2px); }
+}
+.mh-anger { animation: mh-anger-hit 0.38s ease-out; }
+.mh-anger-fog { opacity: 0.55; }
+.mh-anger-emoji {
+  position: absolute;
+  font-size: 1.55rem;
+  filter: blur(0.2px) drop-shadow(0 0 8px rgba(127, 29, 29, 0.55));
+  animation: mh-anger-float 4.8s ease-in-out infinite;
+}
+.mh-anger-emoji.e1 { left: 6%; top: 10%; animation-delay: 0s; }
+.mh-anger-emoji.e2 { right: 8%; top: 14%; animation-delay: -0.8s; font-size: 1.35rem; }
+.mh-anger-emoji.e3 { left: 18%; bottom: 8%; animation-delay: -1.6s; font-size: 1.2rem; }
+.mh-anger-emoji.e4 { right: 16%; bottom: 12%; animation-delay: -2.2s; font-size: 1.15rem; }
+.mh-anger-emoji.e5 { left: 46%; top: 4%; animation-delay: -1.1s; font-size: 1.4rem; opacity: 0.7; }
+.mh-anger-emoji.e6 { left: 62%; bottom: 6%; animation-delay: -2.8s; font-size: 1.1rem; opacity: 0.65; }
+@keyframes mh-anger-float {
+  0%, 100% { transform: translateY(0) rotate(-4deg); opacity: 0.45; }
+  50% { transform: translateY(-8px) rotate(4deg); opacity: 0.85; }
+}
+@keyframes mh-eye-blink {
+  0% { transform: scaleY(1); }
+  38% { transform: scaleY(0.05); }
+  58% { transform: scaleY(0.05); }
+  100% { transform: scaleY(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-dot,
+  .mh-rise,
+  .mh-pop,
+  .mh-sheen,
+  .mh-logo-glow,
+  .mh-orb,
+  .mh-urgent,
+  .mh-cta::after,
+  .mh-login,
+  .mh-login::after,
+  .mh-results,
+  .mh-amt,
+  .mh-soft,
+  .mh-soft::after,
+  .mh-nav,
+  .mh-nav:not(.is-on),
+  .mh-nav.is-on,
+  .mh-wallet,
+  .mh-dollar-roll,
+  .mh-results::before,
+  .mh-hub.is-blinking,
+  .mh-swap-in,
+  .mh-anger,
+  .mh-anger-emoji,
+  .mh-gem-red,
+  .mh-gem-green,
+  .mh-gem-blue,
+  .mh-gem-orb,
+  .mh-gem-sheen {
+    animation: none;
+  }
+}
