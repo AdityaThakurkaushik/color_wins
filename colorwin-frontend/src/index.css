@@ -1,6 +1,26 @@
 
 @import "tailwindcss";
 
+:root {
+  --mh-header-h: 4.5rem;
+}
+@media (min-width: 640px) {
+  :root {
+    --mh-header-h: 5rem;
+  }
+}
+.mh-header-spacer {
+  height: var(--mh-header-h);
+}
+.mh-back {
+  position: sticky;
+  top: calc(var(--mh-header-h) + 0.35rem);
+  z-index: 30;
+  display: inline-flex;
+  align-items: center;
+  background: linear-gradient(180deg, #2a1d12 0%, #120b24 100%);
+}
+
 @keyframes live-blink {
   0%, 100% {
     opacity: 0.28;
@@ -33,7 +53,11 @@
 
 @keyframes mh-glow {
   0%, 100% { filter: drop-shadow(0 0 4px rgba(250, 204, 21, 0.35)); }
-  50% { filter: drop-shadow(0 0 12px rgba(250, 204, 21, 0.8)); }
+  50% { filter: drop-shadow(0 0 18px rgba(250, 204, 21, 1)); }
+}
+@keyframes mh-logo-halo {
+  0%, 100% { opacity: 0.35; transform: scale(0.92); }
+  50% { opacity: 1; transform: scale(1.18); }
 }
 
 @keyframes mh-orb {
@@ -55,7 +79,8 @@
   animation: mh-sheen 7.5s ease-in-out infinite;
 }
 
-.mh-logo-glow { animation: mh-glow 3.8s ease-in-out infinite; }
+.mh-logo-glow { animation: mh-glow 1.8s ease-in-out infinite; }
+.mh-logo-halo { animation: mh-logo-halo 1.6s ease-in-out infinite; }
 .mh-orb { animation: mh-orb 9s ease-in-out infinite; }
 .mh-orb-late { animation-delay: -4.5s; }
 .mh-urgent { animation: mh-urgent 0.85s ease-in-out infinite; }
@@ -72,20 +97,43 @@
   0%, 100% { box-shadow: 0 8px 16px rgba(59, 130, 246, 0.28); }
   50% { box-shadow: 0 14px 30px rgba(59, 130, 246, 0.72); }
 }
+@keyframes mh-gem-red-on {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(253, 224, 71, 0.75), 0 10px 22px rgba(239, 68, 68, 0.55), 0 0 18px rgba(250, 204, 21, 0.45); filter: brightness(1.08); }
+  50% { box-shadow: 0 0 0 3px rgba(254, 240, 138, 1), 0 16px 36px rgba(239, 68, 68, 0.95), 0 0 34px rgba(250, 204, 21, 0.9); filter: brightness(1.28); }
+}
+@keyframes mh-gem-green-on {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(253, 224, 71, 0.75), 0 10px 22px rgba(16, 185, 129, 0.55), 0 0 18px rgba(250, 204, 21, 0.45); filter: brightness(1.08); }
+  50% { box-shadow: 0 0 0 3px rgba(254, 240, 138, 1), 0 16px 36px rgba(16, 185, 129, 0.95), 0 0 34px rgba(250, 204, 21, 0.9); filter: brightness(1.28); }
+}
+@keyframes mh-gem-blue-on {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(253, 224, 71, 0.75), 0 10px 22px rgba(59, 130, 246, 0.55), 0 0 18px rgba(250, 204, 21, 0.45); filter: brightness(1.08); }
+  50% { box-shadow: 0 0 0 3px rgba(254, 240, 138, 1), 0 16px 36px rgba(59, 130, 246, 0.95), 0 0 34px rgba(250, 204, 21, 0.9); filter: brightness(1.28); }
+}
 @keyframes mh-gem-orb {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.1); }
+}
+@keyframes mh-gem-orb-on {
+  0%, 100% { transform: scale(1.05); box-shadow: 0 0 8px rgba(254, 240, 138, 0.55); }
+  50% { transform: scale(1.22); box-shadow: 0 0 18px rgba(254, 240, 138, 0.95); }
+}
+@keyframes mh-gem-sheen-on {
+  0% { transform: translateX(0); opacity: 0.35; }
+  40% { opacity: 1; }
+  100% { transform: translateX(320%); opacity: 0.2; }
 }
 
 .mh-gem-red { animation: mh-gem-red 3.2s ease-in-out infinite; }
 .mh-gem-green { animation: mh-gem-green 3.2s ease-in-out infinite; animation-delay: -1.05s; }
 .mh-gem-blue { animation: mh-gem-blue 3.2s ease-in-out infinite; animation-delay: -2.1s; }
-.mh-gem.is-on { animation-duration: 1.45s; }
+.mh-gem-red.is-on { animation: mh-gem-red-on 0.95s ease-in-out infinite; }
+.mh-gem-green.is-on { animation: mh-gem-green-on 0.95s ease-in-out infinite; }
+.mh-gem-blue.is-on { animation: mh-gem-blue-on 0.95s ease-in-out infinite; }
 
 .mh-gem-orb { animation: mh-gem-orb 2.8s ease-in-out infinite; }
 .mh-gem-green .mh-gem-orb { animation-delay: -0.9s; }
 .mh-gem-blue .mh-gem-orb { animation-delay: -1.8s; }
-.mh-gem.is-on .mh-gem-orb { animation-duration: 1.15s; }
+.mh-gem.is-on .mh-gem-orb { animation: mh-gem-orb-on 0.85s ease-in-out infinite; }
 
 .mh-gem-sheen {
   position: absolute;
@@ -94,10 +142,50 @@
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.38), transparent);
   animation: mh-sheen 4.6s ease-in-out infinite;
   pointer-events: none;
+  z-index: 2;
 }
 .mh-gem-green .mh-gem-sheen { animation-delay: -1.5s; }
 .mh-gem-blue .mh-gem-sheen { animation-delay: -3s; }
-.mh-gem.is-on .mh-gem-sheen { animation-duration: 2s; }
+.mh-gem.is-on .mh-gem-sheen {
+  width: 55%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.85), rgba(254, 240, 138, 0.7), transparent);
+  animation: mh-gem-sheen-on 1.15s ease-in-out infinite;
+}
+.mh-gem.is-on .mh-gem-float {
+  opacity: 0.9;
+  filter: drop-shadow(0 0 5px rgba(254, 240, 138, 0.9));
+  animation-duration: 2.4s;
+}
+
+.mh-gem-fog { z-index: 0; overflow: hidden; }
+.mh-gem-float {
+  position: absolute;
+  font-size: 0.62rem;
+  line-height: 1;
+  opacity: 0.55;
+  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.55));
+  animation: mh-gem-float 4.8s ease-in-out infinite;
+  animation-delay: var(--d, 0s);
+  will-change: transform, opacity;
+}
+.mh-gem-green .mh-gem-float { animation-delay: calc(var(--d, 0s) - 1.2s); }
+.mh-gem-blue .mh-gem-float { animation-delay: calc(var(--d, 0s) - 2.4s); }
+.mh-gem-float.f1 { top: 8%; left: 10%; --d: 0s; animation-duration: 4.2s; }
+.mh-gem-float.f2 { top: 18%; right: 12%; --d: -0.7s; animation-duration: 5.1s; font-size: 0.7rem; }
+.mh-gem-float.f3 { top: 42%; left: 6%; --d: -1.4s; animation-duration: 3.9s; }
+.mh-gem-float.f4 { top: 55%; right: 8%; --d: -2s; animation-duration: 5.4s; font-size: 0.58rem; }
+.mh-gem-float.f5 { bottom: 18%; left: 18%; --d: -2.6s; animation-duration: 4.6s; }
+.mh-gem-float.f6 { bottom: 10%; right: 20%; --d: -3.1s; animation-duration: 5.8s; font-size: 0.66rem; }
+.mh-gem-float.f7 { top: 28%; left: 42%; --d: -1.1s; animation-duration: 4.4s; opacity: 0.4; }
+.mh-gem-float.f8 { bottom: 28%; left: 48%; --d: -3.7s; animation-duration: 5.2s; font-size: 0.55rem; }
+.mh-gem-float.f9 { top: 62%; left: 28%; --d: -4.2s; animation-duration: 3.7s; opacity: 0.45; }
+@keyframes mh-gem-float {
+  0% { transform: translate(0, 0) rotate(-8deg) scale(0.9); opacity: 0.25; }
+  25% { transform: translate(6px, -10px) rotate(6deg) scale(1.05); opacity: 0.75; }
+  50% { transform: translate(-7px, -4px) rotate(-4deg) scale(1); opacity: 0.5; }
+  75% { transform: translate(5px, 8px) rotate(8deg) scale(1.08); opacity: 0.8; }
+  100% { transform: translate(0, 0) rotate(-8deg) scale(0.9); opacity: 0.25; }
+}
 
 @keyframes mh-login-glow {
   0%, 100% { box-shadow: 0 4px 0 #92400e, 0 0 12px rgba(250, 204, 21, 0.3); }
@@ -237,12 +325,85 @@
   100% { transform: scaleY(1); }
 }
 
+/* Referral Agent desk — CSS-only polish */
+@keyframes ra-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.35), 0 18px 40px rgba(88, 28, 135, 0.45); }
+  50% { box-shadow: 0 0 0 8px rgba(250, 204, 21, 0), 0 22px 48px rgba(157, 23, 77, 0.55); }
+}
+@keyframes ra-orb {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.45; }
+  50% { transform: translate(-12px, 10px) scale(1.15); opacity: 0.8; }
+}
+@keyframes ra-shine {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(220%); }
+}
+@keyframes ra-float {
+  0%, 100% { transform: translateY(0) rotate(-6deg); opacity: 0.35; }
+  50% { transform: translateY(-10px) rotate(8deg); opacity: 0.85; }
+}
+@keyframes ra-stat {
+  0%, 100% { border-color: rgba(250, 204, 21, 0.22); }
+  50% { border-color: rgba(250, 204, 21, 0.7); }
+}
+@keyframes ra-btn {
+  0%, 100% { filter: brightness(1); transform: translateY(0); }
+  50% { filter: brightness(1.08); transform: translateY(-1px); }
+}
+.ra-desk { position: relative; overflow-x: hidden; }
+.ra-desk::before {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  inset: -20% -10% auto -10%;
+  height: 55vh;
+  background:
+    radial-gradient(ellipse at 20% 30%, rgba(250, 204, 21, 0.12), transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(232, 121, 249, 0.14), transparent 45%);
+  z-index: 0;
+}
+.ra-desk > * { position: relative; z-index: 1; }
+.ra-hero {
+  animation: ra-pulse 3.2s ease-in-out infinite;
+}
+.ra-hero-orb {
+  animation: ra-orb 5.5s ease-in-out infinite;
+}
+.ra-sheen-wrap { position: relative; overflow: hidden; }
+.ra-sheen-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 -40%;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  animation: ra-shine 3.8s ease-in-out infinite;
+  pointer-events: none;
+}
+.ra-float {
+  position: absolute;
+  font-size: 0.85rem;
+  pointer-events: none;
+  animation: ra-float 4.2s ease-in-out infinite;
+  filter: drop-shadow(0 0 4px rgba(250, 204, 21, 0.45));
+}
+.ra-float.a { top: 12%; left: 8%; animation-delay: 0s; }
+.ra-float.b { top: 22%; right: 10%; animation-delay: -1.2s; font-size: 1rem; }
+.ra-float.c { bottom: 28%; left: 14%; animation-delay: -2.1s; }
+.ra-float.d { bottom: 18%; right: 16%; animation-delay: -3s; font-size: 0.75rem; }
+.ra-stat { animation: ra-stat 2.8s ease-in-out infinite; }
+.ra-stat:nth-child(2) { animation-delay: -0.7s; }
+.ra-stat:nth-child(3) { animation-delay: -1.4s; }
+.ra-stat:nth-child(4) { animation-delay: -2.1s; }
+.ra-copy-btn { animation: ra-btn 2.4s ease-in-out infinite; }
+.ra-login-card { animation: ra-pulse 3.6s ease-in-out infinite; }
+
 @media (prefers-reduced-motion: reduce) {
   .live-dot,
   .mh-rise,
   .mh-pop,
   .mh-sheen,
   .mh-logo-glow,
+  .mh-logo-halo,
   .mh-orb,
   .mh-urgent,
   .mh-cta::after,
@@ -265,8 +426,19 @@
   .mh-gem-red,
   .mh-gem-green,
   .mh-gem-blue,
+  .mh-gem-red.is-on,
+  .mh-gem-green.is-on,
+  .mh-gem-blue.is-on,
   .mh-gem-orb,
-  .mh-gem-sheen {
+  .mh-gem-sheen,
+  .mh-gem-float,
+  .ra-hero,
+  .ra-hero-orb,
+  .ra-sheen-wrap::after,
+  .ra-float,
+  .ra-stat,
+  .ra-copy-btn,
+  .ra-login-card {
     animation: none;
   }
 }

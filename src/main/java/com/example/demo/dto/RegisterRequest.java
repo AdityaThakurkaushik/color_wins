@@ -40,6 +40,9 @@ public class RegisterRequest {
 
     private String referralCode;
 
+    /** Special referral-agent code from ?aref= */
+    private String agentReferralCode;
+
     public String getName() {
         return name;
     }
@@ -94,5 +97,13 @@ public class RegisterRequest {
 
     public void setReferralCode(String referralCode) {
         this.referralCode = referralCode;
+    }
+
+    public String getAgentReferralCode() {
+        return agentReferralCode;
+    }
+
+    public void setAgentReferralCode(String agentReferralCode) {
+        this.agentReferralCode = agentReferralCode;
     }
 }

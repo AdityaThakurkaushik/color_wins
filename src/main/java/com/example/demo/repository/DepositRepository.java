@@ -25,6 +25,8 @@ public interface DepositRepository extends JpaRepository<Deposit, Long> {
 
     long countByUserIdAndStatusIn(Long userId, List<String> statuses);
 
+    long countByUserIdAndStatus(Long userId, String status);
+
     List<Deposit> findByStatusAndExpiresAtBefore(String status, OffsetDateTime time);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

@@ -24,6 +24,7 @@ public class RegistrationService {
     private final PointsTransactionRepository pointsTransactionRepository;
     private final ReferralSettingsRepository referralSettingsRepository;
     private final WalletPolicyService walletPolicyService;
+    private final ReferralAgentService referralAgentService;
     private final PasswordEncoder passwordEncoder;
     private final EmailOtpService emailOtpService;
     private final TelegramAuthService telegramAuthService;
@@ -33,6 +34,7 @@ public class RegistrationService {
             PointsTransactionRepository pointsTransactionRepository,
             ReferralSettingsRepository referralSettingsRepository,
             WalletPolicyService walletPolicyService,
+            ReferralAgentService referralAgentService,
             PasswordEncoder passwordEncoder,
             EmailOtpService emailOtpService,
             TelegramAuthService telegramAuthService) {
@@ -40,6 +42,7 @@ public class RegistrationService {
         this.pointsTransactionRepository = pointsTransactionRepository;
         this.referralSettingsRepository = referralSettingsRepository;
         this.walletPolicyService = walletPolicyService;
+        this.referralAgentService = referralAgentService;
         this.passwordEncoder = passwordEncoder;
         this.emailOtpService = emailOtpService;
         this.telegramAuthService = telegramAuthService;
@@ -75,9 +78,19 @@ public class RegistrationService {
                 .orElseThrow(() -> new IllegalStateException(
                         "Referral settings not found. Check V4 migration."));
 
+        Long referredByAgentId = null;
+        String agentCode = request.getAgentReferralCode();
+        if (agentCode != null && !agentCode.isBlank()) {
+            if (!Boolean.TRUE.equals(referralSettings.getEnabled())) {
+                throw new IllegalArgumentException(
+                        "Referral program is currently disabled");
+            }
+            referredByAgentId = referralAgentService.requireActiveByCode(agentCode).getId();
+        }
+
         User referrer = null;
         String submittedCode = request.getReferralCode();
-        if (submittedCode != null && !submittedCode.isBlank()) {
+        if (referredByAgentId == null && submittedCode != null && !submittedCode.isBlank()) {
             if (!Boolean.TRUE.equals(referralSettings.getEnabled())) {
                 throw new IllegalArgumentException(
                         "Referral program is currently disabled");
@@ -111,7 +124,15 @@ public class RegistrationService {
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setEmailVerified(false);
         user.setActive(false);
-        user.setReferredByCode(referrer == null ? null : referrer.getReferralCode());
+        if (existing == null || existing.getReferredByCode() == null) {
+            user.setReferredByCode(referrer == null ? null : referrer.getReferralCode());
+        }
+        if (existing == null || existing.getReferredByAgentId() == null) {
+            user.setReferredByAgentId(referredByAgentId);
+            if (referredByAgentId != null) {
+                user.setReferredByCode(null);
+            }
+        }
 
         userRepository.save(user);
 
@@ -145,7 +166,11 @@ public class RegistrationService {
         userRepository.save(user);
 
         creditSignupBonusOnce(user);
-        creditReferralRewards(user);
+        if (user.getReferredByAgentId() != null) {
+            referralAgentService.creditSignupReward(user);
+        } else {
+            creditReferralRewards(user);
+        }
     }
 
     @Transactional(readOnly = true)

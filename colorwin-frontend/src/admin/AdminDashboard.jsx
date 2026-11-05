@@ -8,6 +8,7 @@ import AdminDeposits from './AdminDeposits.jsx'
 import AdminWalletPolicy from './AdminWalletPolicy.jsx'
 import AdminLeaderboard from './AdminLeaderboard.jsx'
 import AdminAngerButton from './AdminAngerButton.jsx'
+import AdminReferralAgents from './AdminReferralAgents.jsx'
 
 const menuItems = [
   'Dashboard',
@@ -17,6 +18,7 @@ const menuItems = [
   'Bets History',
   'Wallet & Transactions',
   'Referral Management',
+  'Referral Agents',
   'Commission Settings',
   'Wallet Policy',
   'Leaderboard',
@@ -85,6 +87,8 @@ const [referralForm, setReferralForm] = React.useState({
   referrerReward: '20',
   referredUserReward: '10',
   rewardCondition: 'REGISTRATION',
+  agentFirstDepositPercent: '10',
+  agentNextDepositPercent: '5',
 })
 
 const [referralLoading, setReferralLoading] = React.useState(false)
@@ -499,6 +503,8 @@ const loadReferralSettings = async () => {
       referrerReward: String(data.referrerReward ?? 20),
       referredUserReward: String(data.referredUserReward ?? 10),
       rewardCondition: data.rewardCondition ?? 'REGISTRATION',
+      agentFirstDepositPercent: String(data.agentFirstDepositPercent ?? 10),
+      agentNextDepositPercent: String(data.agentNextDepositPercent ?? 5),
     })
   } catch (error) {
     setReferralError(error.message || 'Settings load nahi hui.')
@@ -585,6 +591,8 @@ const saveCommissionSettings = async () => {
 
     const referrerReward = Number(referralForm.referrerReward)
     const referredUserReward = Number(referralForm.referredUserReward)
+    const agentFirstDepositPercent = Number(referralForm.agentFirstDepositPercent)
+    const agentNextDepositPercent = Number(referralForm.agentNextDepositPercent)
 
     if (
       !Number.isInteger(referrerReward) ||
@@ -593,6 +601,19 @@ const saveCommissionSettings = async () => {
       referredUserReward < 0
     ) {
       setReferralError('Rewards must be non-negative whole numbers.')
+      setReferralSaving(false)
+      return
+    }
+
+    if (
+      Number.isNaN(agentFirstDepositPercent) ||
+      agentFirstDepositPercent < 0 ||
+      agentFirstDepositPercent > 100 ||
+      Number.isNaN(agentNextDepositPercent) ||
+      agentNextDepositPercent < 0 ||
+      agentNextDepositPercent > 100
+    ) {
+      setReferralError('Agent deposit percents must be between 0 and 100.')
       setReferralSaving(false)
       return
     }
@@ -617,6 +638,8 @@ const saveCommissionSettings = async () => {
           referrerReward,
           referredUserReward,
           rewardCondition: referralForm.rewardCondition,
+          agentFirstDepositPercent,
+          agentNextDepositPercent,
         }),
       })
 
@@ -637,6 +660,8 @@ const saveCommissionSettings = async () => {
         ),
         rewardCondition:
           data.rewardCondition ?? referralForm.rewardCondition,
+        agentFirstDepositPercent: String(data.agentFirstDepositPercent ?? agentFirstDepositPercent),
+        agentNextDepositPercent: String(data.agentNextDepositPercent ?? agentNextDepositPercent),
       })
       setReferralMessage('Referral settings saved successfully.')
     } catch (error) {
@@ -995,6 +1020,8 @@ React.useEffect(() => {
 
         {activePage === 'Fund Requests' ? (
           <FundRequests />
+        ) : activePage === 'Referral Agents' ? (
+          <AdminReferralAgents />
         ) : activePage === 'Approval Agents' ? (
           <AgentAdmin kind="APPROVAL" />
         ) : activePage === 'Withdraw Agents' ? (
@@ -1195,6 +1222,51 @@ React.useEffect(() => {
                 <option value="REGISTRATION">Successful registration</option>
               </select>
             </label>
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <label className="block">
+                <span className="text-sm font-semibold">Agent first deposit %</span>
+                <span className="mt-1 block text-xs text-slate-400">
+                  Commission on a referred user&apos;s first approved deposit.
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={referralForm.agentFirstDepositPercent}
+                  onChange={(event) =>
+                    setReferralForm((current) => ({
+                      ...current,
+                      agentFirstDepositPercent: event.target.value,
+                    }))
+                  }
+                  disabled={referralLoading || referralSaving}
+                  className="mt-2 w-full rounded-lg border border-slate-700 bg-[#050817] px-3 py-2 text-white outline-none focus:border-purple-500 disabled:opacity-50"
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-semibold">Agent next deposit %</span>
+                <span className="mt-1 block text-xs text-slate-400">
+                  Commission on every approved deposit after the first.
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={referralForm.agentNextDepositPercent}
+                  onChange={(event) =>
+                    setReferralForm((current) => ({
+                      ...current,
+                      agentNextDepositPercent: event.target.value,
+                    }))
+                  }
+                  disabled={referralLoading || referralSaving}
+                  className="mt-2 w-full rounded-lg border border-slate-700 bg-[#050817] px-3 py-2 text-white outline-none focus:border-purple-500 disabled:opacity-50"
+                />
+              </label>
+            </div>
 
             <div className="mt-6 flex flex-wrap gap-3">
               <button

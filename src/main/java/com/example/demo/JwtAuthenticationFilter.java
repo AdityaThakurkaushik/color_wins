@@ -1,5 +1,6 @@
 package com.example.demo;
 
+import com.example.demo.repository.ReferralAgentRepository;
 import com.example.demo.repository.ReviewAgentRepository;
 import com.example.demo.repository.UserRepository;
 import io.jsonwebtoken.Claims;
@@ -28,17 +29,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final SecretKey secretKey;
     private final UserRepository userRepository;
     private final ReviewAgentRepository reviewAgentRepository;
+    private final ReferralAgentRepository referralAgentRepository;
 
     public JwtAuthenticationFilter(
             @Value("${app.jwt.secret}") String secret,
             UserRepository userRepository,
-            ReviewAgentRepository reviewAgentRepository) {
+            ReviewAgentRepository reviewAgentRepository,
+            ReferralAgentRepository referralAgentRepository) {
 
         this.secretKey = Keys.hmacShaKeyFor(
                 secret.getBytes(StandardCharsets.UTF_8));
 
         this.userRepository = userRepository;
         this.reviewAgentRepository = reviewAgentRepository;
+        this.referralAgentRepository = referralAgentRepository;
     }
 
     @Override
@@ -68,6 +72,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String agentKind = claims.get("agentKind", String.class);
             if ("APPROVAL".equals(agentKind) || "WITHDRAW".equals(agentKind)) {
                 authenticateAgent(username, agentKind, response);
+                if (response.isCommitted()) {
+                    return;
+                }
+                filterChain.doFilter(request, response);
+                return;
+            }
+            if ("REFERRAL".equals(agentKind)) {
+                authenticateReferralAgent(username, response);
                 if (response.isCommitted()) {
                     return;
                 }
@@ -156,6 +168,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 subject,
                 null,
                 List.of(new SimpleGrantedAuthority(role)));
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+    }
+
+    private void authenticateReferralAgent(String subject, HttpServletResponse response) throws IOException {
+        if (subject == null || !subject.startsWith("refagent:")) {
+            reject(response);
+            return;
+        }
+        long agentId;
+        try {
+            agentId = Long.parseLong(subject.substring("refagent:".length()));
+        } catch (NumberFormatException ex) {
+            reject(response);
+            return;
+        }
+        var agent = referralAgentRepository.findById(agentId);
+        if (agent.isEmpty() || !agent.get().isActive()) {
+            reject(response);
+            return;
+        }
+        var authentication = new UsernamePasswordAuthenticationToken(
+                subject,
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_REFERRAL_AGENT")));
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 

@@ -31,18 +31,21 @@ public class DepositService {
     private final UserRepository userRepository;
     private final PointsTransactionRepository pointsTransactionRepository;
     private final NotificationService notificationService;
+    private final ReferralAgentService referralAgentService;
 
     public DepositService(
             DepositRepository depositRepository,
             PaymentMethodRepository paymentMethodRepository,
             UserRepository userRepository,
             PointsTransactionRepository pointsTransactionRepository,
-            NotificationService notificationService) {
+            NotificationService notificationService,
+            ReferralAgentService referralAgentService) {
         this.depositRepository = depositRepository;
         this.paymentMethodRepository = paymentMethodRepository;
         this.userRepository = userRepository;
         this.pointsTransactionRepository = pointsTransactionRepository;
         this.notificationService = notificationService;
+        this.referralAgentService = referralAgentService;
     }
 
     @Transactional
@@ -164,6 +167,7 @@ public class DepositService {
                 key,
                 "Deposit " + deposit.getPublicId() + " approved"));
         deposit.approve(coins);
+        referralAgentService.creditDepositCommission(user, deposit.getId(), coins);
         notifyUser(user.getId(),
                 "Funds added",
                 coins + " coins were added to your wallet for " + deposit.getPublicId() + ".");

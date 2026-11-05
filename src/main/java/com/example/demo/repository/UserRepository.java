@@ -30,6 +30,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     long countByReferredByCode(String referredByCode);
 
+    long countByReferredByAgentId(Long referredByAgentId);
+
+    java.util.List<User> findByReferredByCodeOrderByCreatedAtDesc(String referredByCode);
+
+    java.util.List<User> findByReferredByAgentIdOrderByCreatedAtDesc(Long referredByAgentId);
+
     @Query("""
         SELECT u FROM User u
         WHERE (

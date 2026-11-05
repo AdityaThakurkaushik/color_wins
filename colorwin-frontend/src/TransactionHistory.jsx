@@ -116,7 +116,7 @@ export default function TransactionHistory({ onBack, onBalanceChange }) {
 
   return (
     <section className="space-y-3 pb-4">
-      <button type="button" onClick={onBack} className="rounded-2xl border border-yellow-300/70 bg-gradient-to-b from-[#2a1d12] to-[#120b24] px-4 py-2 text-sm font-black text-yellow-300 shadow-[0_3px_0_#6b4a00] active:translate-y-0.5 active:shadow-[0_1px_0_#6b4a00]">‹ Back</button>
+      <button type="button" onClick={onBack} className="mh-back rounded-2xl border border-yellow-300/70 bg-gradient-to-b from-[#2a1d12] to-[#120b24] px-4 py-2 text-sm font-black text-yellow-300 shadow-[0_3px_0_#6b4a00] active:translate-y-0.5 active:shadow-[0_1px_0_#6b4a00]">‹ Back</button>
 
       <div className="relative overflow-hidden rounded-3xl border border-yellow-400/40 bg-[linear-gradient(120deg,#3b0764_0%,#6b21a8_40%,#1a0b2e_100%)] p-5 shadow-[0_12px_32px_rgba(88,28,135,0.4)]">
         <div className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-yellow-400/20 blur-2xl" />

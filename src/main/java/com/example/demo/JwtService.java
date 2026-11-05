@@ -48,4 +48,16 @@ public class JwtService {
                 .signWith(secretKey)
                 .compact();
     }
+
+    public String generateReferralAgentToken(Long agentId) {
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + expirationMs);
+        return Jwts.builder()
+                .subject("refagent:" + agentId)
+                .claim("agentKind", "REFERRAL")
+                .issuedAt(now)
+                .expiration(expiry)
+                .signWith(secretKey)
+                .compact();
+    }
 }

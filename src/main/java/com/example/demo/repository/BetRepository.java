@@ -62,6 +62,8 @@ public interface BetRepository extends JpaRepository<Bet, Long> {
 
     List<Bet> findByUserIdOrderByCreatedAtDesc(Long userId);
 
+    long countByUserId(Long userId);
+
     List<Bet> findByRoundId(Long roundId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

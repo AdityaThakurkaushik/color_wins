@@ -31,6 +31,9 @@ public class User {
     @Column(name = "referred_by_code", length = 30)
     private String referredByCode;
 
+    @Column(name = "referred_by_agent_id")
+    private Long referredByAgentId;
+
     @Column(name = "virtual_points", nullable = false)
     private Long virtualPoints = 0L;
 
@@ -133,6 +136,14 @@ public class User {
 
     public void setReferredByCode(String referredByCode) {
         this.referredByCode = referredByCode;
+    }
+
+    public Long getReferredByAgentId() {
+        return referredByAgentId;
+    }
+
+    public void setReferredByAgentId(Long referredByAgentId) {
+        this.referredByAgentId = referredByAgentId;
     }
 
     public Long getVirtualPoints() {

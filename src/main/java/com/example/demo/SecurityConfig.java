@@ -107,10 +107,12 @@ public class SecurityConfig {
                                 AntPathRequestMatcher.antMatcher("/api/leaderboard"),
                                 AntPathRequestMatcher.antMatcher("/api/leaderboard/**"),
                                 AntPathRequestMatcher.antMatcher("/api/referral-settings"),
-                                AntPathRequestMatcher.antMatcher("/api/agent/login")
+                                AntPathRequestMatcher.antMatcher("/api/agent/login"),
+                                AntPathRequestMatcher.antMatcher("/api/referral-agent/login")
                         ).permitAll()
                         .requestMatchers("/api/approval/**").hasRole("APPROVAL_AGENT")
                         .requestMatchers("/api/withdraw-agent/**").hasRole("WITHDRAW_AGENT")
+                        .requestMatchers("/api/referral-agent/**").hasRole("REFERRAL_AGENT")
                         .requestMatchers("/api/admin/**")
                         .hasRole("ADMIN")
                         .anyRequest().authenticated()

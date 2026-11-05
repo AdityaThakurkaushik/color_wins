@@ -36,6 +36,9 @@ export default function Auth({ onLogin }) {
   const [referralCode, setReferralCode] = useState(() => {
     return new URLSearchParams(window.location.search).get('ref') || ''
   })
+  const [agentReferralCode] = useState(() => {
+    return new URLSearchParams(window.location.search).get('aref') || ''
+  })
 
   const isRegister = mode === 'register'
   const isLogin = mode === 'login'
@@ -128,7 +131,8 @@ export default function Auth({ onLogin }) {
             mobileNumber: mobile.trim(),
             age: ageNum,
             password,
-            referralCode: referralCode.trim(),
+            referralCode: agentReferralCode.trim() ? '' : referralCode.trim(),
+            agentReferralCode: agentReferralCode.trim() || undefined,
           }),
         })
         const data = await response.json().catch(() => ({}))
@@ -383,16 +387,23 @@ export default function Auth({ onLogin }) {
                 />
               </label>
 
-              <label className="block text-sm text-slate-300">
-                Referral Code (Optional)
-                <input
-                  value={referralCode}
-                  onChange={(event) => setReferralCode(event.target.value)}
-                  placeholder="Enter referral code"
-                  autoComplete="off"
-                  className={field}
-                />
-              </label>
+              {agentReferralCode ? (
+                <div className="rounded-2xl border border-emerald-400/40 bg-emerald-950/30 p-3 text-sm">
+                  <p className="font-black text-emerald-300">Agent invite linked</p>
+                  <p className="mt-1 break-all text-xs text-emerald-100/80">aref={agentReferralCode}</p>
+                </div>
+              ) : (
+                <label className="block text-sm text-slate-300">
+                  Referral Code (Optional)
+                  <input
+                    value={referralCode}
+                    onChange={(event) => setReferralCode(event.target.value)}
+                    placeholder="Enter referral code"
+                    autoComplete="off"
+                    className={field}
+                  />
+                </label>
+              )}
             </>
           )}
 

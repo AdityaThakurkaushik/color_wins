@@ -98,7 +98,9 @@ public class AdminController {
                 request.enabled(),
                 request.referrerReward(),
                 request.referredUserReward(),
-                request.rewardCondition()
+                request.rewardCondition(),
+                request.agentFirstDepositPercent(),
+                request.agentNextDepositPercent()
         );
     }
 
@@ -183,7 +185,9 @@ public class AdminController {
             Boolean enabled,
             Long referrerReward,
             Long referredUserReward,
-            String rewardCondition
+            String rewardCondition,
+            BigDecimal agentFirstDepositPercent,
+            BigDecimal agentNextDepositPercent
     ) {
     }
 

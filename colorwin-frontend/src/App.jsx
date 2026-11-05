@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import Auth from './Auth.jsx'
 import AdminDashboard from './admin/AdminDashboard.jsx'
 import AgentDesk from './agent/AgentDesk.jsx'
+import ReferralAgentPanel from './ReferralAgentPanel.jsx'
 import AddFunds from './AddFunds.jsx'
 import TransactionHistory from './TransactionHistory.jsx'
 import LeaderboardBoard from './LeaderboardBoard.jsx'
@@ -13,13 +14,14 @@ const colors = [
   { name: 'BLUE', value: 'BLUE', gem: 'from-sky-200 via-blue-500 to-blue-900', glow: 'shadow-[0_10px_28px_rgba(59,130,246,0.45)]' },
 ]
 
+const GEM_FLOAT_ICONS = ['+1', '🤑', '💸', '💵', '🪙', '💰', '💲', '₹', '$']
 const amounts = [10, 20, 30, 40, 50, 100, 1000, 10000]
 const DEFAULT_AVATAR = '/millionaire-hub-logo.svg'
 
 function AccountRibbon({ name }) {
   const label = (name && String(name).trim()) || 'Guest'
   return (
-    <span className="pointer-events-none absolute bottom-2 right-2 z-20 max-w-[72%] truncate rounded-full border border-yellow-300/80 bg-gradient-to-r from-amber-100 via-yellow-300 to-amber-400 px-3 py-1 font-serif text-[17px] italic tracking-wide text-amber-950 shadow-[0_0_12px_rgba(250,204,21,0.5)]">
+    <span className="pointer-events-none absolute bottom-2 right-3 z-20 max-w-[58%] truncate rounded-full border border-yellow-300/80 bg-gradient-to-r from-amber-100 via-yellow-300 to-amber-400 px-2 py-0.5 font-serif text-[12px] italic tracking-wide text-amber-950 shadow-[0_0_8px_rgba(250,204,21,0.45)]">
       Welcome, {label}
     </span>
   )
@@ -95,6 +97,8 @@ function ReferralPage({ currentUser }) {
   })
   const [statsLoading, setStatsLoading] = useState(true)
   const [statsError, setStatsError] = useState('')
+  const [network, setNetwork] = useState([])
+  const [networkLoading, setNetworkLoading] = useState(true)
 
   const referralCode = currentUser?.referralCode || ''
   const [referralSettings, setReferralSettings] = useState(null)
@@ -193,6 +197,26 @@ useEffect(() => {
     }
 
     loadReferralStats()
+
+    async function loadNetwork() {
+      setNetworkLoading(true)
+      try {
+        const token = localStorage.getItem('colorwin_token')
+        if (!token) return
+        const response = await fetch(`${API}/user/referral-network`, {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store',
+        })
+        if (!response.ok) return
+        const data = await response.json()
+        if (!cancelled) setNetwork(Array.isArray(data.referrals) ? data.referrals : [])
+      } catch {
+        if (!cancelled) setNetwork([])
+      } finally {
+        if (!cancelled) setNetworkLoading(false)
+      }
+    }
+    loadNetwork()
 
     return () => {
       cancelled = true
@@ -331,6 +355,40 @@ useEffect(() => {
         </div>
         {referralSettingsError && <p className="mt-2 text-sm text-red-400">Referral settings load nahi hui.</p>}
         {referralSettings && !referralSettings.enabled && <p className="mt-2 text-sm text-yellow-400">Referral program is currently disabled.</p>}
+      </section>
+
+      <section className="rounded-3xl border border-yellow-400/30 bg-[linear-gradient(180deg,#15102a_0%,#0d0d1c_100%)] p-4 shadow-[0_0_24px_rgba(250,204,21,0.08)]">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-lg font-black">Your Referrals</h3>
+          <span className="rounded-full border border-yellow-400/40 bg-yellow-400/10 px-2.5 py-0.5 text-[10px] font-black text-yellow-300">
+            {network.length} people
+          </span>
+        </div>
+        {networkLoading && <p className="mt-3 text-sm text-slate-400">Loading referrals...</p>}
+        {!networkLoading && network.length === 0 && (
+          <p className="mt-3 rounded-2xl border border-dashed border-yellow-400/25 bg-[#101020] p-4 text-center text-sm text-slate-400">
+            Abhi koi referral nahi. Link share karke friends invite karo.
+          </p>
+        )}
+        {!networkLoading && network.length > 0 && (
+          <ul className="mt-3 space-y-2">
+            {network.map((row) => (
+              <li
+                key={row.username}
+                className="flex items-center justify-between gap-3 rounded-2xl border border-yellow-400/20 bg-gradient-to-r from-[#1f1538] to-[#0b0b18] px-3 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-black text-white">{row.displayName || row.username}</p>
+                  <p className="text-xs text-slate-400">@{row.username}</p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-sm font-black text-yellow-300">{Number(row.betsCount || 0).toLocaleString('en-IN')} bets</p>
+                  <p className="text-[10px] font-bold text-slate-400">{row.verified ? 'Verified' : 'Pending'}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section className="rounded-3xl border border-yellow-400/25 bg-[#0d0d1c] p-4">
@@ -550,6 +608,7 @@ const [notificationTotalPages, setNotificationTotalPages] = useState(0)
 
   const [pendingBetId, setPendingBetId] = useState(null)
   const [resultPopup, setResultPopup] = useState(null)
+  const playFocusRef = useRef(null)
 const currentPendingBet =
   myBets.find(
     (bet) => String(bet.betId) === String(pendingBetId)
@@ -892,6 +951,10 @@ useEffect(() => {
   }
 }, [page, isAuthenticated, loadAllNotifications])
 
+useEffect(() => {
+  window.scrollTo(0, 0)
+}, [page])
+
   const loadGameData = useCallback(async () => {
     try {
       const [roundResponse, resultsResponse] = await Promise.all([
@@ -1190,6 +1253,9 @@ setResultPopup({
       setBetError(false)
       setSelectedColor('')
       setPendingBetId(data.betId)
+      window.setTimeout(() => {
+        playFocusRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 80)
 
       await Promise.all([
         loadUserProfile(),
@@ -1260,20 +1326,20 @@ setResultPopup({
     <div className="min-h-screen bg-[#03030c] text-white">
       <div className="mx-auto min-h-screen w-full border-x border-purple-950 pb-24">
        
-<header className="sticky top-0 isolate z-40 flex items-center justify-between gap-2 border-b border-yellow-400/30 bg-[linear-gradient(180deg,#1c1433_0%,#080817_100%)] px-2 py-2 shadow-[0_8px_24px_rgba(0,0,0,0.45)] sm:px-3 sm:py-2.5">
+<header className="fixed inset-x-0 top-0 z-40 flex items-center justify-between gap-2 border-b border-yellow-400/30 bg-[linear-gradient(180deg,#1c1433_0%,#080817_100%)] px-2 py-2 shadow-[0_8px_24px_rgba(0,0,0,0.45)] sm:px-3 sm:py-2.5">
   <button
     type="button"
     onClick={() => setPage('Home')}
-    className="flex min-w-0 items-center gap-2 rounded-2xl border border-yellow-300/70 bg-gradient-to-b from-[#2a1d12] to-[#120b24] px-2 py-1.5 shadow-[0_4px_0_#6b4a00,0_0_18px_rgba(250,204,21,0.28)] active:translate-y-0.5 active:shadow-[0_2px_0_#6b4a00]"
+    className="flex min-w-0 max-w-[48%] flex-1 items-center gap-1.5 overflow-hidden rounded-2xl border border-yellow-300/70 bg-gradient-to-b from-[#2a1d12] to-[#120b24] px-1.5 py-1 shadow-[0_4px_0_#6b4a00,0_0_18px_rgba(250,204,21,0.28)] active:translate-y-0.5 active:shadow-[0_2px_0_#6b4a00] sm:max-w-none sm:flex-none sm:gap-2 sm:px-2 sm:py-1.5"
   >
     <img
       src="/millionaire-hub-logo.svg"
       alt=""
-      className="h-10 w-10 shrink-0 rounded-full object-contain ring-2 ring-yellow-300 sm:h-11 sm:w-11"
+      className="h-8 w-8 shrink-0 rounded-full object-contain ring-2 ring-yellow-300 sm:h-11 sm:w-11"
     />
-    <h1 className="min-w-0 text-left text-[13px] font-black leading-tight tracking-wide text-yellow-300 sm:text-lg">
-      MILLIONAIRE<br className="sm:hidden" />{' '}
-      <span className={`mh-hub${hubBlink ? ' is-blinking' : ''}`}>HUB</span>
+    <h1 className="min-w-0 flex-1 overflow-hidden text-left font-black leading-[1.05] tracking-wide text-yellow-300 text-[clamp(10px,3.1vw,13px)] sm:text-lg sm:leading-tight">
+      <span className="block truncate sm:inline sm:overflow-visible">MILLIONAIRE</span>
+      <span className={`mh-hub block truncate sm:ml-1 sm:inline sm:overflow-visible${hubBlink ? ' is-blinking' : ''}`}>HUB</span>
     </h1>
   </button>
 
@@ -1414,21 +1480,21 @@ setResultPopup({
     </button>
   )}
 </header>
-
+        <div className="mh-header-spacer" aria-hidden="true" />
 
         <main key={page} className="mh-rise mx-auto w-full max-w-5xl space-y-2 p-2 pb-4">
           {page === 'Login' && <Auth onLogin={handleLogin} />}
 
           {page === 'Home' && (
             <>
-<section className="relative overflow-hidden rounded-3xl border border-yellow-400/35 bg-[linear-gradient(120deg,#3b0764_0%,#6b21a8_28%,#9d174d_58%,#1a0b2e_100%)] px-4 py-4 pb-8 shadow-[0_18px_40px_rgba(88,28,135,0.45)] sm:px-5 sm:py-5 sm:pb-8">
+<section className="relative overflow-hidden rounded-3xl border border-yellow-400/35 bg-[linear-gradient(120deg,#3b0764_0%,#6b21a8_28%,#9d174d_58%,#1a0b2e_100%)] px-4 py-3 pb-5 shadow-[0_18px_40px_rgba(88,28,135,0.45)] sm:px-5 sm:py-4 sm:pb-5">
                 <div className="mh-orb pointer-events-none absolute -left-10 -top-16 h-40 w-40 rounded-full bg-yellow-400/25 blur-3xl" />
                 <div className="mh-orb mh-orb-late pointer-events-none absolute -right-8 bottom-[-30px] h-36 w-36 rounded-full bg-fuchsia-500/35 blur-3xl" />
                 <div className="mh-sheen pointer-events-none absolute inset-y-0 left-0" />
                 <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-yellow-200/80 to-transparent" />
                 <div className="relative z-10 flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <div className="relative h-[168px] overflow-hidden sm:h-[176px]">
+                    <div className="relative h-[88px] overflow-hidden sm:h-[96px]">
                       {HERO_SLIDES.map((slide, index) => (
                         <div
                           key={slide.title}
@@ -1438,19 +1504,16 @@ setResultPopup({
                           <p className="truncate text-[10px] font-black uppercase tracking-[0.28em] text-yellow-300 sm:text-xs">
                             {slide.kicker}
                           </p>
-                          <h2 className="mt-1 line-clamp-2 min-h-[3.6rem] bg-gradient-to-r from-white via-yellow-100 to-fuchsia-200 bg-clip-text text-2xl font-black leading-tight text-transparent sm:min-h-[4.5rem] sm:text-3xl">
+                          <h2 className="mt-1 line-clamp-2 min-h-[2.5rem] bg-gradient-to-r from-white via-yellow-100 to-fuchsia-200 bg-clip-text text-xl font-black leading-tight text-transparent sm:min-h-[2.9rem] sm:text-2xl">
                             {slide.title}
                           </h2>
-                          <p className="mt-1.5 line-clamp-2 min-h-[2.5rem] text-sm font-bold leading-snug text-fuchsia-200">
-                            {slide.line}
-                          </p>
-                          <p className="mt-2 inline-flex max-w-full truncate rounded-full border border-yellow-400/40 bg-black/25 px-3 py-1 text-[10px] font-bold text-yellow-200 sm:text-xs">
+                          <p className="mt-1.5 inline-flex max-w-full truncate rounded-full border border-yellow-400/40 bg-black/25 px-3 py-0.5 text-[10px] font-bold text-yellow-200 sm:text-xs">
                             {slide.chip}
                           </p>
                         </div>
                       ))}
                     </div>
-                    <div className="mt-3 flex gap-1.5">
+                    <div className="mt-2 flex gap-1.5">
                       {HERO_SLIDES.map((_, index) => (
                         <button
                           key={index}
@@ -1462,9 +1525,9 @@ setResultPopup({
                       ))}
                     </div>
                   </div>
-                  <div className="relative shrink-0 pt-1">
-                    <span className="absolute inset-0 rounded-full bg-yellow-400/40 blur-xl" />
-                    <img src="/millionaire-hub-logo.svg" alt="Millionaire Hub" className="mh-logo-glow relative h-[72px] w-[72px] rounded-full object-contain ring-2 ring-yellow-300/80 sm:h-28 sm:w-28" />
+                  <div className="relative shrink-0 pt-0.5">
+                    <span className="mh-logo-halo absolute -inset-1 rounded-full bg-yellow-400/45 blur-xl" />
+                    <img src="/millionaire-hub-logo.svg" alt="Millionaire Hub" className="mh-logo-glow relative h-14 w-14 rounded-full object-contain ring-2 ring-yellow-300/80 sm:h-[68px] sm:w-[68px]" />
                   </div>
                 </div>
                 <AccountRibbon name={currentUser?.displayName || currentUser?.username} />
@@ -1476,6 +1539,7 @@ setResultPopup({
                 </div>
               )}
 
+              <div ref={playFocusRef} className="space-y-2 scroll-mt-2">
               <section className="grid grid-cols-3 gap-2 text-center">
                 <div className="min-w-0 rounded-2xl border border-yellow-400/20 bg-[#101020] p-2 shadow-[inset_0_0_18px_rgba(250,204,21,0.06)]">
                   <p className="text-[10px] uppercase tracking-widest text-slate-400">Current Period</p>
@@ -1515,14 +1579,19 @@ setResultPopup({
                         onClick={() => setSelectedColor(color.value)}
                         className={`mh-gem mh-gem-${color.value.toLowerCase()} ${on ? 'is-on' : ''} relative overflow-hidden rounded-2xl border p-3 text-center font-black text-white transition-transform duration-200 ${
                           on
-                            ? '-translate-y-1 border-yellow-300 ring-2 ring-yellow-300/80'
+                            ? 'z-[1] -translate-y-1 scale-[1.04] border-yellow-200 ring-2 ring-yellow-300'
                             : 'border-white/15'
                         } bg-gradient-to-b ${color.gem}`}
                       >
                         <span className="mh-gem-sheen" />
+                        <span className="mh-gem-fog pointer-events-none absolute inset-0" aria-hidden="true">
+                          {GEM_FLOAT_ICONS.map((icon, i) => (
+                            <span key={icon} className={`mh-gem-float f${i + 1}`}>{icon}</span>
+                          ))}
+                        </span>
                         <span className="pointer-events-none absolute inset-x-3 top-0 h-8 rounded-full bg-white/25 blur-md" />
-                        <span className={`mh-gem-orb relative mx-auto mt-1 block h-8 w-8 rounded-full bg-gradient-to-br ${color.gem} ring-2 ${on ? 'ring-yellow-200' : 'ring-white/50'}`} />
-                        <span className="relative mt-2 block tracking-wide">{color.name}</span>
+                        <span className={`mh-gem-orb relative z-[1] mx-auto mt-1 block h-8 w-8 rounded-full bg-gradient-to-br ${color.gem} ring-2 ${on ? 'ring-yellow-200' : 'ring-white/50'}`} />
+                        <span className="relative z-[1] mt-2 block tracking-wide">{color.name}</span>
                       </button>
                     )
                   })}
@@ -1596,6 +1665,7 @@ setResultPopup({
                   </div>
                 )}
               </section>
+              </div>
 
               <section className="mh-results relative overflow-hidden rounded-xl border border-purple-900 p-2">
                 {currentPendingBet && (
@@ -1707,6 +1777,9 @@ setResultPopup({
           )}
           {page === 'Notifications' && (
             <section className="space-y-3 pb-4">
+              <button type="button" onClick={() => setPage('Home')} className="mh-back rounded-2xl border border-yellow-300/70 bg-gradient-to-b from-[#2a1d12] to-[#120b24] px-4 py-2 text-sm font-black text-yellow-300 shadow-[0_3px_0_#6b4a00]">
+                ‹ Back
+              </button>
               <div className="relative overflow-hidden rounded-3xl border border-yellow-400/40 bg-[linear-gradient(120deg,#3b0764_0%,#6b21a8_40%,#1a0b2e_100%)] p-5 shadow-[0_12px_32px_rgba(88,28,135,0.4)]">
                 <div className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-yellow-400/20 blur-2xl" />
                 <p className="text-[11px] font-black tracking-[0.22em] text-yellow-300">INBOX</p>
@@ -1719,9 +1792,6 @@ setResultPopup({
                     className="rounded-2xl border border-yellow-200 bg-gradient-to-b from-yellow-300 to-amber-500 px-3 py-2 text-xs font-black text-black shadow-[0_3px_0_#92400e] disabled:opacity-40"
                   >
                     Mark All Read
-                  </button>
-                  <button type="button" onClick={() => setPage('Home')} className="rounded-2xl border border-yellow-300/70 bg-gradient-to-b from-[#2a1d12] to-[#120b24] px-3 py-2 text-sm font-black text-yellow-300 shadow-[0_3px_0_#6b4a00]">
-                    Back
                   </button>
                 </div>
               </div>
@@ -2017,7 +2087,7 @@ setResultPopup({
 
     <button
       type="button"
-      onClick={() => window.open('https://t.me/millionairehub_group', '_blank', 'noopener,noreferrer')}
+      onClick={() => setPage('Help & Support')}
       className="flex w-full items-center gap-4 rounded-2xl border border-fuchsia-300/60 bg-gradient-to-b from-fuchsia-600 to-purple-800 p-4 text-left font-black text-white shadow-[0_4px_0_#4a044e] active:translate-y-0.5 active:shadow-[0_2px_0_#4a044e]"
     >
       <span className="text-2xl">💬</span>
@@ -2025,6 +2095,7 @@ setResultPopup({
         <span className="block">Help &amp; Support</span>
         <span className="text-sm font-bold text-fuchsia-100">Get help and contact us</span>
       </span>
+      <span className="text-xl text-fuchsia-100">›</span>
     </button>
 
     <button
@@ -2058,7 +2129,7 @@ setResultPopup({
 
 {page === 'Help & Support' && (
   <section className="space-y-3 pb-4">
-    <button type="button" onClick={() => setPage('Profile')} className="rounded-2xl border border-yellow-300/70 bg-gradient-to-b from-[#2a1d12] to-[#120b24] px-4 py-2 text-sm font-black text-yellow-300 shadow-[0_3px_0_#6b4a00] active:translate-y-0.5">‹ Back</button>
+    <button type="button" onClick={() => setPage('Profile')} className="mh-back rounded-2xl border border-yellow-300/70 bg-gradient-to-b from-[#2a1d12] to-[#120b24] px-4 py-2 text-sm font-black text-yellow-300 shadow-[0_3px_0_#6b4a00] active:translate-y-0.5">‹ Back</button>
     <div className="relative overflow-hidden rounded-3xl border border-yellow-400/40 bg-[linear-gradient(120deg,#3b0764_0%,#6b21a8_40%,#1a0b2e_100%)] p-5">
       <h2 className="text-2xl font-black text-white">💬 Help &amp; Support</h2>
       <p className="mt-1 text-sm font-bold text-fuchsia-200">Choose a support channel</p>
@@ -2126,7 +2197,7 @@ setResultPopup({
 
 {page === 'Terms & Conditions' && (
   <section className="space-y-3 pb-4">
-    <button type="button" onClick={() => setPage('Profile')} className="rounded-2xl border border-yellow-300/70 bg-gradient-to-b from-[#2a1d12] to-[#120b24] px-4 py-2 text-sm font-black text-yellow-300 shadow-[0_3px_0_#6b4a00] active:translate-y-0.5">‹ Back</button>
+    <button type="button" onClick={() => setPage('Profile')} className="mh-back rounded-2xl border border-yellow-300/70 bg-gradient-to-b from-[#2a1d12] to-[#120b24] px-4 py-2 text-sm font-black text-yellow-300 shadow-[0_3px_0_#6b4a00] active:translate-y-0.5">‹ Back</button>
     <div className="relative overflow-hidden rounded-3xl border border-yellow-400/40 bg-[linear-gradient(120deg,#3b0764_0%,#6b21a8_40%,#1a0b2e_100%)] p-5">
       <h2 className="text-2xl font-black text-white">📋 Terms &amp; Conditions</h2>
       <p className="mt-1 text-sm font-bold text-fuchsia-200">Rules for using MILLIONAIRE HUB</p>
@@ -2372,6 +2443,9 @@ function App() {
   }
   if (window.location.pathname === '/withdraw-agent') {
     return <AgentDesk panel="withdraw" />
+  }
+  if (window.location.pathname === '/referral-agent') {
+    return <ReferralAgentPanel />
   }
 
   return <GameApp />

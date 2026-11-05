@@ -1,6 +1,7 @@
 package com.example.demo.entity;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
 @Entity
@@ -21,6 +22,12 @@ public class ReferralSettings {
 
     @Column(name = "reward_condition", nullable = false, length = 30)
     private String rewardCondition = "REGISTRATION";
+
+    @Column(name = "agent_first_deposit_percent", nullable = false, precision = 5, scale = 2)
+    private BigDecimal agentFirstDepositPercent = new BigDecimal("10");
+
+    @Column(name = "agent_next_deposit_percent", nullable = false, precision = 5, scale = 2)
+    private BigDecimal agentNextDepositPercent = new BigDecimal("5");
 
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
@@ -82,7 +89,33 @@ public class ReferralSettings {
         this.rewardCondition = rewardCondition;
     }
 
+    public BigDecimal getAgentFirstDepositPercent() {
+        return agentFirstDepositPercent;
+    }
+
+    public void setAgentFirstDepositPercent(BigDecimal agentFirstDepositPercent) {
+        this.agentFirstDepositPercent = requirePercent(agentFirstDepositPercent, "First deposit percent");
+    }
+
+    public BigDecimal getAgentNextDepositPercent() {
+        return agentNextDepositPercent;
+    }
+
+    public void setAgentNextDepositPercent(BigDecimal agentNextDepositPercent) {
+        this.agentNextDepositPercent = requirePercent(agentNextDepositPercent, "Next deposit percent");
+    }
+
     public OffsetDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    private static BigDecimal requirePercent(BigDecimal value, String label) {
+        if (value == null) {
+            throw new IllegalArgumentException(label + " is required");
+        }
+        if (value.compareTo(BigDecimal.ZERO) < 0 || value.compareTo(new BigDecimal("100")) > 0) {
+            throw new IllegalArgumentException(label + " must be between 0 and 100");
+        }
+        return value;
     }
 }

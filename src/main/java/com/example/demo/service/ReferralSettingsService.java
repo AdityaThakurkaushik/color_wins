@@ -5,6 +5,8 @@ import com.example.demo.repository.ReferralSettingsRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+
 @Service
 public class ReferralSettingsService {
 
@@ -29,7 +31,9 @@ public class ReferralSettingsService {
             Boolean enabled,
             Long referrerReward,
             Long referredUserReward,
-            String rewardCondition) {
+            String rewardCondition,
+            BigDecimal agentFirstDepositPercent,
+            BigDecimal agentNextDepositPercent) {
 
         ReferralSettings settings = repository
                 .findByIdForUpdate(SETTINGS_ID)
@@ -45,6 +49,12 @@ public class ReferralSettingsService {
         settings.setReferrerReward(referrerReward);
         settings.setReferredUserReward(referredUserReward);
         settings.setRewardCondition(rewardCondition);
+        if (agentFirstDepositPercent != null) {
+            settings.setAgentFirstDepositPercent(agentFirstDepositPercent);
+        }
+        if (agentNextDepositPercent != null) {
+            settings.setAgentNextDepositPercent(agentNextDepositPercent);
+        }
 
         return repository.save(settings);
     }
