@@ -1807,55 +1807,58 @@ setResultPopup({
                         )
                       })}
                     </div>
-                    <label className="mt-3 block text-[10px] font-black uppercase tracking-[0.16em] text-yellow-200/70">
-                      ✎ Custom amount
-                      <input
-                        type="number"
-                        min="5"
-                        step="1"
-                        value={amount}
-                        onChange={(event) => {
-                          setAmount(event.target.value)
-                          setSelectedChipId('')
+                    <div className="mh-chip-footer">
+                      <label className="mh-chip-custom">
+                        <span className="mh-chip-custom-label">✎ Custom amount</span>
+                        <input
+                          type="number"
+                          min="5"
+                          step="1"
+                          inputMode="numeric"
+                          value={amount}
+                          onChange={(event) => {
+                            setAmount(event.target.value)
+                            setSelectedChipId('')
+                          }}
+                          className="mh-lux-input"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!isAuthenticated) {
+                            playClick()
+                            setPage('Login')
+                            return
+                          }
+                          startGameMusic()
+                          handlePlaceBet()
                         }}
-                        className="mh-lux-input mt-2"
-                      />
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!isAuthenticated) {
-                          playClick()
-                          setPage('Login')
-                          return
+                        disabled={
+                          isAuthenticated && (
+                            submittingBet ||
+                            pendingBetId != null ||
+                            !currentRound ||
+                            currentRound.status !== 'OPEN' ||
+                            secondsLeft <= 0
+                          )
                         }
-                        startGameMusic()
-                        handlePlaceBet()
-                      }}
-                      disabled={
-                        isAuthenticated && (
-                          submittingBet ||
-                          pendingBetId != null ||
-                          !currentRound ||
-                          currentRound.status !== 'OPEN' ||
-                          secondsLeft <= 0
-                        )
-                      }
-                      className={`mh-lux-place ${!isAuthenticated ? 'mh-login' : ''}`}
-                    >
-                      <span className="mh-lux-place-ico" aria-hidden="true">🪙</span>
-                      <span>
-                        {submittingBet
-                          ? 'PLACING BET...'
-                          : pendingBetId != null
-                            ? 'WAITING FOR RESULT...'
-                            : !isAuthenticated
-                              ? 'LOGIN TO PLAY'
-                              : secondsLeft <= 0 || currentRound?.status !== 'OPEN'
-                                ? 'WAIT FOR NEXT ROUND'
-                                : 'PLACE BET'}
-                      </span>
-                    </button>
+                        className={`mh-lux-place ${!isAuthenticated ? 'mh-login' : ''}`}
+                      >
+                        <span className="mh-lux-place-ico" aria-hidden="true">🪙</span>
+                        <span>
+                          {submittingBet
+                            ? 'PLACING BET...'
+                            : pendingBetId != null
+                              ? 'WAITING FOR RESULT...'
+                              : !isAuthenticated
+                                ? 'LOGIN TO PLAY'
+                                : secondsLeft <= 0 || currentRound?.status !== 'OPEN'
+                                  ? 'WAIT FOR NEXT ROUND'
+                                  : 'PLACE BET'}
+                        </span>
+                      </button>
+                    </div>
                   </section>
                 )}
 
