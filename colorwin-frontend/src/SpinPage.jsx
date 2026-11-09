@@ -24,7 +24,7 @@ export default function SpinPage({
       balance: String(bootedBalance.current),
     })
     if (token) params.set('token', token)
-    params.set('v', '5')
+    params.set('v', '6')
     return `/xpinr/index.html?${params.toString()}`
   }, [isAuthenticated])
 

@@ -3,6 +3,7 @@ import { Howl, Howler } from 'howler'
 let muted = localStorage.getItem('mh_game_sfx_muted') === '1'
 let musicOn = false
 let ctx = null
+let filesReady = false
 
 Howler.mute(muted)
 Howler.volume(0.85)
@@ -33,9 +34,20 @@ function tone(freq, duration = 0.1, type = 'sine', gain = 0.03) {
   osc.stop(ac.currentTime + duration)
 }
 
+function missingSound() {
+  return {
+    _mhMissing: true,
+    play() {},
+    stop() {},
+    state() { return 'unloaded' },
+    playing() { return false },
+    once() {},
+  }
+}
+
 function makeHowl(name, opts = {}) {
   const sound = new Howl({
-    src: [`/sfx/${name}.mp3`, `/sfx/${name}.ogg`, `/sfx/${name}.wav`],
+    src: [`/sfx/${name}.mp3`],
     volume: opts.volume ?? 0.4,
     loop: Boolean(opts.loop),
     preload: true,
@@ -48,19 +60,39 @@ function makeHowl(name, opts = {}) {
 }
 
 const bank = {
-  click: makeHowl('click', { volume: 0.35 }),
-  chip: makeHowl('chip', { volume: 0.4 }),
-  place: makeHowl('place', { volume: 0.42 }),
-  hit: makeHowl('hit', { volume: 0.4 }),
-  win: makeHowl('win', { volume: 0.45 }),
-  lose: makeHowl('lose', { volume: 0.4 }),
-  ambient: makeHowl('ambient', { volume: 0.28, loop: true, html5: true }),
+  click: missingSound(),
+  chip: missingSound(),
+  place: missingSound(),
+  hit: missingSound(),
+  win: missingSound(),
+  lose: missingSound(),
+  ambient: missingSound(),
 }
+
+/** Only load Howler files if at least one asset exists — avoids live 404 storms / lag. */
+function probeSfxFiles() {
+  if (probeSfxFiles._done) return
+  probeSfxFiles._done = true
+  fetch('/sfx/click.mp3', { method: 'HEAD', cache: 'no-store' })
+    .then((res) => {
+      if (!res.ok) return
+      filesReady = true
+      bank.click = makeHowl('click', { volume: 0.35 })
+      bank.chip = makeHowl('chip', { volume: 0.4 })
+      bank.place = makeHowl('place', { volume: 0.42 })
+      bank.hit = makeHowl('hit', { volume: 0.4 })
+      bank.win = makeHowl('win', { volume: 0.45 })
+      bank.lose = makeHowl('lose', { volume: 0.4 })
+      bank.ambient = makeHowl('ambient', { volume: 0.28, loop: true, html5: true })
+    })
+    .catch(() => {})
+}
+probeSfxFiles()
 
 function playHowl(name, fallback) {
   if (muted) return
   const sound = bank[name]
-  if (sound && !sound._mhMissing && sound.state() !== 'unloaded') {
+  if (filesReady && sound && !sound._mhMissing && sound.state() !== 'unloaded') {
     try {
       if (sound.playing()) sound.stop()
       sound.play()
@@ -112,42 +144,36 @@ export function startGameMusic() {
   if (muted || musicOn) return
 
   const ambient = bank.ambient
-  if (ambient && ambient._mhMissing) {
+  if (!filesReady || ambient._mhMissing) {
     musicOn = true
     startSoftPad()
     return
   }
 
-  if (ambient && !ambient._mhMissing) {
-    try {
-      ambient.once?.('loaderror', () => {
-        ambient._mhMissing = true
-        if (muted) return
+  try {
+    ambient.once?.('loaderror', () => {
+      ambient._mhMissing = true
+      if (muted) return
+      try { ambient.stop() } catch {}
+      musicOn = false
+      startGameMusic()
+    })
+    if (!ambient.playing()) ambient.play()
+    musicOn = true
+    window.setTimeout(() => {
+      if (muted || ambient._mhMissing) return
+      if (!ambient.playing() && ambient.state() !== 'loaded') {
         try { ambient.stop() } catch {}
-        stopSoftPad()
+        ambient._mhMissing = true
         musicOn = false
         startGameMusic()
-      })
-      if (!ambient.playing()) ambient.play()
-      musicOn = true
-      window.setTimeout(() => {
-        if (muted || ambient._mhMissing) return
-        // File missing / failed: Howler never reaches loaded+playing → soft pad (no tik-tik pulses)
-        if (!ambient.playing() && ambient.state() !== 'loaded') {
-          try { ambient.stop() } catch {}
-          ambient._mhMissing = true
-          musicOn = false
-          startGameMusic()
-        }
-      }, 900)
-      return
-    } catch {
-      ambient._mhMissing = true
-    }
+      }
+    }, 900)
+  } catch {
+    ambient._mhMissing = true
+    musicOn = true
+    startSoftPad()
   }
-
-  musicOn = true
-  startSoftPad()
 }
 
 export function stopGameMusic() {
@@ -201,22 +227,9 @@ export function playWinChime() {
       [659.25, 85, 0.11, 0.032],
       [783.99, 170, 0.13, 0.034],
       [1046.5, 265, 0.22, 0.038],
-      [783.99, 420, 0.1, 0.024],
-      [1046.5, 500, 0.2, 0.036],
-      [1318.5, 610, 0.09, 0.028],
-      [1568, 690, 0.1, 0.026],
-      [2093, 780, 0.14, 0.03],
     ]
     fanfare.forEach(([freq, delay, dur, gain]) => {
       window.setTimeout(() => tone(freq, dur, 'sine', gain), delay)
-    })
-    window.setTimeout(() => {
-      tone(523.25, 0.42, 'triangle', 0.014)
-      tone(659.25, 0.42, 'triangle', 0.012)
-      tone(783.99, 0.48, 'sine', 0.016)
-    }, 180)
-    ;[880, 1175, 1480, 1760].forEach((freq, i) => {
-      window.setTimeout(() => tone(freq, 0.07, 'triangle', 0.02), 860 + i * 70)
     })
   })
 }
@@ -225,6 +238,5 @@ export function playLoseTone() {
   playHowl('lose', () => {
     tone(349, 0.14, 'sine', 0.03)
     window.setTimeout(() => tone(277, 0.16, 'triangle', 0.026), 100)
-    window.setTimeout(() => tone(220, 0.28, 'sine', 0.024), 220)
   })
 }

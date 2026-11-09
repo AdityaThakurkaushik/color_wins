@@ -13,12 +13,8 @@ import AdminXpinR from './AdminXpinR.jsx'
 
 const menuItems = [
   'Dashboard',
-  'Game Management',
-  'Rounds & Results',
   'XpinR',
   'Users',
-  'Bets History',
-  'Wallet & Transactions',
   'Referral Management',
   'Referral Agents',
   'Commission Settings',
@@ -30,10 +26,7 @@ const menuItems = [
   'Approval Agents',
   'Withdraw Agents',
   'Withdrawals',
-  'Rewards & Offers',
-  'Live Activity Messages',
   'Announcements',
-  'Settings',
 ]
 
 function StatCard({ item }) {

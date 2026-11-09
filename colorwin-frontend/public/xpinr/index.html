@@ -598,7 +598,8 @@ footer{background:repeating-radial-gradient(circle at 20% 30%,rgba(255,255,255,.
 </style>
 <script>
 /* low-end detection: weak CPU / little RAM / reduced-motion -> "lite" mode (fewer effects) */
-var LITE=(function(){try{var m=navigator.deviceMemory||8,c=navigator.hardwareConcurrency||8;
+var LITE=(function(){try{var m=navigator.deviceMemory||4,c=navigator.hardwareConcurrency||4;
+  if (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||"")) return true;
   return m<=4||c<=4||matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){return false}})();
 if(LITE)document.documentElement.classList.add('lite');
 </script>
@@ -1361,8 +1362,8 @@ function updateUI() {
   $("#betLabel").textContent = `BET: ${state.bet === "ALL" ? "ALL IN (" + fmt(state.balance) + ")" : fmt(state.bet)}`;
   $("#mute").textContent = state.muted ? "🔇" : "🔊";
   audio.syncMusic();
-  $("#bonusBtn").disabled = state.bonusUsed;
-  $("#bonusBtn").textContent = state.bonusUsed ? "Bonus already used" : `📺 Watch bonus +${CONFIG.BONUS_COINS}`;
+  $("#bonusBtn").disabled = false;
+  $("#bonusBtn").textContent = "Open Wallet";
 
   // last 5 results strip
   const h = $("#history"); h.innerHTML = "";
@@ -1381,18 +1382,22 @@ function setStatus(t, color) {
   clearTimeout(talk.t);
   s.style.color = color || "";
   const on = (v) => {
-    const g = $("#girl"), p = $("#girlPhoto");
+    const g = $("#girl");
     if (g) g.classList.toggle("talk", v);
-    if (p) p.classList.toggle("talk", v);
   };
+  // Lite/mobile: instant text — no typewriter / mouth loop (was causing face lag)
+  if (LITE || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    s.textContent = t;
+    on(false);
+    return;
+  }
   const a = document.createElement("span"), b = document.createElement("span");
-  b.style.visibility = "hidden";                  // reserves the final size so the layout never jumps
+  b.style.visibility = "hidden";
   s.replaceChildren(a, b);
-  if (matchMedia("(prefers-reduced-motion: reduce)").matches) { a.textContent = t; return; }
   let i = 0;
   on(true);
   (function step() {
-    if (tok !== talk.tok) return;                 // a newer line replaced this one
+    if (tok !== talk.tok) return;
     i++;
     a.textContent = chars.slice(0, i).join("");
     b.textContent = chars.slice(i).join("");
@@ -1987,41 +1992,15 @@ init();
 <script>
 (function(){
   const bg=document.getElementById('bg'),box=document.getElementById('wheelBox');
-  if(bg){['b1','b2'].forEach(c=>{const d=document.createElement('div');d.className='beam '+c;bg.prepend(d)});
+  if(bg && !document.documentElement.classList.contains('lite')){
+    ['b1','b2'].forEach(c=>{const d=document.createElement('div');d.className='beam '+c;bg.prepend(d)});
     [['♠',6,18],['♥',72,40],['♦',10,66],['♣',68,78]].forEach(([s,l,t])=>{const e=document.createElement('div');
       e.className='suit';e.textContent=s;e.style.cssText='left:'+l+'%;top:'+t+'%';bg.appendChild(e)})}
+  }
   if(box){const b=document.createElement('div');b.id='bezel';box.appendChild(b)}
   const hm=document.querySelectorAll('#girl .hm')[1];
   if(hm)hm.insertAdjacentHTML('beforeend','<path class="shine" d="M66 58 C74 44 92 38 108 40 C92 46 80 54 72 66 Z" fill="#fff" opacity=".4"/>');
-  /* real photo: upload from your phone/PC (kept in this browser) */
-  const mas=document.getElementById('mascot'),girl=document.getElementById('girl');
-  if(mas&&girl){
-    const img=document.createElement('img');img.id='girlPhoto';img.alt='';mas.insertBefore(img,girl);
-    const inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.style.display='none';
-    const btn=document.createElement('button');btn.id='photoBtn';btn.textContent='📷';btn.setAttribute('aria-label','Apni photo lagao');
-    mas.append(inp,btn);btn.onclick=e=>{e.stopPropagation();inp.click()};
-    const show=src=>{img.onload=()=>{
-      try{const c=document.createElement('canvas');c.width=c.height=8;const g=c.getContext('2d');g.drawImage(img,0,0,8,8);
-        img.classList.toggle('framed',g.getImageData(0,0,1,1).data[3]>200)}catch(_){}
-      img.style.display='block';girl.style.display='none'};img.src=src};
-    inp.onchange=()=>{const f=inp.files[0];if(!f)return;const r=new FileReader();
-      r.onload=()=>{const im=new Image();im.onload=()=>{const s=Math.min(1,700/im.height),c=document.createElement('canvas');
-        c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);
-        const url=c.toDataURL('image/png');show(url);try{localStorage.setItem('cs_girl',url)}catch(_){}};im.src=r.result};r.readAsDataURL(f)};
-    try{const s=localStorage.getItem('cs_girl');if(s)show(s)}catch(_){}
-    new MutationObserver(()=>{img.classList.remove('spin','happy','sad','jackpot');
-      (girl.getAttribute('class')||'').split(/\s+/).forEach(k=>['spin','happy','sad','jackpot'].includes(k)&&img.classList.add(k))})
-      .observe(girl,{attributes:true,attributeFilter:['class']});
-    /* mood + haptics for every mascot type */
-    new MutationObserver(()=>{
-      const c=(girl.getAttribute('class')||'').split(/\s+/);
-            if(navigator.vibrate){if(c.includes('jackpot'))navigator.vibrate([80,40,80,40,200]);else if(c.includes('happy'))navigator.vibrate([60,40,100]);else if(c.includes('spin'))navigator.vibrate(25)}
-    }).observe(girl,{attributes:true,attributeFilter:['class']});
-    const rb=document.createElement('button');rb.id='photoReset';rb.textContent='↺';rb.setAttribute('aria-label','Girl wapas lao');
-    rb.onclick=e=>{e.stopPropagation();try{localStorage.removeItem('cs_girl')}catch(_){}img.style.display='none';img.removeAttribute('src');girl.style.display=''};
-    mas.appendChild(rb);
-    const hd=document.querySelector('#app header');if(hd){const cr=document.createElement('div');cr.id='crest';cr.textContent='♠ ROYAL CLUB ♦';hd.parentNode.insertBefore(cr,hd)}
-  }
+  try{localStorage.removeItem('cs_girl')}catch(_){}
 })();
 </script>
 

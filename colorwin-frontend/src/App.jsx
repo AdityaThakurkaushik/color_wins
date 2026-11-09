@@ -1039,9 +1039,20 @@ useEffect(() => {
   useEffect(() => {
     loadGameData()
 
-    const interval = setInterval(loadGameData, 3000)
+    const tick = () => {
+      if (typeof document !== 'undefined' && document.hidden) return
+      loadGameData()
+    }
+    const interval = setInterval(tick, 4000)
+    const onVis = () => {
+      if (!document.hidden) loadGameData()
+    }
+    document.addEventListener('visibilitychange', onVis)
 
-    return () => clearInterval(interval)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVis)
+    }
   }, [loadGameData])
 
   useEffect(() => {
