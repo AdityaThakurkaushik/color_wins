@@ -760,6 +760,7 @@ footer{flex:0 0 auto;gap:4px !important}
   border:2.5px dashed rgba(255,255,255,.95) !important;
   background:none !important;
   opacity:1 !important;
+  pointer-events:none !important;
 }
 .bet[data-bet="5"]{background:radial-gradient(circle at 30% 25%,#93c5fd 0%,#3b82f6 42%,#1d4ed8 100%) !important}
 .bet[data-bet="10"]{background:radial-gradient(circle at 30% 25%,#fda4af 0%,#ef4444 42%,#b91c1c 100%) !important}
@@ -1316,11 +1317,27 @@ function spinWheel(sliceIndex) {
 /* =====================================================================
    BET HELPERS
    ===================================================================== */
-function currentBet() { return state.bet === "ALL" ? state.balance : state.bet; }
+/** ALL-IN stake: full wallet, floored to ×5, capped by admin maxBet (API rules). */
+function allInAmount() {
+  const bal = Math.max(0, Math.floor(Number(state.balance) || 0));
+  const capped = Math.min(bal, Math.max(MIN_BET, Number(MAX_BET) || bal));
+  return Math.floor(capped / 5) * 5;
+}
+function currentBet() {
+  if (state.bet !== "ALL") return Number(state.bet) || 0;
+  return allInAmount();
+}
 function normalizeBet() {                  // make sure the selected bet is affordable
-  if (state.bet === "ALL" || state.bet <= state.balance) return;
+  if (state.bet === "ALL") {
+    if (allInAmount() < MIN_BET) {
+      const ok = CONFIG.BETS.filter((b) => b <= state.balance);
+      state.bet = ok.length ? ok[ok.length - 1] : CONFIG.BETS[0] || MIN_BET;
+    }
+    return;
+  }
+  if (state.bet <= state.balance) return;
   const ok = CONFIG.BETS.filter((b) => b <= state.balance);
-  state.bet = ok.length ? ok[ok.length - 1] : "ALL";
+  state.bet = ok.length ? ok[ok.length - 1] : (allInAmount() >= MIN_BET ? "ALL" : CONFIG.BETS[0] || MIN_BET);
 }
 function buildBetButtons() {
   const box = $("#bets"); box.innerHTML = "";
@@ -1330,13 +1347,32 @@ function buildBetButtons() {
     const key = b === "ALL" ? "ALL" : b;
     el.className = "bet" + (b === "ALL" ? " all" : "") + " tone-" + (tones[key] || "blue");
     el.textContent = b === "ALL" ? "ALL" : b;
-    el.dataset.bet = b;
-    el.setAttribute("aria-label", (b === "ALL" ? "ALL" : b) + " chip");
-    el.addEventListener("click", () => {
+    el.dataset.bet = String(b);
+    el.type = "button";
+    el.setAttribute("aria-label", (b === "ALL" ? "ALL IN" : b) + " chip");
+    el.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
       if (state.spinning || state.over) return;
       audio.unlock();
-      state.bet = b === "ALL" ? "ALL" : Number(b);
-      audio.chip(); chipFly(el);
+      if (b === "ALL") {
+        const stake = allInAmount();
+        if (stake < MIN_BET) {
+          setStatus(`Need at least ${fmt(MIN_BET)} coins for ALL IN`, "#ff6b6b");
+          return;
+        }
+        state.bet = "ALL";
+        setStatus(`ALL IN ready — ${fmt(stake)} coins`, "#c4b5fd");
+      } else {
+        const n = Number(b);
+        if (n > state.balance) {
+          setStatus("Not enough coins for that chip", "#ff6b6b");
+          return;
+        }
+        state.bet = n;
+      }
+      try { audio.chip(); } catch (e) {}
+      chipFly(el);
       updateUI(); saveGame();
     });
     box.appendChild(el);
@@ -1349,17 +1385,20 @@ function buildBetButtons() {
 function updateUI() {
   normalizeBet();
   const busy = state.spinning || state.over;
+  const allStake = allInAmount();
   document.querySelectorAll(".bet").forEach((el) => {
     const b = el.dataset.bet === "ALL" ? "ALL" : Number(el.dataset.bet);
     el.classList.toggle("sel", b === state.bet);
-    el.disabled = busy || (b !== "ALL" && b > state.balance) || (b === "ALL" && state.balance < MIN_BET);
+    el.disabled = busy || (b !== "ALL" && b > state.balance) || (b === "ALL" && allStake < MIN_BET);
   });
   $("#hub").disabled = busy;
   $("#hub").textContent = state.spinning ? "…" : "SPIN";
   $("#wheelBox").classList.toggle("locked", busy);
   $("#best").textContent = fmt(state.best);
   updateHUD();
-  $("#betLabel").textContent = `BET: ${state.bet === "ALL" ? "ALL IN (" + fmt(state.balance) + ")" : fmt(state.bet)}`;
+  $("#betLabel").textContent = state.bet === "ALL"
+    ? `BET: ALL IN (${fmt(allStake)})`
+    : `BET: ${fmt(state.bet)}`;
   $("#mute").textContent = state.muted ? "🔇" : "🔊";
   audio.syncMusic();
   $("#bonusBtn").disabled = false;
@@ -1637,9 +1676,20 @@ async function startSpin() {
     return;
   }
   const bet = currentBet();
-  if (!(bet >= MIN_BET) || bet > state.balance) return;
+  if (!(bet >= MIN_BET)) {
+    setStatus(`Minimum bet is ${fmt(MIN_BET)}`, "#ff6b6b");
+    return;
+  }
+  if (bet > state.balance) {
+    setStatus("Not enough coins for this bet", "#ff6b6b");
+    return;
+  }
   if (bet > MAX_BET) {
     setStatus(`Max bet is ${fmt(MAX_BET)}`, "#ff6b6b");
+    return;
+  }
+  if (bet % 5 !== 0) {
+    setStatus("Bet must be a multiple of 5", "#ff6b6b");
     return;
   }
   state.spinning = true;
