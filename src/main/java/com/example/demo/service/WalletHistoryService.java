@@ -1,6 +1,5 @@
 package com.example.demo.service;
 
-import com.example.demo.dto.NotificationRequest;
 import com.example.demo.entity.Deposit;
 import com.example.demo.entity.PointsTransaction;
 import com.example.demo.entity.User;
@@ -137,7 +136,8 @@ public class WalletHistoryService {
             throw new IllegalArgumentException("Only a pending withdrawal can be paid");
         }
         withdrawal.markPaid();
-        notify(withdrawal.getUser().getId(),
+        notificationService.notifyUserNow(
+                withdrawal.getUser().getId(),
                 "Withdrawal paid",
                 withdrawal.getAmount() + " coins were paid for " + withdrawal.getPublicId() + ".");
         return withdrawal;
@@ -165,10 +165,12 @@ public class WalletHistoryService {
                     key,
                     "Withdrawal " + withdrawal.getPublicId() + " rejected"));
         }
-        withdrawal.reject(reason.trim());
-        notify(user.getId(),
+        String cleanReason = reason.trim();
+        withdrawal.reject(cleanReason);
+        notificationService.notifyUserNow(
+                user.getId(),
                 "Withdrawal rejected",
-                withdrawal.getPublicId() + " was rejected. Your coins were returned. Reason: " + reason.trim());
+                withdrawal.getPublicId() + " was rejected. Your coins were returned. Reason: " + cleanReason);
         return withdrawal;
     }
 
@@ -231,18 +233,6 @@ public class WalletHistoryService {
     private Withdrawal locked(String publicId) {
         return withdrawalRepository.findByPublicIdForUpdate(publicId)
                 .orElseThrow(() -> new IllegalArgumentException("Withdrawal not found"));
-    }
-
-    private void notify(Long userId, String title, String message) {
-        NotificationRequest request = new NotificationRequest();
-        request.setTitle(title);
-        request.setMessage(message);
-        request.setPriority("IMPORTANT");
-        request.setTargetType("USER");
-        request.setTargetUserId(userId);
-        request.setScheduledAt(OffsetDateTime.now());
-        request.setActive(true);
-        notificationService.createNotification(request);
     }
 
     private Map<String, Object> base(

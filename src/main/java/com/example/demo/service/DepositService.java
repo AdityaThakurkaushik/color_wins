@@ -1,6 +1,5 @@
 package com.example.demo.service;
 
-import com.example.demo.dto.NotificationRequest;
 import com.example.demo.entity.Deposit;
 import com.example.demo.entity.PaymentMethod;
 import com.example.demo.entity.PointsTransaction;
@@ -168,7 +167,8 @@ public class DepositService {
                 "Deposit " + deposit.getPublicId() + " approved"));
         deposit.approve(coins);
         referralAgentService.creditDepositCommission(user, deposit.getId(), coins);
-        notifyUser(user.getId(),
+        notificationService.notifyUserNow(
+                user.getId(),
                 "Funds added",
                 coins + " coins were added to your wallet for " + deposit.getPublicId() + ".");
         return deposit;
@@ -184,10 +184,13 @@ public class DepositService {
         if (!"SUBMITTED".equals(deposit.getStatus())) {
             throw new IllegalArgumentException("Only a submitted deposit can be rejected");
         }
-        deposit.reject(reason.trim());
-        notifyUser(deposit.getUser().getId(),
+        Long userId = deposit.getUser().getId();
+        String cleanReason = reason.trim();
+        deposit.reject(cleanReason);
+        notificationService.notifyUserNow(
+                userId,
                 "Deposit rejected",
-                deposit.getPublicId() + " was rejected. Reason: " + reason.trim());
+                deposit.getPublicId() + " was rejected. Reason: " + cleanReason);
         return deposit;
     }
 
@@ -244,18 +247,6 @@ public class DepositService {
     @Transactional(readOnly = true)
     public List<PaymentMethod> listMethods() {
         return paymentMethodRepository.findAllByOrderByPriorityDescIdAsc();
-    }
-
-    private void notifyUser(Long userId, String title, String message) {
-        NotificationRequest request = new NotificationRequest();
-        request.setTitle(title);
-        request.setMessage(message);
-        request.setPriority("IMPORTANT");
-        request.setTargetType("USER");
-        request.setTargetUserId(userId);
-        request.setScheduledAt(OffsetDateTime.now());
-        request.setActive(true);
-        notificationService.createNotification(request);
     }
 
     private void expireOld() {

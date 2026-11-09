@@ -51,9 +51,13 @@ public class AdminDepositController {
     @PostMapping("/deposits/{publicId}/reject")
     public Map<String, Object> reject(@PathVariable String publicId, @Valid @RequestBody RejectRequest request) {
         Deposit deposit = depositService.reject(publicId, request.reason());
-        telegramNotifier.tellUser(
-                deposit.getUser().getTelegramId(),
-                deposit.getPublicId() + " was rejected.\\nReason: " + request.reason().trim());
+        try {
+            telegramNotifier.tellUser(
+                    deposit.getUser().getTelegramId(),
+                    deposit.getPublicId() + " was rejected.\nReason: " + request.reason().trim());
+        } catch (Exception ignored) {
+            // In-app notification already sent inside DepositService.reject
+        }
         return toAdminView(deposit);
     }
 

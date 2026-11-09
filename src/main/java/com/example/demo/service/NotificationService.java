@@ -36,6 +36,27 @@ public class NotificationService {
         this.userRepository = userRepository;
     }
 
+    /**
+     * Instant user alert (deposit/withdrawal decisions). Always creates recipient now —
+     * never leaves the row stuck in SCHEDULED without a recipient.
+     */
+    @Transactional
+    public Notification notifyUserNow(Long userId, String title, String message) {
+        if (userId == null) {
+            throw new IllegalArgumentException("Target user ID is required");
+        }
+        NotificationRequest request = new NotificationRequest();
+        request.setTitle(title);
+        request.setMessage(message);
+        request.setPriority("IMPORTANT");
+        request.setTargetType("USER");
+        request.setTargetUserId(userId);
+        // Slightly in the past so clock skew / timestamptz rounding cannot skip publish.
+        request.setScheduledAt(OffsetDateTime.now().minusSeconds(2));
+        request.setActive(true);
+        return createNotification(request);
+    }
+
     // Create notification now or schedule it for later.
     @Transactional
     public Notification createNotification(NotificationRequest request) {
@@ -62,10 +83,10 @@ public class NotificationService {
 
         notification.setStatus("SCHEDULED");
 
-        Notification saved = notificationRepository.save(notification);
+        Notification saved = notificationRepository.saveAndFlush(notification);
 
-        // Publish immediately if scheduled time has already arrived.
-        if (!saved.getScheduledAt().isAfter(OffsetDateTime.now())) {
+        // Publish when due (allow 2s skew so "now" never stays stuck as SCHEDULED).
+        if (!saved.getScheduledAt().isAfter(OffsetDateTime.now().plusSeconds(2))) {
             publishNotification(saved);
         }
 
@@ -126,25 +147,29 @@ public class NotificationService {
         } else if ("USER".equals(notification.getTargetType())) {
 
             User user = notification.getTargetUser();
-
-            if (user == null) {
+            if (user == null || user.getId() == null) {
                 throw new IllegalStateException(
                         "Target user is missing for notification "
                                 + notification.getId()
                 );
             }
+            // Re-load by id so recipient insert never fails on a detached lazy proxy.
+            User persistentUser = userRepository.findById(user.getId())
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Target user not found for notification "
+                                    + notification.getId()));
 
             if (!recipientRepository.existsByNotificationIdAndUserId(
-                    notification.getId(), user.getId())) {
+                    notification.getId(), persistentUser.getId())) {
 
                 NotificationRecipient recipient =
                         new NotificationRecipient();
 
                 recipient.setNotification(notification);
-                recipient.setUser(user);
+                recipient.setUser(persistentUser);
                 recipient.setRead(false);
 
-                recipientRepository.save(recipient);
+                recipientRepository.saveAndFlush(recipient);
             }
 
         } else {

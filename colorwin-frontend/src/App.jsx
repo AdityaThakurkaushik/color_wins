@@ -991,7 +991,7 @@ useEffect(() => {
 
   const interval = setInterval(() => {
     loadUnreadCount()
-  }, 30000)
+  }, 12000)
 
   return () => clearInterval(interval)
 }, [isAuthenticated, loadUnreadCount])
