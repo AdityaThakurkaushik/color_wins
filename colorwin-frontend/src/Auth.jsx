@@ -69,7 +69,7 @@ export default function Auth({ onLogin }) {
         )
         const data = await response.json().catch(() => ({}))
         if (!cancelled && response.ok && data.verified) {
-          setInfo('Telegram verified. Ab login karo.')
+          setInfo('Telegram verified. Please log in now.')
           setMode('login')
           setTelegramDeepLink('')
         }
@@ -142,7 +142,7 @@ export default function Auth({ onLogin }) {
         }
         setTelegramDeepLink(data.telegramDeepLink || '')
         setBotUsername(data.botUsername || '')
-        setInfo(data.message || 'Telegram pe Open karke account verify karo.')
+        setInfo(data.message || 'Open Telegram and verify your account.')
         setMode('verify')
         setPassword('')
         setConfirmPassword('')
@@ -150,7 +150,7 @@ export default function Auth({ onLogin }) {
       }
 
       if (isVerify) {
-        setError('Pehle Telegram pe Open / Start dabao. Verify hone ke baad automatic login screen aayega.')
+        setError('Open Telegram and tap Start first. After verify, the login screen opens automatically.')
         return
       }
 
@@ -171,14 +171,14 @@ export default function Auth({ onLogin }) {
         }
         setTelegramDeepLink(data.telegramDeepLink || '')
         setBotUsername(data.botUsername || '')
-        setInfo(data.message || 'Telegram pe reset link open karo. Code wahan milega.')
+        setInfo(data.message || 'Open the Telegram reset link. You will get the code there.')
         setMode('reset')
         return
       }
 
       if (isReset) {
         if (!/^\d{6}$/.test(otp.trim())) {
-          setError('Telegram se mila 6-digit code daalo.')
+          setError('Enter the 6-digit code from Telegram.')
           return
         }
         if (password.length < 8) {
@@ -261,7 +261,7 @@ export default function Auth({ onLogin }) {
       }
       setTelegramDeepLink(data.telegramDeepLink || '')
       setBotUsername(data.botUsername || '')
-      setInfo(data.message || 'Naya Telegram link ready hai.')
+      setInfo(data.message || 'New Telegram link is ready.')
     } catch {
       setError('Cannot connect to the server.')
     } finally {
@@ -282,11 +282,11 @@ export default function Auth({ onLogin }) {
           : 'Welcome Back'
 
   const subtitle = isVerify
-    ? `Telegram bot${botUsername ? ` @${botUsername}` : ''} pe Start dabao`
+    ? `Open Telegram${botUsername ? ` @${botUsername}` : ''} and tap Start`
     : isForgot
-      ? 'Reset Telegram bot se hoga'
+      ? 'Password reset happens through Telegram'
       : isReset
-        ? 'Telegram code daalo aur naya password set karo'
+        ? 'Enter the Telegram code and set a new password'
         : isRegister
           ? 'Join Millionaire Hub'
           : 'Login to Millionaire Hub'
@@ -426,13 +426,13 @@ export default function Auth({ onLogin }) {
           {isVerify && (
             <div className="space-y-3 rounded-2xl border border-sky-400/30 bg-[#07111f] p-4">
               <p className="text-sm font-bold text-sky-100">
-                1) Neeche button se Telegram kholo
+                1) Open Telegram with the button below
               </p>
               <p className="text-sm font-bold text-sky-100">
-                2) Bot mein Start dabao
+                2) Tap Start in the bot
               </p>
               <p className="text-sm font-bold text-sky-100">
-                3) Verify hone ke baad yahan automatic Login screen aa jayega
+                3) After verify, the login screen opens automatically
               </p>
               {telegramDeepLink ? (
                 <a
@@ -445,7 +445,7 @@ export default function Auth({ onLogin }) {
                 </a>
               ) : (
                 <p className="text-sm font-bold text-amber-300">
-                  Telegram bot configured nahi hai. BOT_TOKEN / BOT_USERNAME set karo.
+                  Telegram bot is not configured. Set BOT_TOKEN / BOT_USERNAME.
                 </p>
               )}
             </div>
@@ -453,9 +453,9 @@ export default function Auth({ onLogin }) {
 
           {isReset && telegramDeepLink && (
             <div className="space-y-2 rounded-2xl border border-sky-400/30 bg-[#07111f] p-4">
-              <p className="text-sm font-bold text-sky-100">1) Neeche button se Telegram kholo</p>
-              <p className="text-sm font-bold text-sky-100">2) Bot me Start / Open dabao (manual /start mat likho)</p>
-              <p className="text-sm font-bold text-sky-100">3) Jo 6-digit code aaye yahan daalo</p>
+              <p className="text-sm font-bold text-sky-100">1) Open Telegram with the button below</p>
+              <p className="text-sm font-bold text-sky-100">2) Tap Start / Open in the bot (do not type /start manually)</p>
+              <p className="text-sm font-bold text-sky-100">3) Enter the 6-digit code here</p>
               <a
                 href={telegramDeepLink}
                 target="_blank"

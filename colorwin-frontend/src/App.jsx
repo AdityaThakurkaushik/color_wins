@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import gsap from 'gsap'
 import Auth from './Auth.jsx'
 import AdminDashboard from './admin/AdminDashboard.jsx'
 import AgentDesk from './agent/AgentDesk.jsx'
@@ -7,6 +8,18 @@ import AddFunds from './AddFunds.jsx'
 import TransactionHistory from './TransactionHistory.jsx'
 import LeaderboardBoard from './LeaderboardBoard.jsx'
 import { API } from './api.js'
+import SpinPage from './SpinPage.jsx'
+import {
+  isGameSfxMuted,
+  setGameSfxMuted,
+  startGameMusic,
+  playClick,
+  playChip,
+  playPlace,
+  playHit,
+  playWinChime,
+  playLoseTone,
+} from './gameSfx.js'
 
 const colors = [
   { name: 'RED', value: 'RED', gem: 'from-red-300 via-red-500 to-red-900', glow: 'shadow-[0_10px_28px_rgba(239,68,68,0.45)]' },
@@ -15,14 +28,21 @@ const colors = [
 ]
 
 const GEM_FLOAT_ICONS = ['+1', '🤑', '💸', '💵', '🪙', '💰', '💲', '₹', '$']
-const amounts = [10, 20, 30, 40, 50, 100, 1000, 10000]
+const BET_CHIPS = [
+  { id: '5', label: '5', value: 5, tone: 'blue' },
+  { id: '10', label: '10', value: 10, tone: 'red' },
+  { id: '20', label: '20', value: 20, tone: 'teal' },
+  { id: '50', label: '50', value: 50, tone: 'green' },
+  { id: '100', label: '100', value: 100, tone: 'black' },
+  { id: 'ALL', label: 'ALL', value: 'ALL', tone: 'purple' },
+]
 const DEFAULT_AVATAR = '/millionaire-hub-logo.svg'
 
 function AccountRibbon({ name }) {
   const label = (name && String(name).trim()) || 'Guest'
   return (
-    <span className="pointer-events-none absolute bottom-2 right-3 z-20 max-w-[58%] truncate rounded-full border border-yellow-300/80 bg-gradient-to-r from-amber-100 via-yellow-300 to-amber-400 px-2 py-0.5 font-serif text-[12px] italic tracking-wide text-amber-950 shadow-[0_0_8px_rgba(250,204,21,0.45)]">
-      Welcome, {label}
+    <span className="relative z-[1] max-w-[5.8rem] truncate rounded-full border border-yellow-300/80 bg-gradient-to-r from-amber-100 via-yellow-300 to-amber-400 px-1.5 py-0.5 text-center font-serif text-[9px] italic leading-tight tracking-wide text-amber-950 shadow-[0_0_8px_rgba(250,204,21,0.45)] sm:max-w-[6.5rem] sm:text-[10px]">
+      {label}
     </span>
   )
 }
@@ -155,7 +175,7 @@ useEffect(() => {
         const token = localStorage.getItem('colorwin_token')
 
         if (!token) {
-          throw new Error('Login session nahi mila. Dobara login karein.')
+          throw new Error('Login session expired. Please log in again.')
         }
 
         const response = await fetch(
@@ -169,7 +189,7 @@ useEffect(() => {
 
         if (!response.ok) {
           throw new Error(
-            `Referral stats load nahi hue (HTTP ${response.status}).`
+            `Could not load referral stats (HTTP ${response.status}).`
           )
         }
 
@@ -186,7 +206,7 @@ useEffect(() => {
       } catch (error) {
         if (!cancelled) {
           setStatsError(
-            error.message || 'Referral stats load nahi ho sake.'
+            error.message || 'Could not load referral stats.'
           )
         }
       } finally {
@@ -229,13 +249,13 @@ useEffect(() => {
       setCopied(type)
       setShareMessage('')
     } catch {
-      setShareMessage('Copy nahi hua. Link ko manually copy karein.')
+      setShareMessage('Copy failed. Please copy the link manually.')
     }
   }
 
   async function shareReferral() {
     const text =
-      `MILLIONAIRE HUB join karein! Mere referral link se signup karein: ${referralLink}`
+      `Join MILLIONAIRE HUB with my referral link: ${referralLink}`
 
     if (navigator.share) {
       try {
@@ -249,7 +269,7 @@ useEffect(() => {
       }
     } else {
       await copyText(referralLink, 'link')
-      setShareMessage('Referral link copy ho gaya. Ab share kar sakte hain.')
+      setShareMessage('Referral link copied. You can share it now.')
     }
   }
 
@@ -353,7 +373,7 @@ useEffect(() => {
             </div>
           ))}
         </div>
-        {referralSettingsError && <p className="mt-2 text-sm text-red-400">Referral settings load nahi hui.</p>}
+        {referralSettingsError && <p className="mt-2 text-sm text-red-400">Could not load referral settings.</p>}
         {referralSettings && !referralSettings.enabled && <p className="mt-2 text-sm text-yellow-400">Referral program is currently disabled.</p>}
       </section>
 
@@ -367,7 +387,7 @@ useEffect(() => {
         {networkLoading && <p className="mt-3 text-sm text-slate-400">Loading referrals...</p>}
         {!networkLoading && network.length === 0 && (
           <p className="mt-3 rounded-2xl border border-dashed border-yellow-400/25 bg-[#101020] p-4 text-center text-sm text-slate-400">
-            Abhi koi referral nahi. Link share karke friends invite karo.
+            No referrals yet. Share your link to invite friends.
           </p>
         )}
         {!networkLoading && network.length > 0 && (
@@ -535,6 +555,16 @@ function NavIcon({ name }) {
       </svg>
     )
   }
+  if (name === 'XpinR') {
+    return (
+      <svg {...props}>
+        <circle cx="12" cy="12" r="8.5" />
+        <path d="M12 5.5v13" />
+        <path d="M5.5 12h13" />
+        <path d="M7.8 7.8 16.2 16.2" />
+      </svg>
+    )
+  }
   return (
     <svg {...props}>
       <circle cx="12" cy="8" r="3.2" />
@@ -554,7 +584,14 @@ function GameApp() {
   })
   const [angerHit, setAngerHit] = useState(0)
   const [angerLabel, setAngerLabel] = useState('LET IT OUT')
-  const [amount, setAmount] = useState(50)
+  const [amount, setAmount] = useState(5)
+  const [selectedChipId, setSelectedChipId] = useState('5')
+  const [gameMuted, setGameMuted] = useState(() => isGameSfxMuted())
+  const [flyingCoins, setFlyingCoins] = useState([])
+  const resultSoundRef = useRef(null)
+  const colorBtnRefs = useRef({})
+  const chipBtnRefs = useRef({})
+  const flyLayerRef = useRef(null)
   useEffect(() => {
     let clearBlink
     const blink = () => {
@@ -609,12 +646,26 @@ const [notificationTotalPages, setNotificationTotalPages] = useState(0)
   const [pendingBetId, setPendingBetId] = useState(null)
   const [resultPopup, setResultPopup] = useState(null)
   const playFocusRef = useRef(null)
-const currentPendingBet =
-  myBets.find(
-    (bet) => String(bet.betId) === String(pendingBetId)
-  ) ||
-  myBets.find((bet) => bet.status === 'PENDING') ||
-  null
+  const waitFocusRef = useRef(null)
+  const currentPendingBet =
+    myBets.find(
+      (bet) => String(bet.betId) === String(pendingBetId)
+    ) ||
+    myBets.find((bet) => bet.status === 'PENDING') ||
+    null
+  const lockedColor = currentPendingBet?.color || selectedColor
+
+  useEffect(() => {
+    if (!resultPopup) {
+      resultSoundRef.current = null
+      return
+    }
+    const key = `${resultPopup.betId}-${resultPopup.status}`
+    if (resultSoundRef.current === key) return
+    resultSoundRef.current = key
+    if (resultPopup.status === 'WON') playWinChime()
+    else playLoseTone()
+  }, [resultPopup])
 
   const [isAuthenticated, setIsAuthenticated] = useState(
     () => Boolean(localStorage.getItem('colorwin_token'))
@@ -678,7 +729,7 @@ const loadUnreadCount = useCallback(async () => {
     setNotificationError('')
   } catch (error) {
     console.error('Unread notification count failed:', error)
-    setNotificationError('Notifications load nahi ho sake.')
+    setNotificationError('Could not load notifications.')
   }
 }, [])
 
@@ -714,7 +765,7 @@ const loadNotifications = useCallback(async () => {
     setNotificationError('')
   } catch (error) {
     console.error('Notifications loading failed:', error)
-    setNotificationError('Please wait for Notifications? load nahi ho sake.')
+    setNotificationError('Could not load notifications. Please try again.')
     
   } finally {
     setNotificationsLoading(false)
@@ -755,7 +806,7 @@ const loadAllNotifications = useCallback(async (pageNumber = 0) => {
     setNotificationError('')
   } catch (error) {
     console.error('All notifications loading failed:', error)
-    setNotificationError('Notifications load nahi ho sake.')
+    setNotificationError('Could not load notifications.')
   } finally {
     setNotificationsLoading(false)
   }
@@ -788,7 +839,7 @@ const handleMarkNotificationRead = useCallback(async (notificationId) => {
     ])
   } catch (error) {
     console.error('Mark notification read failed:', error)
-    setNotificationError('Notification update nahi ho saka.')
+    setNotificationError('Could not update notification.')
   }
 }, [loadNotifications, loadUnreadCount, loadAllNotifications, notificationPage])
 
@@ -820,7 +871,7 @@ const handleMarkAllNotificationsRead = useCallback(async () => {
 ])
   } catch (error) {
     console.error('Mark all notifications read failed:', error)
-    setNotificationError('Notifications update nahi ho sake.')
+    setNotificationError('Could not update notifications.')
   }
 }, [loadNotifications, loadUnreadCount, loadAllNotifications, notificationPage])
 
@@ -980,7 +1031,7 @@ useEffect(() => {
       setResults(Array.isArray(recentResults) ? recentResults : [])
       setApiError('')
     } catch (error) {
-      setApiError('Game server se connection nahi ho raha.')
+      setApiError('Could not connect to the game server.')
       console.error('Game API error:', error)
     }
   }, [])
@@ -1175,45 +1226,45 @@ setResultPopup({
     setBetError(false)
 
     if (!isAuthenticated || !token()) {
-      setBetMessage('Bet place karne ke liye pehle login karo.')
+      setBetMessage('Please log in to place a bet.')
       setBetError(true)
       setPage('Login')
       return
     }
 
     if (!selectedColor) {
-      setBetMessage('Pehle ek color select karo.')
+      setBetMessage('Please select a color first.')
       setBetError(true)
       return
     }
 
     if (!currentRound?.periodNumber || currentRound.status !== 'OPEN') {
-      setBetMessage('Abhi koi open round available nahi hai.')
+      setBetMessage('No open round right now. Please wait.')
       setBetError(true)
       return
     }
 
     if (secondsLeft <= 0) {
-      setBetMessage('Round ka time khatam ho gaya. Agle round ka wait karo.')
+      setBetMessage('This round has ended. Please wait for the next round.')
       setBetError(true)
       return
     }
 
-    const parsedAmount = Number(amount)
-    if (!Number.isInteger(parsedAmount) || parsedAmount <= 5) {
-      setBetMessage('Please enter above 5')
+    const parsedAmount = Math.trunc(Number(amount))
+    if (!Number.isFinite(parsedAmount) || parsedAmount < 5) {
+      setBetMessage('Minimum bet is 5 points.')
       setBetError(true)
       return
     }
 
-    if (Number(amount) > (currentUser?.virtualPoints ?? 0)) {
-      setBetMessage('Tumhare paas itne virtual points nahi hain.')
+    if (parsedAmount > (currentUser?.virtualPoints ?? 0)) {
+      setBetMessage('You do not have enough virtual points.')
       setBetError(true)
       return
     }
 
     if (pendingBetId != null) {
-      setBetMessage('Pichhli bet ka result aane ka wait karo.')
+      setBetMessage('Please wait for your previous bet result.')
       setBetError(true)
       return
     }
@@ -1230,7 +1281,7 @@ setResultPopup({
         body: JSON.stringify({
           periodNumber: currentRound.periodNumber,
           color: selectedColor,
-          amount: Number(amount),
+          amount: parsedAmount,
         }),
       })
 
@@ -1251,18 +1302,25 @@ setResultPopup({
       )
 
       setBetError(false)
-      setSelectedColor('')
+      setSelectedColor(data.color || selectedColor)
       setPendingBetId(data.betId)
-      window.setTimeout(() => {
-        playFocusRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      }, 80)
+      setPage('Home')
+      startGameMusic()
+      playPlace()
+      // Bring WAIT / Locked Color / Tap Pad in front immediately after bet
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          const target = playFocusRef.current || waitFocusRef.current
+          target?.scrollIntoView({ behavior: 'auto', block: 'start' })
+        })
+      })
 
       await Promise.all([
         loadUserProfile(),
         loadMyBets(),
       ])
     } catch (error) {
-      setBetMessage(error.message || 'Bet place nahi ho saki.')
+      setBetMessage(error.message || 'Could not place the bet.')
       setBetError(true)
     } finally {
       setSubmittingBet(false)
@@ -1315,6 +1373,86 @@ setResultPopup({
       return next
     })
     setAngerHit((hit) => hit + 1)
+    playHit()
+  }
+
+  function flyCoinToColor(fromEl, colorValue, chipValue) {
+    const target = colorBtnRefs.current[colorValue]
+    if (!fromEl || !target || !colorValue) return
+    const from = fromEl.getBoundingClientRect()
+    const to = target.getBoundingClientRect()
+    const id = `coin-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    const startX = from.left + from.width / 2
+    const startY = from.top + from.height / 2
+    const endX = to.left + to.width / 2
+    const endY = to.top + to.height / 2
+    setFlyingCoins((list) => [...list, {
+      id,
+      value: chipValue,
+      color: colorValue,
+      x: startX,
+      y: startY,
+    }])
+    window.requestAnimationFrame(() => {
+      const node = document.getElementById(id)
+      if (!node) return
+      gsap.fromTo(node, {
+        left: startX,
+        top: startY,
+        scale: 1,
+        opacity: 1,
+        rotate: 0,
+      }, {
+        left: endX,
+        top: endY,
+        scale: 0.5,
+        opacity: 0.12,
+        rotate: 480,
+        duration: 0.58,
+        ease: 'power2.in',
+        onComplete: () => {
+          setFlyingCoins((list) => list.filter((c) => c.id !== id))
+          gsap.fromTo(target, { scale: 1 }, { scale: 1.07, yoyo: true, repeat: 1, duration: 0.12, overwrite: 'auto' })
+        },
+      })
+    })
+  }
+
+  function resolveChipAmount(chip) {
+    if (!chip) return 50
+    if (chip.value === 'ALL') {
+      return Math.max(0, Number(currentUser?.virtualPoints || 0))
+    }
+    return Number(chip.value)
+  }
+
+  function pickChip(chip, chipEl) {
+    const nextAmount = resolveChipAmount(chip)
+    setSelectedChipId(chip.id)
+    setAmount(nextAmount)
+    startGameMusic()
+    playChip()
+    const color = selectedColor || lockedColor
+    if (color && chipEl) flyCoinToColor(chipEl, color, chip.label)
+  }
+
+  function pickColor(colorValue) {
+    if (pendingBetId != null) return
+    setSelectedColor(colorValue)
+    startGameMusic()
+    playClick()
+    const chipEl = chipBtnRefs.current[selectedChipId]
+    if (chipEl) flyCoinToColor(chipEl, colorValue, selectedChipId === 'ALL' ? 'ALL' : amount)
+  }
+
+  function toggleGameMute() {
+    const next = !gameMuted
+    setGameMuted(next)
+    setGameSfxMuted(next)
+    if (!next) {
+      startGameMusic()
+      playClick()
+    }
   }
 
   const showAnger = pendingBetId != null && !resultPopup
@@ -1322,8 +1460,35 @@ setResultPopup({
   const isRefunded = resultPopup?.status === 'REFUNDED'
   const popupColor = won ? 'emerald' : 'red'
 
+  useEffect(() => {
+    if (!showAnger) return undefined
+    const jump = () => {
+      const target = playFocusRef.current || waitFocusRef.current
+      target?.scrollIntoView({ behavior: 'auto', block: 'start' })
+    }
+    jump()
+    const t1 = window.setTimeout(jump, 16)
+    const t2 = window.setTimeout(jump, 100)
+    return () => {
+      window.clearTimeout(t1)
+      window.clearTimeout(t2)
+    }
+  }, [showAnger, pendingBetId])
+
   return (
     <div className="min-h-screen bg-[#03030c] text-white">
+      <div ref={flyLayerRef} className="mh-fly-layer" aria-hidden="true">
+        {flyingCoins.map((coin) => (
+          <div
+            key={coin.id}
+            id={coin.id}
+            className={`mh-fly-coin mh-fly-coin-${String(coin.color || '').toLowerCase()}`}
+            style={{ left: coin.x, top: coin.y }}
+          >
+            <span>{coin.value}</span>
+          </div>
+        ))}
+      </div>
       <div className="mx-auto min-h-screen w-full border-x border-purple-950 pb-24">
        
 <header className="fixed inset-x-0 top-0 z-40 flex items-center justify-between gap-2 border-b border-yellow-400/30 bg-[linear-gradient(180deg,#1c1433_0%,#080817_100%)] px-2 py-2 shadow-[0_8px_24px_rgba(0,0,0,0.45)] sm:px-3 sm:py-2.5">
@@ -1342,6 +1507,15 @@ setResultPopup({
       <span className={`mh-hub block truncate sm:ml-1 sm:inline sm:overflow-visible${hubBlink ? ' is-blinking' : ''}`}>HUB</span>
     </h1>
   </button>
+
+<button
+  type="button"
+  aria-label={gameMuted ? 'Unmute sounds' : 'Mute sounds'}
+  onClick={toggleGameMute}
+  className="rounded-2xl border border-yellow-400/40 bg-gradient-to-b from-[#2a1a08] to-[#151027] px-2.5 py-2 text-sm font-black text-yellow-200 shadow-[0_4px_0_#3b0764] active:translate-y-0.5 active:shadow-[0_2px_0_#3b0764]"
+>
+  {gameMuted ? '🔇' : '🔊'}
+</button>
 
  {isAuthenticated && (
   <div ref={notificationPanelRef} className="relative">
@@ -1487,50 +1661,33 @@ setResultPopup({
 
           {page === 'Home' && (
             <>
-<section className="relative overflow-hidden rounded-3xl border border-yellow-400/35 bg-[linear-gradient(120deg,#3b0764_0%,#6b21a8_28%,#9d174d_58%,#1a0b2e_100%)] px-4 py-3 pb-5 shadow-[0_18px_40px_rgba(88,28,135,0.45)] sm:px-5 sm:py-4 sm:pb-5">
-                <div className="mh-orb pointer-events-none absolute -left-10 -top-16 h-40 w-40 rounded-full bg-yellow-400/25 blur-3xl" />
-                <div className="mh-orb mh-orb-late pointer-events-none absolute -right-8 bottom-[-30px] h-36 w-36 rounded-full bg-fuchsia-500/35 blur-3xl" />
+<section className="mh-hero-slim relative overflow-hidden rounded-2xl border border-yellow-400/35 bg-[linear-gradient(120deg,#3b0764_0%,#6b21a8_28%,#9d174d_58%,#1a0b2e_100%)] px-3 py-2.5 shadow-[0_12px_28px_rgba(88,28,135,0.4)] sm:px-4 sm:py-3">
+                <div className="mh-orb pointer-events-none absolute -left-10 -top-16 h-28 w-28 rounded-full bg-yellow-400/25 blur-3xl" />
+                <div className="mh-orb mh-orb-late pointer-events-none absolute -right-8 bottom-[-24px] h-24 w-24 rounded-full bg-fuchsia-500/30 blur-3xl" />
                 <div className="mh-sheen pointer-events-none absolute inset-y-0 left-0" />
-                <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-yellow-200/80 to-transparent" />
-                <div className="relative z-10 flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="relative h-[88px] overflow-hidden sm:h-[96px]">
-                      {HERO_SLIDES.map((slide, index) => (
-                        <div
-                          key={slide.title}
-                          className={`absolute inset-0 transition-[opacity,transform] duration-500 ease-out ${index === heroSlide ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-1 opacity-0'}`}
-                          aria-hidden={index !== heroSlide}
-                        >
-                          <p className="truncate text-[10px] font-black uppercase tracking-[0.28em] text-yellow-300 sm:text-xs">
-                            {slide.kicker}
-                          </p>
-                          <h2 className="mt-1 line-clamp-2 min-h-[2.5rem] bg-gradient-to-r from-white via-yellow-100 to-fuchsia-200 bg-clip-text text-xl font-black leading-tight text-transparent sm:min-h-[2.9rem] sm:text-2xl">
-                            {slide.title}
-                          </h2>
-                          <p className="mt-1.5 inline-flex max-w-full truncate rounded-full border border-yellow-400/40 bg-black/25 px-3 py-0.5 text-[10px] font-bold text-yellow-200 sm:text-xs">
-                            {slide.chip}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-2 flex gap-1.5">
-                      {HERO_SLIDES.map((_, index) => (
-                        <button
-                          key={index}
-                          type="button"
-                          onClick={() => setHeroSlide(index)}
-                          className={`h-1.5 rounded-full ${index === heroSlide ? 'w-6 bg-yellow-300' : 'w-1.5 bg-white/30'}`}
-                          aria-label={`Slide ${index + 1}`}
-                        />
-                      ))}
-                    </div>
+                <div className="relative z-10 flex items-center justify-between gap-3">
+                  <div className="relative min-h-[3.4rem] min-w-0 flex-1 sm:min-h-[3.8rem]">
+                    {HERO_SLIDES.map((slide, index) => (
+                      <div
+                        key={slide.title}
+                        className={`${index === heroSlide ? 'relative' : 'pointer-events-none absolute inset-0'} transition-[opacity,transform] duration-500 ease-out ${index === heroSlide ? 'translate-y-0 opacity-100' : 'translate-y-1 opacity-0'}`}
+                        aria-hidden={index !== heroSlide}
+                      >
+                        <p className="text-[9px] font-black uppercase tracking-[0.24em] text-yellow-300 sm:text-[10px]">
+                          {slide.kicker}
+                        </p>
+                        <h2 className="mt-0.5 bg-gradient-to-r from-white via-yellow-100 to-fuchsia-200 bg-clip-text text-[1.05rem] font-black leading-tight text-transparent sm:text-xl">
+                          {slide.title}
+                        </h2>
+                      </div>
+                    ))}
                   </div>
-                  <div className="relative shrink-0 pt-0.5">
+                  <div className="relative flex shrink-0 flex-col items-center gap-1">
                     <span className="mh-logo-halo absolute -inset-1 rounded-full bg-yellow-400/45 blur-xl" />
-                    <img src="/millionaire-hub-logo.svg" alt="Millionaire Hub" className="mh-logo-glow relative h-14 w-14 rounded-full object-contain ring-2 ring-yellow-300/80 sm:h-[68px] sm:w-[68px]" />
+                    <img src="/millionaire-hub-logo.svg" alt="Millionaire Hub" className="mh-logo-glow relative h-11 w-11 rounded-full object-contain ring-2 ring-yellow-300/80 sm:h-12 sm:w-12" />
+                    <AccountRibbon name={currentUser?.displayName || currentUser?.username} />
                   </div>
                 </div>
-                <AccountRibbon name={currentUser?.displayName || currentUser?.username} />
               </section>
 
               {apiError && (
@@ -1539,242 +1696,263 @@ setResultPopup({
                 </div>
               )}
 
-              <div ref={playFocusRef} className="space-y-2 scroll-mt-2">
-              <section className="grid grid-cols-3 gap-2 text-center">
-                <div className="min-w-0 rounded-2xl border border-yellow-400/20 bg-[#101020] p-2 shadow-[inset_0_0_18px_rgba(250,204,21,0.06)]">
-                  <p className="text-[10px] uppercase tracking-widest text-slate-400">Current Period</p>
-                  <p className="mt-2 break-all text-[11px] font-bold text-white">
-                    {currentRound?.periodNumber ?? 'Loading...'}
-                  </p>
-                </div>
-                <div className={`relative overflow-hidden rounded-2xl border p-2 ${
-                  secondsLeft > 0 && secondsLeft <= 10
-                    ? 'border-amber-300/70 bg-[#2a1520] shadow-[0_0_24px_rgba(251,191,36,0.28)]'
-                    : 'border-fuchsia-400/45 bg-[#1a102d] shadow-[0_0_22px_rgba(232,121,249,0.28)]'
-                }`}>
-                  <span className="pointer-events-none absolute inset-x-4 top-0 h-6 rounded-full bg-white/10 blur-md" />
-                  <p className="relative text-[10px] uppercase tracking-widest text-slate-400">Time Left</p>
-                  <p className={`relative mt-1 text-2xl font-black tabular-nums ${
-                    secondsLeft > 0 && secondsLeft <= 10 ? 'mh-urgent text-amber-300' : 'text-fuchsia-300'
-                  }`}>
-                    {formatTime(secondsLeft)}
-                  </p>
-                </div>
-                <div className="min-w-0 rounded-2xl border border-emerald-400/25 bg-[#101020] p-2">
-                  <p className="text-[10px] uppercase tracking-widest text-slate-400">Round Status</p>
-                  <p className="mt-2 text-sm font-black text-emerald-400">
-                    {currentRound?.status ?? 'Loading...'}
-                  </p>
-                </div>
-              </section>
+              <div ref={playFocusRef} className="mh-lux-table mh-play-anchor">
+                <section className={`mh-lux-stats grid grid-cols-[1.05fr_1.2fr_0.95fr] gap-2 ${showAnger ? 'is-sticky' : ''}`}>
+                  <div className="mh-lux-card flex flex-col justify-between">
+                    <p className="mh-lux-kicker">📅 Period</p>
+                    <p className="mh-lux-period">{currentRound?.periodNumber ?? '...'}</p>
+                  </div>
+                  <div className={`mh-lux-card mh-lux-timer ${secondsLeft > 0 && secondsLeft <= 10 ? 'is-hot' : ''}`}>
+                    <p className="mh-lux-kicker">⏱ Timer</p>
+                    <p className={`mh-lux-time ${secondsLeft > 0 && secondsLeft <= 10 ? 'mh-urgent' : ''}`}>
+                      {formatTime(secondsLeft)}
+                    </p>
+                  </div>
+                  <div className="mh-lux-card flex flex-col justify-between">
+                    <p className="mh-lux-kicker">📡 Status</p>
+                    <span className={`mh-lux-status ${showAnger ? 'is-wait' : 'is-open'}`}>
+                      {showAnger ? 'WAIT' : (currentRound?.status ?? '...')}
+                    </span>
+                  </div>
+                </section>
 
-              <section>
-                <h3 className="mb-2 text-sm font-black tracking-wide text-white">Select Your Color</h3>
-                <div className="grid grid-cols-3 gap-2">
-                  {colors.map((color) => {
-                    const on = selectedColor === color.value
-                    return (
-                      <button
-                        key={color.value}
-                        onClick={() => setSelectedColor(color.value)}
-                        className={`mh-gem mh-gem-${color.value.toLowerCase()} ${on ? 'is-on' : ''} relative overflow-hidden rounded-2xl border p-3 text-center font-black text-white transition-transform duration-200 ${
-                          on
-                            ? 'z-[1] -translate-y-1 scale-[1.04] border-yellow-200 ring-2 ring-yellow-300'
-                            : 'border-white/15'
-                        } bg-gradient-to-b ${color.gem}`}
-                      >
-                        <span className="mh-gem-sheen" />
-                        <span className="mh-gem-fog pointer-events-none absolute inset-0" aria-hidden="true">
-                          {GEM_FLOAT_ICONS.map((icon, i) => (
-                            <span key={icon} className={`mh-gem-float f${i + 1}`}>{icon}</span>
-                          ))}
-                        </span>
-                        <span className="pointer-events-none absolute inset-x-3 top-0 h-8 rounded-full bg-white/25 blur-md" />
-                        <span className={`mh-gem-orb relative z-[1] mx-auto mt-1 block h-8 w-8 rounded-full bg-gradient-to-br ${color.gem} ring-2 ${on ? 'ring-yellow-200' : 'ring-white/50'}`} />
-                        <span className="relative z-[1] mt-2 block tracking-wide">{color.name}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </section>
+                <section className="mh-lux-card mh-lux-colors">
+                  <h3 className="mh-lux-title">
+                    <span>◆</span> {showAnger ? 'Locked Color' : 'Pick Color'} <span>◆</span>
+                  </h3>
+                  <div className="grid grid-cols-3 gap-2.5">
+                    {colors.map((color) => {
+                      const on = lockedColor === color.value
+                      const waiting = showAnger
+                      return (
+                        <button
+                          key={color.value}
+                          type="button"
+                          disabled={waiting}
+                          ref={(el) => { colorBtnRefs.current[color.value] = el }}
+                          onClick={() => pickColor(color.value)}
+                          className={`mh-lux-color mh-lux-color-${color.value.toLowerCase()} ${on ? 'is-on' : ''} ${waiting && !on ? 'is-dim' : ''}`}
+                        >
+                          <span className="mh-lux-chip" aria-hidden="true">
+                            <span className="mh-lux-chip-core">{color.value === 'GREEN' ? '♣' : '♠'}</span>
+                          </span>
+                          <span className="mh-lux-color-name">{color.name}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </section>
 
-              <section className={`overflow-hidden rounded-2xl p-3 ${showAnger ? 'border border-red-900/80 bg-[radial-gradient(circle_at_top,#3b0a0f_0%,#120608_55%,#050203_100%)]' : 'border border-yellow-400/20 bg-[#0d0d1c]'}`}>
                 {showAnger ? (
-                  <div key="anger" className="mh-swap-in mh-anger-panel relative overflow-hidden">
-                    <div className="mh-anger-fog pointer-events-none absolute inset-0" aria-hidden="true">
-                      <span className="mh-anger-emoji e1">😈</span>
-                      <span className="mh-anger-emoji e2">💀</span>
-                      <span className="mh-anger-emoji e3">🔥</span>
-                      <span className="mh-anger-emoji e4">👁️</span>
-                      <span className="mh-anger-emoji e5">👹</span>
-                      <span className="mh-anger-emoji e6">🩸</span>
-                    </div>
-                    <div className="relative mb-3 flex items-center justify-between gap-2">
-                      <h3 className="font-black tracking-wide text-red-100 drop-shadow-[0_0_10px_rgba(248,113,113,0.45)]">Let it out</h3>
-                      <span key={angerCount} className="mh-pop rounded-full border border-red-500/40 bg-red-950/80 px-2 py-0.5 text-sm font-black text-red-300">
-                        {angerCount}
-                      </span>
+                  <section ref={waitFocusRef} className="mh-fight-panel mh-wait-enter">
+                    <div className="mh-fight-head">
+                      <div>
+                        <p className="mh-lux-kicker text-red-300/80">Tap Pad</p>
+                        <h3 className="text-sm font-black text-red-50">Build your hits</h3>
+                      </div>
+                      <div className="mh-fight-side">
+                        <div className="mh-fight-timer" title="Time left this round">
+                          <span className="mh-fight-count-label">TIMER</span>
+                          <strong className={`mh-fight-timer-value ${secondsLeft > 0 && secondsLeft <= 10 ? 'is-hot' : ''}`}>
+                            {formatTime(secondsLeft)}
+                          </strong>
+                        </div>
+                        <div key={angerCount} className="mh-fight-count" title="Saved on this device only">
+                          <span className="mh-fight-count-label">HITS</span>
+                          <strong className="mh-fight-count-value">{angerCount}</strong>
+                        </div>
+                      </div>
                     </div>
                     <button
                       type="button"
-                      key={angerHit}
+                      className={`mh-tap-pad ${angerHit ? 'is-hit' : ''}`}
                       onClick={releaseAnger}
-                      className="mh-anger relative z-[1] flex h-24 w-full items-center justify-center rounded-2xl border border-red-400/50 bg-gradient-to-b from-[#9f1239] via-[#7f1d1d] to-[#2a0609] px-3 text-center text-lg font-black leading-tight tracking-[0.08em] text-red-50 shadow-[0_4px_0_#2a0508,0_0_24px_rgba(220,38,38,0.35)] active:translate-y-0.5 active:shadow-[0_2px_0_#2a0508]"
+                      aria-label="Tap to build hits"
+                      autoFocus
                     >
-                      {angerLabel}
+                      <span className="mh-tap-pad-glow" aria-hidden="true" />
+                      <span className="mh-tap-pad-label">{angerLabel || 'LET IT OUT'}</span>
+                      <span className="mh-tap-pad-hint">Keep tapping till the result</span>
                     </button>
-                    <p className="relative z-[1] mt-2 text-center text-xs font-bold text-red-300/70">
-                      Tap until the result lands.
-                    </p>
-                  </div>
+                  </section>
                 ) : (
-                  <div key="points" className="mh-swap-in">
-                    <div className="mb-2 flex items-center justify-between gap-2">
-                      <h3 className="font-black text-white">Virtual Points</h3>
-                      <span key={amount} className="mh-pop rounded-full bg-yellow-400/15 px-2 py-0.5 text-sm font-black text-yellow-300">
-                        {amount} points
-                      </span>
+                  <section className="mh-chip-tray">
+                    <p className="mh-chip-bet-label">BET: {selectedChipId === 'ALL' ? 'ALL' : amount}</p>
+                    <div className="mh-coin-row">
+                      {BET_CHIPS.map((chip) => {
+                        const on = selectedChipId === chip.id
+                        return (
+                          <button
+                            key={chip.id}
+                            type="button"
+                            ref={(el) => { chipBtnRefs.current[chip.id] = el }}
+                            onClick={(e) => pickChip(chip, e.currentTarget)}
+                            className={`mh-coin mh-coin-${chip.tone} ${on ? 'is-on' : ''}`}
+                            aria-label={`${chip.label} chip`}
+                          >
+                            <span className="mh-coin-ring" aria-hidden="true" />
+                            <span className="mh-coin-value">{chip.label}</span>
+                          </button>
+                        )
+                      })}
                     </div>
-                    <div className="grid grid-cols-4 gap-1.5">
-                      {amounts.map((value, index) => (
-                        <button
-                          key={value}
-                          onClick={() => setAmount(value)}
-                          style={{ animationDelay: `${index * -0.55}s` }}
-                          className={`mh-amt rounded-xl border py-2 font-black ${
-                            Number(amount) === value
-                              ? 'is-on border-yellow-300 bg-fuchsia-600 text-white'
-                              : 'border-white/10 bg-slate-900 text-slate-200'
-                          }`}
-                        >
-                          {value}
-                        </button>
-                      ))}
-                    </div>
-                    <label className="mt-2 block text-xs text-slate-400">
-                      Custom amount
+                    <label className="mt-3 block text-[10px] font-black uppercase tracking-[0.16em] text-yellow-200/70">
+                      ✎ Custom amount
                       <input
                         type="number"
-                        min="6"
+                        min="5"
                         step="1"
                         value={amount}
-                        onChange={(event) => setAmount(event.target.value)}
-                        className="mt-1 w-full rounded-xl border border-purple-900 bg-[#050510] p-2.5 text-white outline-none focus:border-yellow-400"
+                        onChange={(event) => {
+                          setAmount(event.target.value)
+                          setSelectedChipId('')
+                        }}
+                        className="mh-lux-input mt-2"
                       />
                     </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!isAuthenticated) {
+                          playClick()
+                          setPage('Login')
+                          return
+                        }
+                        startGameMusic()
+                        handlePlaceBet()
+                      }}
+                      disabled={
+                        isAuthenticated && (
+                          submittingBet ||
+                          pendingBetId != null ||
+                          !currentRound ||
+                          currentRound.status !== 'OPEN' ||
+                          secondsLeft <= 0
+                        )
+                      }
+                      className={`mh-lux-place ${!isAuthenticated ? 'mh-login' : ''}`}
+                    >
+                      <span className="mh-lux-place-ico" aria-hidden="true">🪙</span>
+                      <span>
+                        {submittingBet
+                          ? 'PLACING BET...'
+                          : pendingBetId != null
+                            ? 'WAITING FOR RESULT...'
+                            : !isAuthenticated
+                              ? 'LOGIN TO PLAY'
+                              : secondsLeft <= 0 || currentRound?.status !== 'OPEN'
+                                ? 'WAIT FOR NEXT ROUND'
+                                : 'PLACE BET'}
+                      </span>
+                    </button>
+                  </section>
+                )}
+
+                {currentPendingBet && (
+                  <section className="mh-lux-card border-fuchsia-500/50">
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <h3 className="text-sm font-black text-white">Your Current Bet</h3>
+                      <span className="rounded-full border border-yellow-500/60 bg-yellow-500/15 px-2 py-0.5 text-[10px] font-black text-yellow-300">
+                        {currentPendingBet.status}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                      <div>
+                        <p className="text-slate-400">Period</p>
+                        <p className="mt-1 break-all font-bold text-white">{currentPendingBet.periodNumber}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-400">Color</p>
+                        <p className="mt-1 font-black text-white">{currentPendingBet.color}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-400">Amount</p>
+                        <p className="mt-1 font-black text-yellow-300">{currentPendingBet.amount}</p>
+                      </div>
+                    </div>
+                  </section>
+                )}
+
+                <section className="mh-lux-card mh-lux-results">
+                  <div className="mb-2.5 flex items-center justify-between gap-2">
+                    <h3 className="mh-lux-title !m-0 !justify-start">
+                      <span>◆</span> Recent Results
+                    </h3>
+                    {results[0] && (
+                      <span className={`mh-lux-latest mh-lux-latest-${String(results[0].resultColor || '').toLowerCase()}`}>
+                        LAST {results[0].resultNumber}
+                      </span>
+                    )}
+                  </div>
+                  <div className="mh-lux-result-rail">
+                    {results.slice(0, 6).map((result, index) => (
+                      <div
+                        key={result.periodNumber}
+                        title={`${result.periodNumber}: ${result.resultColor}`}
+                        className={`mh-lux-result mh-lux-result-${String(result.resultColor || '').toLowerCase()} ${index === 0 ? 'is-latest' : ''}`}
+                      >
+                        <span className="mh-lux-result-num">{result.resultNumber}</span>
+                        <span className="mh-lux-result-color">{result.resultColor?.[0] || '?'}</span>
+                      </div>
+                    ))}
+                    {results.length === 0 && (
+                      <p className="w-full py-2 text-center text-sm font-bold text-slate-400">
+                        No results yet. Play the next round.
+                      </p>
+                    )}
+                  </div>
+                </section>
+
+                {betMessage && (
+                  <div
+                    role="status"
+                    className={`rounded-lg border p-3 text-sm ${
+                      betError
+                        ? 'border-red-700 bg-red-950/40 text-red-300'
+                        : 'border-emerald-700 bg-emerald-950/40 text-emerald-300'
+                    }`}
+                  >
+                    {betMessage}
                   </div>
                 )}
-              </section>
               </div>
 
-              <section className="mh-results relative overflow-hidden rounded-xl border border-purple-900 p-2">
-                {currentPendingBet && (
-  <section className="rounded-2xl border-2 border-fuchsia-500 bg-gradient-to-br from-[#21102d] to-[#0d0d1c] p-3 shadow-lg shadow-fuchsia-500/20">
-
-    <div className="mb-3 flex items-center justify-between border-b border-purple-800 pb-2">
-      <h3 className="text-lg font-black text-white">
-        🎯 Your Current Bet
-      </h3>
-
-      <span className="rounded-full border border-yellow-500 bg-yellow-500/20 px-3 py-1 text-xs font-black text-yellow-300">
-        {currentPendingBet.status}
-      </span>
-    </div>
-
-    <div className="grid grid-cols-3 divide-x divide-purple-700 text-center">
-
-      <div className="px-1">
-        <p className="text-xs text-slate-400">Period</p>
-        <p className="mt-2 break-all text-xs font-bold text-white">
-          {currentPendingBet.periodNumber}
-        </p>
-      </div>
-
-      <div className="px-1">
-        <p className="text-xs text-slate-400">Selected Color</p>
-        <p className="mt-2 font-black text-white">
-          <span className={`mr-1 inline-block h-3 w-3 rounded-full ${
-            currentPendingBet.color === 'RED'
-              ? 'bg-red-500'
-              : currentPendingBet.color === 'GREEN'
-                ? 'bg-emerald-500'
-                : 'bg-blue-500'
-          }`} />
-          {currentPendingBet.color}
-        </p>
-      </div>
-
-      <div className="px-1">
-        <p className="text-xs text-slate-400">Bet Amount</p>
-        <p className="mt-2 font-black text-yellow-300">
-          {currentPendingBet.amount} points
-        </p>
-      </div>
-
-    </div>
-  </section>
-)}
-                <h3 className="font-bold">Recent Results</h3>
-
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {results.slice(0, 10).map((result) => (
-                    <div
-                      key={result.periodNumber}
-                      title={`${result.periodNumber}: ${result.resultColor}`}
-                      className={`mh-pop flex h-10 w-10 items-center justify-center rounded-full text-sm font-black ${colorBadgeClass(result.resultColor)}`}
-                    >
-                      {result.resultNumber}
-                    </div>
-                  ))}
-
-                  {results.length === 0 && (
-                    <p className="text-sm text-slate-400">
-                      No results available yet.
-                    </p>
-                  )}
-                </div>
-              </section>
-
-              {betMessage && (
-                <div
-                  role="status"
-                  className={`rounded-lg border p-3 text-sm ${
-                    betError
-                      ? 'border-red-700 bg-red-950/40 text-red-300'
-                      : 'border-emerald-700 bg-emerald-950/40 text-emerald-300'
-                  }`}
-                >
-                  {betMessage}
-                </div>
-              )}
-
               <button
-                onClick={handlePlaceBet}
-                disabled={
-                  isAuthenticated && (
-                    submittingBet ||
-                    pendingBetId != null ||
-                    !currentRound ||
-                    currentRound.status !== 'OPEN' ||
-                    secondsLeft <= 0
-                  )
-                }
-                className={`mh-cta w-full rounded-2xl border border-yellow-200 bg-gradient-to-b from-yellow-300 to-amber-500 py-3.5 font-black text-black shadow-[0_4px_0_#92400e,0_0_16px_rgba(250,204,21,0.3)] active:translate-y-0.5 active:shadow-[0_2px_0_#92400e] disabled:cursor-not-allowed disabled:border-slate-600 disabled:bg-slate-700 disabled:from-slate-600 disabled:to-slate-800 disabled:text-slate-300 disabled:shadow-none ${!isAuthenticated ? 'mh-login' : ''}`}
+                type="button"
+                className="mh-xpinr-entry"
+                onClick={() => {
+                  playClick()
+                  setPage(isAuthenticated ? 'XpinR' : 'Login')
+                }}
               >
-                {submittingBet
-                  ? 'PLACING BET...'
-                  : pendingBetId != null
-                    ? 'WAITING FOR BET RESULT...'
-                    : !isAuthenticated
-                      ? 'LOGIN TO PLAY'
-                      : secondsLeft <= 0 || currentRound?.status !== 'OPEN'
-                        ? 'WAIT FOR NEXT ROUND'
-                        : `PLAY ${selectedColor || 'SELECT COLOR'} · ${amount} POINTS`}
+                <div className="mh-xpinr-entry-copy">
+                  <p>New Game</p>
+                  <strong>XpinR Spin</strong>
+                  <span>Bet coins · spin the wheel · win multipliers</span>
+                </div>
+                <span className="mh-xpinr-entry-cta">Play</span>
               </button>
 
               <LeaderboardBoard />
             </>
           )}
+
+          {page === 'XpinR' && (
+            <SpinPage
+              balance={currentUser?.virtualPoints ?? 0}
+              isAuthenticated={isAuthenticated}
+              onLogin={() => setPage('Login')}
+              onAddFunds={() => setPage(isAuthenticated ? 'Add Funds' : 'Login')}
+              onBalanceChange={(next) => {
+                if (typeof next === 'number') {
+                  setCurrentUser((user) => (user ? { ...user, virtualPoints: next } : user))
+                } else {
+                  loadUserProfile()
+                }
+              }}
+            />
+          )}
+
           {page === 'Notifications' && (
             <section className="space-y-3 pb-4">
               <button type="button" onClick={() => setPage('Home')} className="mh-back rounded-2xl border border-yellow-300/70 bg-gradient-to-b from-[#2a1d12] to-[#120b24] px-4 py-2 text-sm font-black text-yellow-300 shadow-[0_3px_0_#6b4a00]">
@@ -1986,22 +2164,25 @@ setResultPopup({
 )}
 
 {page === 'Profile' && (
-  <section className="space-y-3 pb-3">
-    <div className="relative overflow-hidden rounded-3xl border border-yellow-400/40 bg-[linear-gradient(120deg,#3b0764_0%,#6b21a8_40%,#1a0b2e_100%)] p-5 text-center shadow-[0_12px_32px_rgba(88,28,135,0.4)]">
-      <div className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-yellow-400/20 blur-2xl" />
+  <section className="mh-profile space-y-3 pb-3">
+    <div className="mh-profile-hero">
+      <div className="mh-profile-hero-glow" aria-hidden="true" />
+      <p className="mh-profile-brand">Millionaire Hub</p>
+
       <button
         type="button"
-        onClick={() => isAuthenticated ? profileFileRef.current?.click() : setPage('Login')}
-        className="mx-auto block rounded-full p-[3px] shadow-[0_4px_0_#6b4a00,0_0_28px_rgba(250,204,21,0.45)] active:translate-y-0.5"
+        onClick={() => (isAuthenticated ? profileFileRef.current?.click() : setPage('Login'))}
+        className="mh-profile-avatar"
         aria-label="Change profile photo"
       >
-        <span className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-[#120b24] ring-2 ring-yellow-300">
+        <span className="mh-profile-avatar-ring">
           <img
             src={currentUser?.profileImage || DEFAULT_AVATAR}
             alt=""
             className={currentUser?.profileImage ? 'h-full w-full object-cover' : 'h-[72%] w-[72%] object-contain'}
           />
         </span>
+        <span className="mh-profile-avatar-edit">✎</span>
       </button>
       <input
         ref={profileFileRef}
@@ -2010,113 +2191,133 @@ setResultPopup({
         className="hidden"
         onChange={onProfilePhotoPicked}
       />
-      <p className="mt-2 text-xs font-bold text-fuchsia-200">Tap the circle to set your photo</p>
-      <p className="mt-2 text-[11px] font-black tracking-[0.28em] text-yellow-300">MILLIONAIRE HUB</p>
+      <p className="mh-profile-hint">Tap photo to update</p>
+
       {isAuthenticated ? (
-        <div className="mt-3 text-left">
-          <label className="text-[11px] font-black uppercase tracking-[0.16em] text-yellow-200/80">Name</label>
-          <div className="mt-1 flex gap-2">
+        <>
+          <p className="mh-profile-user">@{currentUser?.username || 'player'}</p>
+          <label className="mh-profile-label">Display name</label>
+          <div className="mh-profile-name-row">
             <input
               value={profileName}
               maxLength={40}
               onChange={(event) => setProfileName(event.target.value)}
-              className="min-w-0 flex-1 rounded-2xl border border-yellow-400/30 bg-black/30 px-3 py-2 text-lg font-black text-white outline-none focus:border-yellow-300"
+              className="mh-profile-input"
+              placeholder="Your name"
             />
             <button
               type="button"
               disabled={profileBusy}
               onClick={() => saveProfile({ displayName: profileName })}
-              className="rounded-2xl border border-yellow-200 bg-gradient-to-b from-yellow-300 to-amber-500 px-4 py-2 text-sm font-black text-black shadow-[0_4px_0_#92400e] active:translate-y-0.5 active:shadow-[0_2px_0_#92400e] disabled:opacity-50"
+              className="mh-profile-save"
             >
-              Save
+              {profileBusy ? '…' : 'Save'}
             </button>
           </div>
-        </div>
+        </>
       ) : (
-        <h2 className="mt-1 text-2xl font-black tracking-wide text-white">Guest user</h2>
+        <h2 className="mh-profile-guest">Guest Player</h2>
       )}
-      {profileNotice && <p className="mt-2 text-sm text-yellow-200">{profileNotice}</p>}
+      {profileNotice && <p className="mh-profile-notice">{profileNotice}</p>}
 
       <button
         type="button"
         onClick={() => setPage(isAuthenticated ? 'Wallet' : 'Login')}
-        className="mt-4 w-full rounded-2xl border border-yellow-300/70 bg-gradient-to-b from-[#2a1d12] to-[#101020] px-4 py-3 text-left shadow-[0_4px_0_#6b4a00] active:translate-y-0.5 active:shadow-[0_2px_0_#6b4a00]"
+        className="mh-profile-wallet"
       >
-        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-yellow-200/80">Virtual Points</p>
-        <p className="mt-1 text-3xl font-black text-yellow-300">
-          {(currentUser?.virtualPoints ?? 0).toLocaleString('en-IN')}
-          <span className="ml-1 text-sm font-semibold text-yellow-500/80">pts</span>
-        </p>
+        <span className="mh-profile-wallet-ico" aria-hidden="true">🪙</span>
+        <span className="min-w-0 flex-1 text-left">
+          <span className="mh-profile-label">Wallet balance</span>
+          <strong className="mh-profile-balance">
+            {(currentUser?.virtualPoints ?? 0).toLocaleString('en-IN')}
+            <span> pts</span>
+          </strong>
+        </span>
+        <span className="mh-profile-chevron">›</span>
       </button>
 
-      <div className="mt-4 divide-y divide-yellow-400/15 overflow-hidden rounded-2xl border border-yellow-400/25 bg-[#0b0b19]/80 text-left">
-        <div className="px-4 py-3">
-          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">Email ID</p>
-          <p className="mt-1 break-all font-bold text-white">{currentUser?.email || 'Not available'}</p>
+      <div className="mh-profile-meta">
+        <div>
+          <p className="mh-profile-label">Email</p>
+          <p className="mh-profile-meta-value">{currentUser?.email || 'Not available'}</p>
         </div>
-        <div className="px-4 py-3">
-          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">Phone Number</p>
-          <p className="mt-1 font-bold text-white">{currentUser?.phoneNumber || currentUser?.phone || 'Not available'}</p>
+        <div>
+          <p className="mh-profile-label">Phone</p>
+          <p className="mh-profile-meta-value">{currentUser?.phoneNumber || currentUser?.phone || 'Not available'}</p>
         </div>
       </div>
     </div>
 
-    <button
-      type="button"
-      onClick={() => isAuthenticated ? setPage('Add Funds') : setPage('Login')}
-      className="flex w-full items-center gap-4 rounded-2xl border border-emerald-200 bg-gradient-to-b from-emerald-300 to-green-700 p-4 text-left font-black text-white shadow-[0_4px_0_#14532d,0_0_14px_rgba(16,185,129,0.3)] active:translate-y-0.5 active:shadow-[0_2px_0_#14532d]"
-    >
-      <span className="text-2xl">💰</span>
-      <span className="flex-1">
-        <span className="block">Add Funds</span>
-        <span className="text-sm font-bold text-emerald-100">Pay by UPI. 1 rupee = 1 coin</span>
-      </span>
-    </button>
-
-    <button
-      type="button"
-      onClick={() => isAuthenticated ? setPage('Transaction History') : setPage('Login')}
-      className="flex w-full items-center gap-4 rounded-2xl border border-yellow-300/70 bg-gradient-to-b from-[#2a1d12] to-[#120b24] p-4 text-left shadow-[0_4px_0_#6b4a00] active:translate-y-0.5 active:shadow-[0_2px_0_#6b4a00]"
-    >
-      <span className="text-2xl">📜</span>
-      <span className="flex-1">
-        <span className="block font-black text-white">Transaction History</span>
-        <span className="text-sm font-bold text-yellow-100/70">Deposits, withdrawals, and game coins</span>
-      </span>
-    </button>
-
-    <button
-      type="button"
-      onClick={() => setPage('Help & Support')}
-      className="flex w-full items-center gap-4 rounded-2xl border border-fuchsia-300/60 bg-gradient-to-b from-fuchsia-600 to-purple-800 p-4 text-left font-black text-white shadow-[0_4px_0_#4a044e] active:translate-y-0.5 active:shadow-[0_2px_0_#4a044e]"
-    >
-      <span className="text-2xl">💬</span>
-      <span className="flex-1">
-        <span className="block">Help &amp; Support</span>
-        <span className="text-sm font-bold text-fuchsia-100">Get help and contact us</span>
-      </span>
-      <span className="text-xl text-fuchsia-100">›</span>
-    </button>
-
-    <button
-      type="button"
-      onClick={() => setPage('Terms & Conditions')}
-      className="flex w-full items-center gap-4 rounded-2xl border border-yellow-400/25 bg-gradient-to-b from-[#1a1430] to-[#0b0b18] p-4 text-left shadow-[0_4px_0_#3b0764] active:translate-y-0.5 active:shadow-[0_2px_0_#3b0764]"
-    >
-      <span className="text-2xl">📋</span>
-      <span className="flex-1">
-        <span className="block font-black text-white">Terms &amp; Conditions</span>
-        <span className="text-sm font-bold text-slate-400">Read rules and conditions</span>
-      </span>
-    </button>
-
-    {isAuthenticated && (
+    <div className="mh-profile-actions">
       <button
         type="button"
-        onClick={handleLogout}
-        className="w-full rounded-2xl border border-red-900/60 bg-gradient-to-b from-[#3a1518] to-[#1a0a0c] py-3.5 font-black text-red-300/80 shadow-[0_4px_0_#450a0a] active:translate-y-0.5 active:shadow-[0_2px_0_#450a0a]"
+        className="mh-profile-action is-spin"
+        onClick={() => setPage(isAuthenticated ? 'XpinR' : 'Login')}
       >
-        🔻 Logout
+        <span className="mh-profile-action-ico">🎡</span>
+        <span className="mh-profile-action-copy">
+          <strong>XpinR Spin</strong>
+          <span>Play the wheel with your coins</span>
+        </span>
+        <span className="mh-profile-chevron">›</span>
+      </button>
+
+      <button
+        type="button"
+        className="mh-profile-action is-funds"
+        onClick={() => (isAuthenticated ? setPage('Add Funds') : setPage('Login'))}
+      >
+        <span className="mh-profile-action-ico">💰</span>
+        <span className="mh-profile-action-copy">
+          <strong>Add Funds</strong>
+          <span>UPI top-up · 1 rupee = 1 coin</span>
+        </span>
+        <span className="mh-profile-chevron">›</span>
+      </button>
+
+      <button
+        type="button"
+        className="mh-profile-action"
+        onClick={() => (isAuthenticated ? setPage('Transaction History') : setPage('Login'))}
+      >
+        <span className="mh-profile-action-ico">📜</span>
+        <span className="mh-profile-action-copy">
+          <strong>Transaction History</strong>
+          <span>Deposits, withdrawals, game coins</span>
+        </span>
+        <span className="mh-profile-chevron">›</span>
+      </button>
+
+      <button
+        type="button"
+        className="mh-profile-action"
+        onClick={() => setPage('Help & Support')}
+      >
+        <span className="mh-profile-action-ico">💬</span>
+        <span className="mh-profile-action-copy">
+          <strong>Help &amp; Support</strong>
+          <span>Get help and contact us</span>
+        </span>
+        <span className="mh-profile-chevron">›</span>
+      </button>
+
+      <button
+        type="button"
+        className="mh-profile-action"
+        onClick={() => setPage('Terms & Conditions')}
+      >
+        <span className="mh-profile-action-ico">📋</span>
+        <span className="mh-profile-action-copy">
+          <strong>Terms &amp; Conditions</strong>
+          <span>Rules and conditions</span>
+        </span>
+        <span className="mh-profile-chevron">›</span>
+      </button>
+    </div>
+
+    {isAuthenticated && (
+      <button type="button" onClick={handleLogout} className="mh-profile-logout">
+        Logout
       </button>
     )}
   </section>
@@ -2232,27 +2433,35 @@ setResultPopup({
         </main>
 
 <nav className="fixed bottom-0 left-0 z-20 grid w-full grid-cols-5 border-t border-yellow-400/30 bg-[linear-gradient(180deg,#1c1433_0%,#080817_100%)]">
-  {['Home', 'Results', 'Wallet', 'Rewards', 'Profile'].map((name) => (
+  {['Home', 'Results', 'XpinR', 'Rewards', 'Profile'].map((name) => (
     <button
       key={name}
-      onClick={() => setPage(name)}
+      onClick={() => {
+        if (name === 'XpinR' && !isAuthenticated) {
+          setPage('Login')
+          return
+        }
+        setPage(name)
+      }}
       className={`mh-nav m-1 flex flex-col items-center justify-center gap-1 rounded-2xl py-2 text-xs font-black ${
+        name === 'XpinR' ? 'mh-nav-xpinr' : ''
+      } ${
         page === name
           ? 'is-on border border-yellow-200 bg-gradient-to-b from-yellow-300 to-amber-500 text-black shadow-[0_3px_0_#92400e]'
           : 'text-slate-400'
       }`}
-      style={{ animationDelay: name === 'Results' ? '-1.5s' : name === 'Wallet' ? '-3s' : undefined }}
+      style={{ animationDelay: name === 'Results' ? '-1.5s' : name === 'XpinR' ? '-3s' : undefined }}
     >
       <span
         className={
-          name === 'Wallet'
-            ? 'mh-wallet -mt-5 flex h-12 w-12 items-center justify-center rounded-full border-2 border-purple-400 bg-purple-700 text-[2.35rem] font-black leading-none text-white'
+          name === 'XpinR'
+            ? 'mh-xpinr-orb'
             : 'text-xl'
         }
       >
-        {name === 'Wallet' ? <span className="mh-dollar-roll">$</span> : <NavIcon name={name} />}
+        {name === 'XpinR' ? '🎡' : <NavIcon name={name} />}
       </span>
-      {name}
+      {name === 'XpinR' ? 'XpinR' : name}
     </button>
   ))}
 </nav>
@@ -2261,20 +2470,52 @@ setResultPopup({
       {/* WIN / LOST result popup */}
       {resultPopup && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/80 p-3 backdrop-blur-sm"
+          className={`mh-result-overlay fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-3 ${won ? 'is-win' : isRefunded ? 'is-refund' : 'is-lose'}`}
           role="dialog"
           aria-modal="true"
           aria-labelledby="result-popup-title"
         >
           <div
-            className={`relative my-auto w-full max-w-md overflow-hidden rounded-3xl border ${
+            className={`mh-result-card relative my-auto w-full max-w-md overflow-hidden rounded-3xl border p-5 shadow-2xl ${
               won
-  ? 'border-emerald-500 bg-gradient-to-b from-emerald-950 via-[#061a16] to-[#030c0a]'
-  : isRefunded
-    ? 'border-amber-500 bg-gradient-to-b from-amber-950 via-[#211707] to-[#0d0903]'
-    : 'border-red-600 bg-gradient-to-b from-red-950 via-[#210b0d] to-[#0d0506]'
-            } p-5 shadow-2xl`}
+                ? 'border-yellow-300/80 bg-gradient-to-b from-emerald-900 via-[#06241c] to-[#030c0a]'
+                : isRefunded
+                  ? 'border-amber-500 bg-gradient-to-b from-amber-950 via-[#211707] to-[#0d0903]'
+                  : 'border-red-600 bg-gradient-to-b from-red-950 via-[#210b0d] to-[#0d0506]'
+            }`}
           >
+            {won && (
+              <div className="mh-win-fx" aria-hidden="true">
+                <div className="mh-win-rays" />
+                {Array.from({ length: 28 }, (_, i) => (
+                  <span
+                    key={`c-${i}`}
+                    className="mh-confetti"
+                    style={{
+                      '--i': i,
+                      '--x': `${((i * 37) % 100)}%`,
+                      '--delay': `${(i % 10) * 0.05}s`,
+                      '--rot': `${(i * 47) % 360}deg`,
+                      '--c': ['#fde68a', '#34d399', '#fbbf24', '#a7f3d0', '#f472b6', '#60a5fa'][i % 6],
+                    }}
+                  />
+                ))}
+                {Array.from({ length: 10 }, (_, i) => (
+                  <span
+                    key={`coin-${i}`}
+                    className="mh-win-coin"
+                    style={{
+                      '--i': i,
+                      '--x': `${8 + ((i * 9) % 84)}%`,
+                      '--delay': `${0.12 + i * 0.08}s`,
+                    }}
+                  >
+                    🪙
+                  </span>
+                ))}
+              </div>
+            )}
+
             <button
               onClick={() => setResultPopup(null)}
               aria-label="Close result popup"
@@ -2283,14 +2524,14 @@ setResultPopup({
               ×
             </button>
 
-            <div className="pt-3 text-center">
+            <div className="relative z-[1] pt-3 text-center">
               <div
-                className={`mx-auto flex h-20 w-20 items-center justify-center rounded-full border-4 text-5xl shadow-lg ${
+                className={`mh-result-badge mx-auto flex h-20 w-20 items-center justify-center rounded-full border-4 text-5xl shadow-lg ${
                   won
-  ? 'border-yellow-300 bg-emerald-700 text-yellow-200 shadow-emerald-500/30'
-  : isRefunded
-    ? 'border-amber-300 bg-amber-700 text-white shadow-amber-500/30'
-    : 'border-red-400 bg-red-700 text-white shadow-red-500/30'
+                    ? 'is-win border-yellow-300 bg-emerald-600 text-yellow-100 shadow-yellow-400/40'
+                    : isRefunded
+                      ? 'border-amber-300 bg-amber-700 text-white shadow-amber-500/30'
+                      : 'border-red-400 bg-red-700 text-white shadow-red-500/30'
                 }`}
               >
                 {won ? '🏆' : isRefunded ? '↩️' : '✕'}
@@ -2298,24 +2539,24 @@ setResultPopup({
 
               <h2
                 id="result-popup-title"
-                className={`mt-4 text-3xl font-black tracking-wide ${
+                className={`mh-result-title mt-4 text-3xl font-black tracking-wide ${
                   won
-  ? 'text-yellow-300'
-  : isRefunded
-    ? 'text-amber-300'
-    : 'text-red-300'
+                    ? 'is-win text-yellow-300'
+                    : isRefunded
+                      ? 'text-amber-300'
+                      : 'text-white'
                 }`}
               >
                 {won ? 'YOU WON!' : isRefunded ? 'BET REFUNDED' : 'YOU LOST'}
               </h2>
 
               <div
-                className={`mt-4 rounded-xl border px-3 py-3 text-3xl font-black ${
+                className={`mh-result-points mt-4 rounded-xl border px-3 py-3 text-3xl font-black ${
                   won
-  ? 'border-emerald-500 bg-emerald-950/70 text-emerald-300'
-  : isRefunded
-    ? 'border-amber-500 bg-amber-950/60 text-amber-300'
-    : 'border-red-500 bg-red-950/60 text-red-300'
+                    ? 'is-win border-yellow-300/70 bg-emerald-950/80 text-yellow-200'
+                    : isRefunded
+                      ? 'border-amber-500 bg-amber-950/60 text-amber-300'
+                      : 'border-red-500 bg-red-950/60 text-[#f5e6c8]'
                 }`}
               >
                 {won || isRefunded ? '+' : '-'}
@@ -2323,10 +2564,10 @@ setResultPopup({
                 <span className="ml-2 text-lg">Points</span>
               </div>
               {isRefunded && (
-  <p className="mt-3 rounded-xl border border-amber-500/40 bg-amber-950/40 p-3 text-sm text-amber-200">
-    Round cancel ho gaya. Aapki bet ke points wallet mein wapas kar diye gaye hain.
-  </p>
-)}
+                <p className="mt-3 rounded-xl border border-amber-500/40 bg-amber-950/40 p-3 text-sm text-amber-200">
+                  This round was cancelled. Your bet points were returned to your wallet.
+                </p>
+              )}
 
               <div className="mt-4 space-y-3 rounded-xl border border-white/10 bg-black/30 p-4 text-left">
                 <div className="flex justify-between gap-3 text-sm">
@@ -2336,23 +2577,28 @@ setResultPopup({
                   </span>
                 </div>
                 {!isRefunded && resultPopup.resultColor && (
-  <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-500/70 bg-emerald-950/40 px-3 py-3 shadow-lg shadow-emerald-500/10">
-    <span className="font-bold text-white">
-      🏆 Winning Color
-    </span>
-
-    <span className={`flex items-center gap-2 font-black ${colorTextClass(resultPopup.resultColor)}`}>
-      <span className={`h-3 w-3 rounded-full ${
-        resultPopup.resultColor === 'RED'
-          ? 'bg-red-500'
-          : resultPopup.resultColor === 'GREEN'
-            ? 'bg-emerald-500'
-            : 'bg-blue-500'
-      }`} />
-      {resultPopup.resultColor}
-    </span>
-  </div>
-)}
+                  <div className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-3 shadow-lg ${
+                    won
+                      ? 'mh-win-color-row border-yellow-300/50 bg-emerald-950/50 shadow-yellow-500/10'
+                      : 'border-emerald-500/70 bg-emerald-950/40 shadow-emerald-500/10'
+                  }`}
+                  >
+                    <span className="font-bold text-white">
+                      🏆 Winning Color
+                    </span>
+                    <span className={`flex items-center gap-2 font-black ${colorTextClass(resultPopup.resultColor)}`}>
+                      <span className={`h-3 w-3 rounded-full ${
+                        resultPopup.resultColor === 'RED'
+                          ? 'bg-red-500'
+                          : resultPopup.resultColor === 'GREEN'
+                            ? 'bg-emerald-500'
+                            : 'bg-blue-500'
+                      }`}
+                      />
+                      {resultPopup.resultColor}
+                    </span>
+                  </div>
+                )}
 
                 <div className="flex justify-between gap-3 text-sm">
                   <span className="text-slate-400">Bet Amount</span>
@@ -2364,21 +2610,22 @@ setResultPopup({
                 <div className="flex justify-between gap-3 text-sm">
                   <span className="text-slate-400">Bet Status</span>
                   <span className={`font-bold ${
-  won
-    ? 'text-emerald-300'
-    : isRefunded
-      ? 'text-amber-300'
-      : 'text-red-300'
-}`}>
+                    won
+                      ? 'text-emerald-300'
+                      : isRefunded
+                        ? 'text-amber-300'
+                        : 'text-red-300'
+                  }`}
+                  >
                     {resultPopup.status}
                   </span>
                 </div>
 
                 <div className="flex justify-between gap-3 text-sm">
                   <span className="text-slate-400">
-  {isRefunded ? 'Refunded Amount' : 'Payout'}
-</span>
-                  <span className="font-bold">
+                    {isRefunded ? 'Refunded Amount' : 'Payout'}
+                  </span>
+                  <span className={`font-bold ${won ? 'text-yellow-300' : ''}`}>
                     {Number(resultPopup.pointsPayout ?? 0).toLocaleString('en-IN')} Points
                   </span>
                 </div>
@@ -2388,23 +2635,24 @@ setResultPopup({
                 </div>
               </div>
 
-              <div className="mt-4 flex items-center gap-3 rounded-xl border border-white/10 bg-black/30 p-3 text-left">
-                <span className="text-3xl">🪙</span>
+              <div className={`mt-4 flex items-center gap-3 rounded-xl border border-white/10 bg-black/30 p-3 text-left ${won ? 'mh-win-balance' : ''}`}>
+                <span className={`text-3xl ${won ? 'mh-win-balance-coin' : ''}`}>🪙</span>
                 <div className="min-w-0 flex-1">
                   <p className="text-xs text-slate-400">Updated Balance</p>
-                  <p className="mt-1 break-words text-xl font-black text-yellow-300">
+                  <p className={`mt-1 break-words text-xl font-black text-yellow-300 ${won ? 'mh-win-balance-value' : ''}`}>
                     {Number(resultPopup.updatedBalance ?? 0).toLocaleString('en-IN')} Points
                   </p>
                 </div>
                 <span className={`text-2xl ${
-  won
-    ? 'text-emerald-400'
-    : isRefunded
-      ? 'text-amber-400'
-      : 'text-red-400'
-}`}>
-  {won || isRefunded ? '↑' : '↓'}
-</span>
+                  won
+                    ? 'text-emerald-400'
+                    : isRefunded
+                      ? 'text-amber-400'
+                      : 'text-red-400'
+                }`}
+                >
+                  {won || isRefunded ? '↑' : '↓'}
+                </span>
               </div>
 
               <div className="mt-5 grid grid-cols-2 gap-3">

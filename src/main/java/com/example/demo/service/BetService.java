@@ -15,7 +15,7 @@ import java.util.*;
 @Service
 public class BetService {
 
-    private static final long MIN_BET = 6L;
+    private static final long MIN_BET = 5L;
     private static final long MAX_BET = 10000L;
     private static final BigDecimal DEFAULT_COMMISSION =
             new BigDecimal("5.00");
@@ -53,12 +53,12 @@ public class BetService {
     }
 
     static void validateBetAmount(Long amount) {
-        if (amount == null || amount <= 5L) {
-            throw new IllegalArgumentException("Please enter above 5");
+        if (amount == null || amount < MIN_BET) {
+            throw new IllegalArgumentException("Minimum bet is 5 points.");
         }
-        if (amount < MIN_BET || amount > MAX_BET) {
+        if (amount > MAX_BET) {
             throw new IllegalArgumentException(
-                    "Bet must be between 6 and 10000 tokens");
+                    "Bet must be between 5 and 10000 tokens");
         }
     }
 
@@ -128,7 +128,7 @@ public class BetService {
         if (user.getVirtualPoints() == null
                 || user.getVirtualPoints() < amount) {
             throw new IllegalArgumentException(
-                    "Insufficient virtual points");
+                    "You do not have enough virtual points.");
         }
 
         user.setVirtualPoints(

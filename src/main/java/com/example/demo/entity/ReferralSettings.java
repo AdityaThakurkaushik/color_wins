@@ -29,6 +29,9 @@ public class ReferralSettings {
     @Column(name = "agent_next_deposit_percent", nullable = false, precision = 5, scale = 2)
     private BigDecimal agentNextDepositPercent = new BigDecimal("5");
 
+    @Column(name = "min_agent_balance", nullable = false)
+    private Long minAgentBalance = 0L;
+
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
@@ -103,6 +106,17 @@ public class ReferralSettings {
 
     public void setAgentNextDepositPercent(BigDecimal agentNextDepositPercent) {
         this.agentNextDepositPercent = requirePercent(agentNextDepositPercent, "Next deposit percent");
+    }
+
+    public Long getMinAgentBalance() {
+        return minAgentBalance;
+    }
+
+    public void setMinAgentBalance(Long minAgentBalance) {
+        if (minAgentBalance == null || minAgentBalance < 0) {
+            throw new IllegalArgumentException("Minimum agent balance cannot be negative");
+        }
+        this.minAgentBalance = minAgentBalance;
     }
 
     public OffsetDateTime getUpdatedAt() {

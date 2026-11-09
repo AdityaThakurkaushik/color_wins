@@ -100,7 +100,8 @@ public class AdminController {
                 request.referredUserReward(),
                 request.rewardCondition(),
                 request.agentFirstDepositPercent(),
-                request.agentNextDepositPercent()
+                request.agentNextDepositPercent(),
+                request.minAgentBalance()
         );
     }
 
@@ -187,7 +188,8 @@ public class AdminController {
             Long referredUserReward,
             String rewardCondition,
             BigDecimal agentFirstDepositPercent,
-            BigDecimal agentNextDepositPercent
+            BigDecimal agentNextDepositPercent,
+            Long minAgentBalance
     ) {
     }
 

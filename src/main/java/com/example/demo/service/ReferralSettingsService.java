@@ -33,7 +33,8 @@ public class ReferralSettingsService {
             Long referredUserReward,
             String rewardCondition,
             BigDecimal agentFirstDepositPercent,
-            BigDecimal agentNextDepositPercent) {
+            BigDecimal agentNextDepositPercent,
+            Long minAgentBalance) {
 
         ReferralSettings settings = repository
                 .findByIdForUpdate(SETTINGS_ID)
@@ -54,6 +55,9 @@ public class ReferralSettingsService {
         }
         if (agentNextDepositPercent != null) {
             settings.setAgentNextDepositPercent(agentNextDepositPercent);
+        }
+        if (minAgentBalance != null) {
+            settings.setMinAgentBalance(minAgentBalance);
         }
 
         return repository.save(settings);

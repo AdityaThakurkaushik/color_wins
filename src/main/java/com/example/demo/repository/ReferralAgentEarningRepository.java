@@ -16,10 +16,13 @@ public interface ReferralAgentEarningRepository extends JpaRepository<ReferralAg
 
     long countByAgentId(Long agentId);
 
+    void deleteByAgentId(Long agentId);
+
     @Query("""
         SELECT COALESCE(SUM(e.coins), 0)
         FROM ReferralAgentEarning e
         WHERE e.agent.id = :agentId
+          AND e.kind IN ('SIGNUP', 'FIRST_DEPOSIT', 'NEXT_DEPOSIT')
         """)
     long sumCoinsByAgentId(@Param("agentId") Long agentId);
 

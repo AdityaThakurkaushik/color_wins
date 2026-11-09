@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.Query;
 
@@ -35,6 +36,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
     java.util.List<User> findByReferredByCodeOrderByCreatedAtDesc(String referredByCode);
 
     java.util.List<User> findByReferredByAgentIdOrderByCreatedAtDesc(Long referredByAgentId);
+
+    @Modifying
+    @Query("UPDATE User u SET u.referredByAgentId = null WHERE u.referredByAgentId = :agentId")
+    int clearReferredByAgentId(@Param("agentId") Long agentId);
 
     @Query("""
         SELECT u FROM User u

@@ -1,6 +1,7 @@
 package com.example.demo.entity;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
 @Entity
@@ -22,6 +23,21 @@ public class ReferralAgent {
 
     @Column(name = "display_name", length = 60)
     private String displayName;
+
+    @Column(length = 20)
+    private String phone;
+
+    @Column(name = "payout_note", length = 200)
+    private String payoutNote;
+
+    @Column(name = "first_deposit_percent", precision = 5, scale = 2)
+    private BigDecimal firstDepositPercent;
+
+    @Column(name = "next_deposit_percent", precision = 5, scale = 2)
+    private BigDecimal nextDepositPercent;
+
+    @Column(name = "min_balance")
+    private Long minBalance;
 
     @Column(name = "virtual_points", nullable = false)
     private Long virtualPoints = 0L;
@@ -67,6 +83,10 @@ public class ReferralAgent {
         return agentCode;
     }
 
+    public void setAgentCode(String agentCode) {
+        this.agentCode = agentCode;
+    }
+
     public String getUsername() {
         return username;
     }
@@ -85,6 +105,49 @@ public class ReferralAgent {
 
     public void setDisplayName(String displayName) {
         this.displayName = displayName;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public String getPayoutNote() {
+        return payoutNote;
+    }
+
+    public void setPayoutNote(String payoutNote) {
+        this.payoutNote = payoutNote;
+    }
+
+    public BigDecimal getFirstDepositPercent() {
+        return firstDepositPercent;
+    }
+
+    public void setFirstDepositPercent(BigDecimal firstDepositPercent) {
+        this.firstDepositPercent = firstDepositPercent;
+    }
+
+    public BigDecimal getNextDepositPercent() {
+        return nextDepositPercent;
+    }
+
+    public void setNextDepositPercent(BigDecimal nextDepositPercent) {
+        this.nextDepositPercent = nextDepositPercent;
+    }
+
+    public Long getMinBalance() {
+        return minBalance;
+    }
+
+    public void setMinBalance(Long minBalance) {
+        if (minBalance != null && minBalance < 0) {
+            throw new IllegalArgumentException("Minimum balance cannot be negative");
+        }
+        this.minBalance = minBalance;
     }
 
     public Long getVirtualPoints() {

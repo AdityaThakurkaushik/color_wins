@@ -9,11 +9,13 @@ import AdminWalletPolicy from './AdminWalletPolicy.jsx'
 import AdminLeaderboard from './AdminLeaderboard.jsx'
 import AdminAngerButton from './AdminAngerButton.jsx'
 import AdminReferralAgents from './AdminReferralAgents.jsx'
+import AdminXpinR from './AdminXpinR.jsx'
 
 const menuItems = [
   'Dashboard',
   'Game Management',
   'Rounds & Results',
+  'XpinR',
   'Users',
   'Bets History',
   'Wallet & Transactions',
@@ -89,6 +91,7 @@ const [referralForm, setReferralForm] = React.useState({
   rewardCondition: 'REGISTRATION',
   agentFirstDepositPercent: '10',
   agentNextDepositPercent: '5',
+  minAgentBalance: '0',
 })
 
 const [referralLoading, setReferralLoading] = React.useState(false)
@@ -492,7 +495,7 @@ const loadReferralSettings = async () => {
     })
 
     if (!response.ok) {
-      throw new Error(`Settings load nahi hui. Status: ${response.status}`)
+      throw new Error(`Could not load settings. Status: ${response.status}`)
     }
 
     const data = await response.json()
@@ -505,9 +508,10 @@ const loadReferralSettings = async () => {
       rewardCondition: data.rewardCondition ?? 'REGISTRATION',
       agentFirstDepositPercent: String(data.agentFirstDepositPercent ?? 10),
       agentNextDepositPercent: String(data.agentNextDepositPercent ?? 5),
+      minAgentBalance: String(data.minAgentBalance ?? 0),
     })
   } catch (error) {
-    setReferralError(error.message || 'Settings load nahi hui.')
+    setReferralError(error.message || 'Could not load settings.')
   } finally {
     setReferralLoading(false)
   }
@@ -593,6 +597,7 @@ const saveCommissionSettings = async () => {
     const referredUserReward = Number(referralForm.referredUserReward)
     const agentFirstDepositPercent = Number(referralForm.agentFirstDepositPercent)
     const agentNextDepositPercent = Number(referralForm.agentNextDepositPercent)
+    const minAgentBalance = Number(referralForm.minAgentBalance)
 
     if (
       !Number.isInteger(referrerReward) ||
@@ -614,6 +619,12 @@ const saveCommissionSettings = async () => {
       agentNextDepositPercent > 100
     ) {
       setReferralError('Agent deposit percents must be between 0 and 100.')
+      setReferralSaving(false)
+      return
+    }
+
+    if (!Number.isInteger(minAgentBalance) || minAgentBalance < 0) {
+      setReferralError('Minimum agent balance must be a whole number of 0 or more.')
       setReferralSaving(false)
       return
     }
@@ -640,6 +651,7 @@ const saveCommissionSettings = async () => {
           rewardCondition: referralForm.rewardCondition,
           agentFirstDepositPercent,
           agentNextDepositPercent,
+          minAgentBalance,
         }),
       })
 
@@ -647,7 +659,7 @@ const saveCommissionSettings = async () => {
 
       if (!response.ok) {
         throw new Error(
-          data.error || `Settings save failed: ${response.status}`,
+          data.message || data.error || `Settings save failed: ${response.status}`,
         )
       }
 
@@ -662,6 +674,7 @@ const saveCommissionSettings = async () => {
           data.rewardCondition ?? referralForm.rewardCondition,
         agentFirstDepositPercent: String(data.agentFirstDepositPercent ?? agentFirstDepositPercent),
         agentNextDepositPercent: String(data.agentNextDepositPercent ?? agentNextDepositPercent),
+        minAgentBalance: String(data.minAgentBalance ?? minAgentBalance),
       })
       setReferralMessage('Referral settings saved successfully.')
     } catch (error) {
@@ -1032,6 +1045,8 @@ React.useEffect(() => {
           <AdminLeaderboard />
         ) : activePage === 'Anger Button' ? (
           <AdminAngerButton />
+        ) : activePage === 'XpinR' ? (
+          <AdminXpinR />
         ) : activePage === 'Commission Settings' ? (
   <section className="mx-auto max-w-2xl rounded-xl border border-purple-900 bg-[#091126] p-4 md:p-6">
     <h3 className="text-lg font-bold">Game Commission Settings</h3>
@@ -1267,6 +1282,27 @@ React.useEffect(() => {
                 />
               </label>
             </div>
+
+            <label className="mt-5 block">
+              <span className="text-sm font-semibold">Minimum agent balance</span>
+              <span className="mt-1 block text-xs text-slate-400">
+                Agents can only withdraw coins above this amount. Per-agent overrides can be set in Referral Agents.
+              </span>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={referralForm.minAgentBalance}
+                onChange={(event) =>
+                  setReferralForm((current) => ({
+                    ...current,
+                    minAgentBalance: event.target.value,
+                  }))
+                }
+                disabled={referralLoading || referralSaving}
+                className="mt-2 w-full rounded-lg border border-slate-700 bg-[#050817] px-3 py-2 text-white outline-none focus:border-purple-500 disabled:opacity-50"
+              />
+            </label>
 
             <div className="mt-6 flex flex-wrap gap-3">
               <button

@@ -16,8 +16,8 @@ public class ReferralAgentEarning {
     @JoinColumn(name = "agent_id", nullable = false)
     private ReferralAgent agent;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "referred_user_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "referred_user_id")
     private User referredUser;
 
     @Column(name = "deposit_id")

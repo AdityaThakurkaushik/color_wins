@@ -72,7 +72,7 @@ public class TelegramAuthService {
         String token = rawToken == null ? "" : rawToken.trim().toUpperCase();
         TelegramLinkToken link = tokenRepository.findById(token)
                 .orElseThrow(() -> new IllegalArgumentException(
-                        "This Telegram link is invalid. Website pe naya Forgot/Verify link open karo."));
+                        "This Telegram link is invalid. Open a new Forgot/Verify link from the website."));
         if (link.getUsedAt() != null) {
             // Same Telegram account can retry within expiry to get a fresh reset/verify action.
             User linkedUser = link.getUser();

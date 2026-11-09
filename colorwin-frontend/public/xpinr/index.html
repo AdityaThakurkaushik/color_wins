@@ -1,0 +1,2029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#120a2e">
+<title>Coin Spin</title>
+
+<!--
+  COIN SPIN — single-file mobile-first game. Virtual coins only: no real money, no payments.
+
+  SETUP NOTES (Mesh2Motion mascot)
+  1. Open https://app.mesh2motion.org and pick a model (or import your own mesh and rig it).
+  2. Add animations: at least an Idle, one happy clip (Jump / Run / Walk / Dance), one sad clip (Death / Sit).
+  3. Export as GLB (glTF Binary) with animations included.
+  4. Save the file as "mascot.glb" in the SAME folder as this HTML file
+     (or change CONFIG.MASCOT_GLB below to any path/URL).
+  5. Serve the folder over HTTP — browsers block loading the GLB from file:// :
+       python3 -m http.server 8000      then open  http://localhost:8000/coin-spin.html
+  If the GLB is missing or WebGL / the CDN is unavailable, the built-in animated cartoon girl is used and the game still works.
+  (MASCOT_GLB is empty by default = built-in girl. Set it to "./girl.glb" to use a Mesh2Motion character instead.)
+-->
+
+<!-- Three.js pinned to an exact version; loaded lazily so the game works even if the CDN fails -->
+<script type="importmap">
+{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<style>
+  :root{
+    --bg1:#2a1370; --bg2:#0c0a22; --card:rgba(255,255,255,.07);
+    --gold:#ffc400; --text:#fff; --muted:#a9a3d6;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;touch-action:manipulation;
+    background:radial-gradient(120% 90% at 50% 0%,var(--bg1),var(--bg2) 70%);
+    color:var(--text);font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif;
+    -webkit-user-select:none;user-select:none}
+  button{font:inherit;color:inherit;border:0;cursor:pointer}
+  button:disabled{cursor:not-allowed}
+
+  #app{max-width:560px;height:100dvh;margin:0 auto;display:flex;flex-direction:column;
+    padding:max(10px,env(safe-area-inset-top)) 12px max(10px,env(safe-area-inset-bottom));gap:8px}
+
+  /* ---------- header ---------- */
+  header{display:flex;align-items:center;gap:10px}
+  .pill{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid rgba(255,255,255,.12);
+    border-radius:999px;padding:6px 14px 6px 8px}
+  .coin{width:30px;height:30px;flex:none;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%,#fff7b0,#ffc400 55%,#c98600);
+    box-shadow:inset 0 0 0 3px #e6a500,inset 0 0 0 5px #ffe27a,0 2px 6px rgba(0,0,0,.4)}
+  #balance{font-size:clamp(22px,6.5vw,30px);font-weight:900;letter-spacing:.5px;font-variant-numeric:tabular-nums}
+  .bump{animation:bump .3s ease}
+  @keyframes bump{50%{transform:scale(1.25)}}
+  .best{margin-left:auto;text-align:right;font-size:11px;color:var(--muted);letter-spacing:1px;line-height:1.2}
+  .best b{display:block;font-size:16px;color:var(--gold);letter-spacing:0}
+  #mute{width:42px;height:42px;border-radius:50%;background:var(--card);border:1px solid rgba(255,255,255,.12);font-size:20px}
+
+  /* ---------- mascot + history ---------- */
+  .top{display:flex;gap:12px;align-items:stretch}
+  #mascot{position:relative;width:clamp(84px,24vw,112px);aspect-ratio:1;flex:none;border-radius:18px;
+    background:linear-gradient(160deg,rgba(255,255,255,.12),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.12);overflow:hidden}
+  #mascotCanvas{position:absolute;inset:0;width:100%;height:100%;display:none}
+  #mascotEmoji{position:absolute;inset:0;display:grid;place-items:center;font-size:clamp(44px,13vw,64px);
+    animation:bob 2.2s ease-in-out infinite}
+  #mascotEmoji.happy{animation:hop .45s ease-in-out 4}
+  #mascotEmoji.sad{animation:droop 1.6s ease forwards}
+  @keyframes bob{50%{transform:translateY(-4px) rotate(-3deg)}}
+  @keyframes hop{50%{transform:translateY(-16px) scale(1.12) rotate(6deg)}}
+  @keyframes droop{30%,80%{transform:translateY(8px) rotate(-14deg) scale(.92);filter:grayscale(.7)}100%{transform:none;filter:none}}
+  .info{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:6px}
+  .lbl{font-size:11px;letter-spacing:2px;color:var(--muted)}
+  #history{display:flex;gap:6px}
+  .chip{flex:1;max-width:58px;text-align:center;padding:6px 0;border-radius:10px;font-weight:900;font-size:13px;
+    background:rgba(255,255,255,.06);color:var(--muted);border:1px dashed rgba(255,255,255,.18)}
+  .chip.f{border:0;box-shadow:inset 0 -3px 0 rgba(0,0,0,.25)}
+  #status{font-size:14px;min-height:36px;color:#e9e6ff;font-weight:700;line-height:1.25}
+
+  /* ---------- wheel ---------- */
+  #stage{flex:1;min-height:0;display:grid;place-items:center}
+  #wheelBox{position:relative;width:max(230px,min(92vw,calc(100dvh - 340px),520px));aspect-ratio:1;cursor:pointer}
+  #wheelBox.locked{cursor:default}
+  #wheelShake{position:absolute;inset:3% 0 0 0;border-radius:50%;filter:drop-shadow(0 10px 24px rgba(0,0,0,.55))}
+  #wheelShake.shake{animation:shake .55s ease}
+  #wheelShake.shake-soft{animation:shake .4s ease;animation-iteration-count:1}
+  @keyframes shake{10%,90%{transform:translateX(-5px)}20%,80%{transform:translateX(9px) rotate(1deg)}
+    30%,50%,70%{transform:translateX(-12px) rotate(-1.5deg)}40%,60%{transform:translateX(12px) rotate(1.5deg)}}
+  #wheelRot{width:100%;height:100%;will-change:transform}
+  #wheel{width:100%;height:100%;display:block}
+  #pointer{position:absolute;z-index:3;left:50%;top:-1%;width:10%;height:13%;margin-left:-5%;
+    transform-origin:50% 18%;background:linear-gradient(#fff,#ffd54a 40%,#e69500);
+    clip-path:polygon(50% 100%,0 22%,18% 0,82% 0,100% 22%);filter:drop-shadow(0 3px 3px rgba(0,0,0,.5))}
+  #hub{position:absolute;z-index:2;left:50%;top:51.5%;width:23%;aspect-ratio:1;transform:translate(-50%,-50%);
+    border-radius:50%;font-weight:900;font-size:clamp(14px,4.4vw,24px);letter-spacing:1px;color:#3b2500;
+    background:radial-gradient(circle at 35% 30%,#fff7b0,#ffc400 55%,#d18a00);
+    box-shadow:0 0 0 4px #7a4b00,0 0 0 7px #ffe27a,0 6px 14px rgba(0,0,0,.5);animation:pulse 1.4s ease-in-out infinite}
+  #hub:disabled{animation:none;filter:grayscale(.6) brightness(.8)}
+  @keyframes pulse{50%{transform:translate(-50%,-50%) scale(1.08)}}
+
+  /* ---------- bets ---------- */
+  footer{display:flex;flex-direction:column;gap:6px}
+  #betLabel{text-align:center;font-size:12px;letter-spacing:2px;color:var(--muted)}
+  #bets{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+  .bet{padding:14px 0;border-radius:14px;font-weight:900;font-size:clamp(14px,4vw,18px);
+    background:linear-gradient(#4a3a9c,#2e2370);box-shadow:0 4px 0 #1a1347;transition:transform .1s}
+  .bet:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 #1a1347}
+  .bet.sel{background:linear-gradient(#ffd54a,#f29d00);color:#3b2500;box-shadow:0 4px 0 #9a5f00,0 0 16px rgba(255,196,0,.55)}
+  .bet.all{background:linear-gradient(#ff6b6b,#c62828);box-shadow:0 4px 0 #6d1212;font-size:clamp(11px,3.2vw,15px)}
+  .bet.all.sel{background:linear-gradient(#ff9a9a,#ff3d3d);color:#fff;box-shadow:0 4px 0 #8a1c1c,0 0 16px rgba(255,80,80,.7)}
+  .bet:disabled{opacity:.35;filter:grayscale(.5)}
+
+  /* ---------- effects ---------- */
+  #confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:30}
+  #floats{position:fixed;inset:0;pointer-events:none;z-index:40}
+  .float{position:absolute;transform:translate(-50%,-50%);font-weight:900;white-space:nowrap;
+    font-size:clamp(30px,10vw,54px);text-shadow:0 3px 0 rgba(0,0,0,.5),0 0 18px currentColor;animation:floatUp 1.5s ease-out forwards}
+  .float.big{font-size:clamp(38px,13vw,72px)}
+  @keyframes floatUp{0%{opacity:0;transform:translate(-50%,-20%) scale(.5)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.25)}
+    30%{transform:translate(-50%,-60%) scale(1)}100%{opacity:0;transform:translate(-50%,-190%) scale(1)}}
+  .flycoin{position:fixed;z-index:45;width:26px;height:26px;border-radius:50%;pointer-events:none;
+    background:radial-gradient(circle at 35% 30%,#fff7b0,#ffc400 55%,#c98600);box-shadow:inset 0 0 0 3px #e6a500,0 2px 6px rgba(0,0,0,.4)}
+  #flash{position:fixed;inset:0;z-index:35;pointer-events:none;opacity:0}
+
+  /* ---------- game over ---------- */
+  #over{position:fixed;inset:0;z-index:60;display:none;place-items:center;background:rgba(6,4,24,.85);backdrop-filter:blur(4px);padding:20px}
+  #over.show{display:grid}
+  .card{width:min(360px,100%);text-align:center;padding:26px 20px;border-radius:24px;
+    background:linear-gradient(#2c1f78,#170f47);border:1px solid rgba(255,255,255,.18);box-shadow:0 20px 60px rgba(0,0,0,.6)}
+  .card h2{margin:0 0 6px;font-size:34px;color:#ff6b6b;letter-spacing:1px}
+  .card p{margin:4px 0 18px;color:var(--muted)}
+  .btn{display:block;width:100%;padding:15px;margin-top:10px;border-radius:16px;font-weight:900;font-size:18px}
+  .btn.primary{background:linear-gradient(#ffd54a,#f29d00);color:#3b2500;box-shadow:0 4px 0 #9a5f00}
+  .btn.green{background:linear-gradient(#5be36f,#1f9d36);box-shadow:0 4px 0 #11641f}
+  .btn:disabled{opacity:.45;filter:grayscale(.6)}
+  .note{font-size:11px;color:var(--muted);margin-top:10px}
+
+  @media (prefers-reduced-motion:reduce){#hub,#mascotEmoji{animation:none!important}}
+</style>
+<style id="luxe">
+/* ================= LUXE THEME (overrides) ================= */
+:root{--gold:#ffd36b;--line:rgba(255,215,120,.38)}
+html,body{background:#06030e}
+#bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;
+  background:radial-gradient(110% 70% at 50% -10%,#4d1d86 0%,#1a0b3c 48%,#06030e 100%)}
+#bg::before,#bg::after{content:"";position:absolute;width:70vmax;height:70vmax;border-radius:50%;filter:blur(60px);opacity:.38;
+  animation:drift 18s ease-in-out infinite alternate}
+#bg::before{left:-28vmax;top:-24vmax;background:radial-gradient(circle,#ff2e93,transparent 62%)}
+#bg::after{right:-28vmax;bottom:-28vmax;background:radial-gradient(circle,#ffb300,transparent 62%);animation-duration:24s}
+@keyframes drift{to{transform:translate(8vmax,6vmax) scale(1.15)}}
+.spark{position:absolute;bottom:-12px;border-radius:50%;opacity:0;
+  background:radial-gradient(circle,#fff,#ffd36b 50%,transparent 72%);animation:sparkRise linear infinite}
+@keyframes sparkRise{0%{transform:translateY(0) scale(.6);opacity:0}15%{opacity:.9}100%{transform:translateY(-108vh) scale(1.2);opacity:0}}
+#app{position:relative;z-index:2}
+
+/* entrance animation */
+header,.top,#stage,footer{animation:rise2 .8s cubic-bezier(.2,.9,.3,1) both}
+.top{animation-delay:.08s}#stage{animation-delay:.16s}footer{animation-delay:.24s}
+@keyframes rise2{from{opacity:0;transform:translateY(20px)}}
+
+/* header */
+.pill{background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.04));border:1px solid var(--line);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  box-shadow:0 6px 20px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.3),0 0 22px rgba(255,190,60,.12)}
+.pill .coin{animation:coinTurn 3.4s ease-in-out infinite}
+@keyframes coinTurn{0%,100%{transform:rotateY(0)}50%{transform:rotateY(180deg)}}
+#balance{background:linear-gradient(180deg,#fff9d6,#ffd36b 50%,#e39a00);-webkit-background-clip:text;background-clip:text;
+  color:transparent;font-family:Georgia,"Times New Roman",serif;filter:drop-shadow(0 2px 6px rgba(255,170,0,.4))}
+#mute{background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.04));border:1px solid var(--line);
+  backdrop-filter:blur(8px);box-shadow:0 4px 12px rgba(0,0,0,.35)}
+.best b{font-family:Georgia,serif;text-shadow:0 0 12px rgba(255,190,60,.5)}
+
+/* mascot stage */
+.top{align-items:center}
+#mascot{width:clamp(80px,22vw,108px);aspect-ratio:200/280;overflow:visible;background:none;border:0;border-radius:0;perspective:500px}
+#mascot::before{content:"";position:absolute;left:-14%;right:-14%;top:4%;bottom:-2%;border-radius:50%;z-index:-1;
+  background:radial-gradient(closest-side,rgba(255,110,190,.35),rgba(255,190,60,.12) 60%,transparent 75%);animation:aura 3s ease-in-out infinite}
+@keyframes aura{50%{transform:scale(1.1);opacity:.75}}
+#mascotCanvas{border-radius:16px}
+
+/* speech bubble status */
+#status{position:relative;display:flex;align-items:center;min-height:42px;padding:8px 12px;border-radius:14px;
+  background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.04));border:1px solid var(--line);
+  backdrop-filter:blur(8px);box-shadow:0 6px 16px rgba(0,0,0,.3)}
+#status::before{content:"";position:absolute;left:-7px;top:50%;margin-top:-6px;border:6px solid transparent;border-left:0;border-right-color:rgba(255,215,120,.45)}
+.lbl{color:#d9c58a}
+.chip{background:rgba(255,255,255,.07);border:1px dashed rgba(255,215,120,.28)}
+.chip.f{animation:chipIn .5s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes chipIn{from{transform:scale(.4);opacity:0}}
+
+/* wheel */
+#wheelBox{width:max(220px,min(92vw,calc(100dvh - 396px),500px))}
+#wheelBox::before{content:"";position:absolute;inset:-6%;border-radius:50%;filter:blur(20px);opacity:.55;
+  background:conic-gradient(from 0deg,#ffd36b,#ff2e93,#7b4dff,#29d3ff,#ffd36b);animation:haloSpin 10s linear infinite}
+#wheelBox.spinning::before{animation-duration:2s;opacity:.9}
+@keyframes haloSpin{to{transform:rotate(360deg)}}
+#wheelShake::after{content:"";position:absolute;inset:0;border-radius:50%;pointer-events:none;
+  background:linear-gradient(135deg,rgba(255,255,255,.3),transparent 38%,transparent 62%,rgba(255,255,255,.1))}
+.ripple{position:absolute;inset:3% 0 0 0;border-radius:50%;border:4px solid var(--rc,#ffd36b);pointer-events:none;z-index:1;
+  box-shadow:0 0 24px var(--rc,#ffd36b);animation:ripple 1s ease-out both}
+@keyframes ripple{from{transform:scale(.92);opacity:.95}to{transform:scale(1.38);opacity:0}}
+#hub{position:absolute;overflow:hidden;font-family:Georgia,"Times New Roman",serif;text-shadow:0 1px 0 rgba(255,255,255,.7);
+  background:radial-gradient(circle at 35% 28%,#fffbe0,#ffd36b 45%,#c98600 100%)}
+#hub::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.8) 50%,transparent 65%);
+  transform:translateX(-130%);animation:shine 2.6s ease-in-out infinite}
+@keyframes shine{60%,100%{transform:translateX(130%)}}
+#hub:disabled::after{animation:none}
+
+/* bets */
+.bet{position:relative;overflow:hidden;color:#fff2c4;border:1px solid var(--line);
+  background:linear-gradient(180deg,rgba(255,255,255,.17),rgba(255,255,255,.04));
+  box-shadow:0 6px 16px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.3);backdrop-filter:blur(8px)}
+.bet.sel{transform:translateY(-3px) scale(1.05);border-color:#fff1b8}
+.bet.sel::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.65) 50%,transparent 65%);
+  transform:translateX(-130%);animation:shine 2.4s ease-in-out infinite}
+.bet.all{background:linear-gradient(180deg,#ff6a98,#b3123f);border-color:#ffb3c8;color:#fff}
+.bet.all.sel{background:linear-gradient(180deg,#ff9ab8,#ff2e63)}
+#betLabel{color:#d9c58a}
+
+/* game over card */
+.card{border:1px solid var(--line);background:linear-gradient(180deg,#2d1670,#110929);
+  box-shadow:0 30px 80px rgba(0,0,0,.7),inset 0 0 0 1px rgba(255,215,120,.15),0 0 70px rgba(255,170,0,.18);
+  animation:cardIn .55s cubic-bezier(.2,1.3,.4,1) both}
+@keyframes cardIn{from{transform:scale(.8) translateY(24px);opacity:0}}
+.card h2{background:linear-gradient(#fff7cf,#ff7a7a 90%);-webkit-background-clip:text;background-clip:text;color:transparent;font-family:Georgia,serif}
+.float{font-family:Georgia,"Times New Roman",serif}
+
+/* ================= CARTOON GIRL ================= */
+#girl{position:absolute;inset:0;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 8px 10px rgba(0,0,0,.45))}
+#girl .bodyG{transform-origin:100px 244px;animation:breathe 3.2s ease-in-out infinite}
+#girl .hm{transform-origin:100px 142px;animation:headIdle 4.2s ease-in-out infinite}
+#girl .armL{transform-origin:72px 162px;animation:armIdleL 3.6s ease-in-out infinite}
+#girl .armR{transform-origin:128px 162px;animation:armIdleR 3.6s ease-in-out infinite}
+#girl .lockL{transform-origin:56px 92px;animation:lock 3.4s ease-in-out infinite}
+#girl .lockR{transform-origin:144px 92px;animation:lock 3.4s ease-in-out -1.2s infinite reverse}
+#girl .eyeL{transform-origin:80px 100px}#girl .eyeR{transform-origin:120px 100px}
+#girl .eye{animation:blink 4.6s infinite}
+#girl .eyesH,#girl .mH,#girl .mS,#girl .tear,#girl .sp{opacity:0}
+#girl .mN,#girl .eye,#girl .blush{transition:opacity .2s}
+#girl .blush{opacity:.5}
+#girl .brow{transition:transform .35s}
+#girl .browL{transform-origin:80px 79px}#girl .browR{transform-origin:120px 79px}
+#girl .sp,#girl .tear,#girl .gshadow{transform-box:fill-box;transform-origin:center}
+
+@keyframes breathe{50%{transform:translateY(-3px)}}
+@keyframes headIdle{0%,100%{transform:rotate(-1.6deg)}50%{transform:rotate(1.6deg)}}
+@keyframes armIdleL{50%{transform:rotate(4deg)}}
+@keyframes armIdleR{50%{transform:rotate(-4deg)}}
+@keyframes lock{0%,100%{transform:rotate(3deg)}50%{transform:rotate(-3deg)}}
+@keyframes blink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.08)}}
+
+/* watching the wheel spin */
+#girl.spin .bodyG{animation:excite .55s ease-in-out infinite}
+#girl.spin .armL{animation:armWatchL .55s ease-in-out infinite alternate}
+#girl.spin .armR{animation:armWatchR .55s ease-in-out infinite alternate}
+@keyframes excite{50%{transform:translateY(-6px)}}
+@keyframes armWatchL{from{transform:rotate(14deg)}to{transform:rotate(34deg)}}
+@keyframes armWatchR{from{transform:rotate(-14deg)}to{transform:rotate(-34deg)}}
+
+/* WIN */
+#girl.happy .bodyG{animation:hop .5s ease-in-out 4}
+@keyframes hop{0%,100%{transform:translateY(0) scale(1,1)}15%{transform:translateY(0) scale(1.06,.93)}
+  50%{transform:translateY(-22px) scale(.97,1.04)}85%{transform:translateY(0) scale(1.06,.93)}}
+#girl.happy .armL{animation:waveL .36s ease-in-out infinite alternate}
+#girl.happy .armR{animation:waveR .36s ease-in-out infinite alternate}
+@keyframes waveL{from{transform:rotate(100deg)}to{transform:rotate(126deg)}}
+@keyframes waveR{from{transform:rotate(-100deg)}to{transform:rotate(-126deg)}}
+#girl.happy .hm{animation:headHappy .5s ease-in-out infinite alternate}
+@keyframes headHappy{from{transform:rotate(-5deg)}to{transform:rotate(5deg)}}
+#girl.happy .eye,#girl.happy .mN{opacity:0}
+#girl.happy .eyesH,#girl.happy .mH{opacity:1}
+#girl.happy .blush{opacity:.9}
+#girl.happy .gshadow{animation:shadowHop .5s ease-in-out 4}
+@keyframes shadowHop{50%{transform:scale(.65);opacity:.5}}
+#girl.happy .sp{animation:twinkle .7s ease-in-out infinite}
+#girl .sparks g:nth-child(2) .sp{animation-delay:.12s}#girl .sparks g:nth-child(3) .sp{animation-delay:.24s}
+#girl .sparks g:nth-child(4) .sp{animation-delay:.36s}#girl .sparks g:nth-child(5) .sp{animation-delay:.18s}
+#girl .sparks g:nth-child(6) .sp{animation-delay:.3s}
+@keyframes twinkle{0%,100%{opacity:0;transform:scale(.3) rotate(0)}50%{opacity:1;transform:scale(1.3) rotate(45deg)}}
+/* JACKPOT: full 3D spin */
+#girl.jackpot{animation:spin3d 1.1s ease-in-out 1}
+#girl.jackpot .sp{animation-duration:.35s}
+@keyframes spin3d{to{transform:rotateY(360deg)}}
+
+/* LOSE */
+#girl.sad .bodyG{animation:slump 1s ease forwards}
+@keyframes slump{to{transform:translateY(7px) scale(1.02,.97)}}
+#girl.sad .hm{animation:headSad 1s ease forwards}
+@keyframes headSad{to{transform:rotate(-7deg) translateY(6px)}}
+#girl.sad .armL{animation:none;transform:rotate(-10deg)}
+#girl.sad .armR{animation:none;transform:rotate(10deg)}
+#girl.sad .browL{transform:rotate(-16deg)}#girl.sad .browR{transform:rotate(16deg)}
+#girl.sad .mN{opacity:0}#girl.sad .mS{opacity:1}
+#girl.sad .tear{animation:tear 1.1s ease-in infinite}
+@keyframes tear{0%{transform:translateY(-4px) scale(.6);opacity:0}25%{opacity:1}100%{transform:translateY(18px) scale(1);opacity:0}}
+
+@media (prefers-reduced-motion:reduce){.spark,#bg::before,#bg::after,#wheelBox::before{animation:none!important}}
+</style>
+<style id="luxe2">
+/* ================= REAL GOLD · GAMING WORLD (luxe2) ================= */
+:root{
+  --goldMetal:linear-gradient(135deg,#6e4300 0%,#d9a21a 16%,#fff3b0 30%,#f5b81c 46%,#a86f00 62%,#ffe27a 80%,#7a4a00 100%);
+  --goldText:linear-gradient(180deg,#fff9d0 0%,#ffe27a 30%,#f5b81c 50%,#a86f00 52%,#ffd75a 76%,#fff3b0 100%);
+  --panel:linear-gradient(180deg,#2b1566,#10072a);
+}
+/* gaming grid + scanlines + vignette */
+body::before{content:"";position:fixed;inset:0;z-index:1;pointer-events:none;
+  background-image:linear-gradient(rgba(255,200,80,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(255,200,80,.055) 1px,transparent 1px);
+  background-size:38px 38px;
+  -webkit-mask:radial-gradient(80% 60% at 50% 55%,#000 20%,transparent 80%);mask:radial-gradient(80% 60% at 50% 55%,#000 20%,transparent 80%)}
+body::after{content:"";position:fixed;inset:0;z-index:3;pointer-events:none;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.022) 0 1px,transparent 1px 3px),
+             radial-gradient(120% 90% at 50% 40%,transparent 55%,rgba(0,0,0,.55))}
+/* gold corner brackets around the game */
+#app::before{content:"";position:absolute;inset:4px;pointer-events:none;z-index:5;opacity:.85;filter:drop-shadow(0 0 6px rgba(255,200,60,.7));
+  background:
+   linear-gradient(#ffe27a,#ffe27a) 0 0/26px 2px no-repeat,linear-gradient(#ffe27a,#ffe27a) 0 0/2px 26px no-repeat,
+   linear-gradient(#ffe27a,#ffe27a) 100% 0/26px 2px no-repeat,linear-gradient(#ffe27a,#ffe27a) 100% 0/2px 26px no-repeat,
+   linear-gradient(#ffe27a,#ffe27a) 0 100%/26px 2px no-repeat,linear-gradient(#ffe27a,#ffe27a) 0 100%/2px 26px no-repeat,
+   linear-gradient(#ffe27a,#ffe27a) 100% 100%/26px 2px no-repeat,linear-gradient(#ffe27a,#ffe27a) 100% 100%/2px 26px no-repeat}
+
+/* real-gold framed panels */
+.pill,#mute,#status{border:2px solid transparent;background:var(--panel) padding-box,var(--goldMetal) border-box;
+  box-shadow:0 8px 22px rgba(0,0,0,.5),inset 0 0 18px rgba(255,200,80,.12),0 0 26px rgba(255,190,60,.18)}
+#status::before{left:-9px;border-right-color:#d9a21a}
+#balance{background:var(--goldText);-webkit-background-clip:text;background-clip:text;color:transparent;
+  -webkit-text-stroke:.6px rgba(90,50,0,.55);letter-spacing:1px;filter:drop-shadow(0 2px 8px rgba(255,170,0,.5))}
+.best b{background:var(--goldText);-webkit-background-clip:text;background-clip:text;color:transparent}
+.chip.f{border:2px solid rgba(255,226,122,.85);box-shadow:0 0 10px rgba(255,200,60,.35),inset 0 -3px 0 rgba(0,0,0,.25)}
+
+/* HUD: level hexagon + XP bar + streak */
+#hud{display:flex;align-items:center;gap:10px;animation:rise2 .8s .04s cubic-bezier(.2,.9,.3,1) both}
+.lvl{position:relative;width:46px;height:52px;flex:none;display:grid;place-items:center;
+  clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);background:var(--goldMetal)}
+.lvl::before{content:"";position:absolute;inset:3px;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);
+  background:radial-gradient(circle at 50% 30%,#6a35c8,#1a0a45)}
+.lvl b{position:relative;font:900 19px Georgia,serif;transform:translateY(-3px);background:var(--goldText);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lvl span{position:absolute;bottom:6px;font-size:7px;letter-spacing:1.5px;color:#ffe27a;font-weight:900}
+.xpwrap{flex:1;min-width:0}
+.xptxt{display:flex;justify-content:space-between;font-size:10px;letter-spacing:1.5px;color:#e6cf8e;margin-bottom:3px;font-weight:700}
+.xpbar{position:relative;height:13px;border-radius:8px;overflow:hidden;border:2px solid transparent;
+  background:linear-gradient(#0a0520,#0a0520) padding-box,var(--goldMetal) border-box}
+#xpFill{display:block;height:100%;width:0;border-radius:6px;transition:width .9s cubic-bezier(.2,.9,.3,1);
+  background:linear-gradient(90deg,#a86f00,#ffe27a 60%,#fff9d0);box-shadow:0 0 12px #ffc400}
+.xpbar::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.55) 50%,transparent 65%);
+  transform:translateX(-130%);animation:shine 3s ease-in-out infinite}
+.streak{text-align:center;font-size:9px;letter-spacing:1.5px;color:#e6cf8e;font-weight:700;min-width:46px}
+.streak b{display:block;font:900 20px Georgia,serif;color:#ffe27a;line-height:1}
+.streak.hot b{text-shadow:0 0 14px #ff7a00,0 0 4px #ff3d00;animation:bump .8s ease infinite}
+.streak.hot::before{content:"🔥";display:block;font-size:11px;line-height:1}
+
+/* wheel: gold bezel, chasing lights, gem pointer */
+#wheelBox{width:max(220px,min(92vw,calc(100dvh - 452px),500px))}
+#wheelBox::after{content:"";position:absolute;inset:3% 0 0 0;border-radius:50%;pointer-events:none;z-index:2;
+  background:conic-gradient(from 0deg,transparent 0 78%,rgba(255,255,255,.75) 92%,transparent 100%);
+  -webkit-mask:radial-gradient(closest-side,transparent 87%,#000 88%);mask:radial-gradient(closest-side,transparent 87%,#000 88%);
+  animation:haloSpin 3.4s linear infinite}
+#wheelBox.spinning::after{animation-duration:.9s}
+#pointer{background:linear-gradient(180deg,#fff9d0,#ffd75a 35%,#a86f00 72%,#ffe27a);
+  filter:drop-shadow(0 0 10px rgba(255,200,60,.9)) drop-shadow(0 3px 3px rgba(0,0,0,.6))}
+#pointer::after{content:"";position:absolute;left:50%;top:20%;width:32%;aspect-ratio:1;margin-left:-16%;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#fff,#ff3d7f 40%,#7a0030)}
+#hub{background:conic-gradient(from 210deg,#fff3b0,#e8b020,#7a4a00,#ffe27a,#b87a00,#fff3b0);color:#3b2000;
+  box-shadow:0 0 0 4px #5a3600,0 0 0 8px #ffe27a,0 0 0 10px #7a4a00,0 0 34px rgba(255,200,60,.75),0 8px 18px rgba(0,0,0,.6)}
+
+/* gold bet buttons */
+.bet{border:2px solid transparent;background:var(--panel) padding-box,var(--goldMetal) border-box;
+  color:#ffe9a0;text-shadow:0 1px 0 #000,0 0 10px rgba(255,200,60,.5)}
+.bet.sel{background:var(--goldMetal);color:#3b2000;text-shadow:0 1px 0 rgba(255,255,255,.75);border-color:#fff3b0;
+  box-shadow:0 6px 0 #5a3600,0 0 28px rgba(255,200,60,.85)}
+.bet.all{background:linear-gradient(180deg,#ff5d8f,#9a0f36) padding-box,var(--goldMetal) border-box;color:#fff;animation:allGlow 1.8s ease-in-out infinite}
+.bet.all.sel{background:linear-gradient(180deg,#ffb0c8,#ff2e63) padding-box,var(--goldMetal) border-box;color:#fff}
+@keyframes allGlow{50%{box-shadow:0 6px 16px rgba(0,0,0,.35),0 0 22px rgba(255,60,120,.75)}}
+#betLabel{font-weight:700;color:#e6cf8e}
+
+/* game over card */
+.card{border:3px solid transparent;background:var(--panel) padding-box,var(--goldMetal) border-box}
+.btn.primary{background:var(--goldMetal);color:#3b2000;text-shadow:0 1px 0 rgba(255,255,255,.7);box-shadow:0 5px 0 #5a3600,0 0 22px rgba(255,200,60,.5)}
+.float{-webkit-text-stroke:1.5px rgba(0,0,0,.45)}
+</style>
+<style id="luxe3">
+/* ================= REAL CASINO PACK (luxe3) ================= */
+
+/* spotlight on the table + wheel suspense zoom */
+#stage{position:relative}
+#stage::before{content:"";position:absolute;inset:-6% -12%;pointer-events:none;
+  background:radial-gradient(58% 54% at 50% 48%,rgba(255,215,130,.22),transparent 70%)}
+#wheelBox{width:max(220px,min(92vw,calc(100dvh - 470px),500px));transition:transform .8s cubic-bezier(.2,.8,.2,1)}
+#wheelBox.tension{transform:scale(1.045)}
+
+/* marquee bulbs (Las Vegas style chase) around the game */
+#marquee{position:absolute;inset:0;pointer-events:none;z-index:4;filter:drop-shadow(0 0 4px rgba(255,190,60,.85))}
+#marquee i{position:absolute}
+#marquee .t,#marquee .b{left:14px;right:14px;height:8px}
+#marquee .t{top:2px}#marquee .b{bottom:2px}
+#marquee .l,#marquee .r{top:14px;bottom:14px;width:8px}
+#marquee .l{left:2px}#marquee .r{right:2px}
+#marquee i::before,#marquee i::after{content:"";position:absolute;inset:0}
+#marquee .t::before,#marquee .b::before{background:radial-gradient(circle,#fff6c8 0 1.5px,#ffc400 2.6px,rgba(255,170,0,0) 4.6px) 0 50%/18px 100% repeat-x}
+#marquee .t::after,#marquee .b::after{background:radial-gradient(circle,#fff6c8 0 1.5px,#ffc400 2.6px,rgba(255,170,0,0) 4.6px) 9px 50%/18px 100% repeat-x}
+#marquee .l::before,#marquee .r::before{background:radial-gradient(circle,#fff6c8 0 1.5px,#ffc400 2.6px,rgba(255,170,0,0) 4.6px) 50% 0/100% 18px repeat-y}
+#marquee .l::after,#marquee .r::after{background:radial-gradient(circle,#fff6c8 0 1.5px,#ffc400 2.6px,rgba(255,170,0,0) 4.6px) 50% 9px/100% 18px repeat-y}
+#marquee i::before{animation:bulb 1s steps(1,end) infinite}
+#marquee i::after{animation:bulb 1s steps(1,end) -.5s infinite}
+@keyframes bulb{0%{opacity:1}50%{opacity:.18}}
+
+/* poker-chip bet buttons */
+#bets{align-items:center}
+.bet{--chip:#2b6cff;
+  --chipbg:radial-gradient(circle,var(--chip) 0 55%,transparent 56%),repeating-conic-gradient(#fff 0 11deg,var(--chip) 11deg 30deg)}
+.bet[data-bet="5"]{--chip:#e0263c}
+.bet[data-bet="10"]{--chip:#2b6cff}
+.bet[data-bet="15"]{--chip:#17a05a}
+.bet[data-bet="20"]{--chip:#ff8a00}
+.bet[data-bet="50"]{--chip:#26262e}
+.bet.all{--chip:#8a2be2}
+.bet,.bet.sel,.bet.all,.bet.all.sel{background:var(--chipbg);border:0;border-radius:50%;aspect-ratio:1;padding:0;width:100%;max-width:76px;justify-self:center;
+  display:grid;place-items:center;color:#fff;position:relative;overflow:hidden;
+  font-size:clamp(14px,4.4vw,20px);text-shadow:0 2px 0 rgba(0,0,0,.65),0 0 8px rgba(0,0,0,.5);
+  box-shadow:0 6px 0 rgba(0,0,0,.5),0 10px 18px rgba(0,0,0,.5),inset 0 0 0 3px rgba(0,0,0,.28),inset 0 2px 5px rgba(255,255,255,.35)}
+.bet::before{content:"";position:absolute;inset:15%;border-radius:50%;border:2px dashed rgba(255,255,255,.8);
+  background:radial-gradient(circle,rgba(255,255,255,.18),transparent 70%)}
+.bet.all{font-size:clamp(10px,3vw,13px);letter-spacing:.5px}
+.bet.sel,.bet.all.sel{transform:translateY(-7px) scale(1.12);color:#fff;
+  box-shadow:0 11px 0 rgba(0,0,0,.35),0 0 0 3px #ffe27a,0 0 28px rgba(255,200,60,.95),inset 0 2px 5px rgba(255,255,255,.4)}
+.flychip{position:fixed;z-index:45;pointer-events:none;border-radius:50%;
+  background:radial-gradient(circle,var(--chip) 0 55%,transparent 56%),repeating-conic-gradient(#fff 0 11deg,var(--chip) 11deg 30deg);
+  box-shadow:0 4px 10px rgba(0,0,0,.55),inset 0 0 0 2px rgba(0,0,0,.3)}
+
+/* VIP tiers on the level badge */
+#hud[data-tier="bronze"] .lvl{background:linear-gradient(135deg,#5a2d0c,#d08a4b,#f7c796,#a8641f,#5a2d0c)}
+#hud[data-tier="silver"] .lvl{background:linear-gradient(135deg,#6b7280,#f3f4f6,#9ca3af,#e5e7eb,#6b7280)}
+#hud[data-tier="diamond"] .lvl{background:linear-gradient(135deg,#0a6ea8,#a7f3ff,#29d3ff,#e0fbff,#0a6ea8);filter:drop-shadow(0 0 10px #29d3ff)}
+#vipName{color:#ffe27a}
+
+/* BIG WIN / MEGA WIN / JACKPOT banner */
+#coins{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:31}
+#bigwin{position:fixed;left:0;right:0;top:17%;z-index:50;display:none;flex-direction:column;align-items:center;pointer-events:none;text-align:center}
+#bigwin.show{display:flex;animation:bwIn .6s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes bwIn{from{transform:scale(.3);opacity:0}}
+#bigwin .rays{position:absolute;top:50%;left:50%;width:110vmax;height:110vmax;margin:-55vmax 0 0 -55vmax;z-index:-1;
+  background:repeating-conic-gradient(rgba(255,215,120,.3) 0 7deg,transparent 7deg 15deg);
+  -webkit-mask:radial-gradient(circle,#000 0,transparent 55%);mask:radial-gradient(circle,#000 0,transparent 55%);animation:haloSpin 16s linear infinite}
+.bw-title{font:900 clamp(46px,15vw,88px)/1 Georgia,"Times New Roman",serif;letter-spacing:2px;
+  background:var(--goldText);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-stroke:2px rgba(90,50,0,.7);
+  filter:drop-shadow(0 5px 0 #5a3600) drop-shadow(0 0 26px rgba(255,190,60,.9))}
+#bigwin.mega .bw-title{filter:drop-shadow(0 5px 0 #5a3600) drop-shadow(0 0 34px rgba(255,80,160,.95))}
+#bigwin.jp .bw-title{background:linear-gradient(180deg,#fff,#ffe27a 40%,#ff3d7f);-webkit-background-clip:text;background-clip:text;animation:jpShake .5s ease-in-out infinite}
+@keyframes jpShake{25%{transform:rotate(-2deg) scale(1.04)}75%{transform:rotate(2deg) scale(1.04)}}
+.bw-amt{display:flex;align-items:center;gap:10px;margin-top:6px;font:900 clamp(30px,10vw,54px) Georgia,serif;color:#ffe27a;
+  text-shadow:0 3px 0 #5a3600,0 0 20px rgba(255,190,60,.8)}
+.bw-amt .coin{width:.9em;height:.9em}
+
+/* curtain intro */
+#intro{position:fixed;inset:0;z-index:100;display:grid;place-items:center;cursor:pointer;overflow:hidden;
+  background:radial-gradient(90% 70% at 50% 40%,#2a1060,#06030e)}
+#intro.open{background:transparent;pointer-events:none}
+.curtain{position:absolute;top:0;bottom:0;width:51%;z-index:1;transition:transform 1.7s cubic-bezier(.7,0,.2,1) .35s;
+  background:linear-gradient(90deg,rgba(0,0,0,.45),transparent 20%,transparent 80%,rgba(0,0,0,.45)),
+             repeating-linear-gradient(90deg,#4d0816 0 16px,#8f1632 16px 34px,#4d0816 34px 52px);
+  box-shadow:inset 0 -50px 70px rgba(0,0,0,.55)}
+.curtain.cl{left:0;border-right:4px solid #ffd36b}
+.curtain.cr{right:0;border-left:4px solid #ffd36b}
+#intro.open .cl{transform:translateX(-104%)}
+#intro.open .cr{transform:translateX(104%)}
+.valance{position:absolute;top:0;left:0;right:0;height:46px;z-index:3;background:linear-gradient(#3a0610,#7a1128);
+  border-bottom:5px solid #ffd36b;box-shadow:0 8px 20px rgba(0,0,0,.6)}
+#intro.open .valance{transform:translateY(-110%);transition:transform 1s .9s}
+.intro-center{position:relative;z-index:2;text-align:center;padding:20px;transition:opacity .5s,transform .8s}
+#intro.open .intro-center{opacity:0;transform:scale(1.25)}
+.neon{font-size:26px;letter-spacing:14px;color:#ffd36b;text-shadow:0 0 12px #ffb300;margin-bottom:10px}
+.logo{margin:0;font:900 clamp(44px,14vw,76px)/1 Georgia,"Times New Roman",serif;letter-spacing:3px;
+  background:var(--goldText);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-stroke:1px rgba(90,50,0,.6);
+  filter:drop-shadow(0 4px 0 #5a3600) drop-shadow(0 0 22px rgba(255,190,60,.6))}
+.intro-center .sub{margin-top:8px;font:700 clamp(14px,4.5vw,20px) Georgia,serif;letter-spacing:10px;color:#ff6fa8;
+  text-shadow:0 0 8px #ff2e93,0 0 22px #ff2e93;animation:neonFlick 3s infinite}
+@keyframes neonFlick{0%,19%,21%,60%,62%,100%{opacity:1}20%,61%{opacity:.35}}
+.welcome{margin:22px auto 26px;max-width:300px;font-size:12px;letter-spacing:2px;color:#e6cf8e;line-height:1.6}
+#enterBtn{padding:14px 34px;border-radius:999px;font:900 16px Georgia,serif;letter-spacing:3px;color:#3b2000;
+  background:var(--goldMetal);box-shadow:0 5px 0 #5a3600,0 0 30px rgba(255,200,60,.7);animation:pulseBtn 1.4s ease-in-out infinite}
+@keyframes pulseBtn{50%{transform:scale(1.07)}}
+@media (prefers-reduced-motion:reduce){#marquee i::before,#marquee i::after{animation:none}}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;900&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<style id="luxe2">
+/* ===== ROYAL CASINO PASS ===== */
+:root{--serif:"Cinzel","Playfair Display",Georgia,serif}
+html,body{background:#050208}
+#bg{background:
+ radial-gradient(90% 60% at 50% 38%,rgba(120,10,50,.55),transparent 70%),
+ repeating-linear-gradient(45deg,rgba(255,215,120,.035) 0 1px,transparent 1px 22px),
+ repeating-linear-gradient(-45deg,rgba(255,215,120,.035) 0 1px,transparent 1px 22px),
+ radial-gradient(110% 70% at 50% -10%,#3a0d4f 0%,#16061f 50%,#050208 100%)}
+body::after{content:"";position:fixed;inset:0;z-index:1;pointer-events:none;
+ background:radial-gradient(120% 90% at 50% 45%,transparent 55%,rgba(0,0,0,.75))}
+/* swinging spotlights */
+#bg .beam{position:absolute;top:-10vh;width:34vmax;height:120vh;transform-origin:50% 0;opacity:.2;mix-blend-mode:screen;
+ background:linear-gradient(180deg,rgba(255,235,170,.9),transparent 75%);clip-path:polygon(46% 0,54% 0,100% 100%,0 100%);animation:sway 7s ease-in-out infinite alternate}
+#bg .beam.b1{left:-8vmax;transform:rotate(-14deg)}
+#bg .beam.b2{right:-8vmax;transform:rotate(14deg);animation-delay:-3.5s}
+@keyframes sway{to{transform:rotate(12deg)}}
+#bg .beam.b2{animation-name:sway2}@keyframes sway2{to{transform:rotate(-12deg)}}
+.suit{position:absolute;color:rgba(255,215,120,.07);font-size:clamp(60px,14vw,120px);animation:drift 14s ease-in-out infinite alternate;font-family:Georgia,serif}
+/* typography */
+.logo,.bw-title,.card h2,#balance,.best b,.lvl b,#enterBtn,.neon,#vipName{font-family:var(--serif)!important}
+.logo{background-size:100% 200%;animation:foil 4s linear infinite}
+@keyframes foil{to{background-position:0 200%}}
+/* LED balance panel */
+.pill{background:linear-gradient(#000,#1a0a00) padding-box,var(--goldMetal) border-box!important;
+ box-shadow:0 8px 22px rgba(0,0,0,.6),inset 0 0 18px rgba(255,170,0,.25),inset 0 2px 0 rgba(255,255,255,.12),0 0 26px rgba(255,180,40,.3)}
+#balance{letter-spacing:2px;filter:drop-shadow(0 0 8px rgba(255,190,40,.8))}
+/* wheel: ornate bezel with chasing bulbs */
+#bezel{--bw:clamp(12px,3.6vw,20px);position:absolute;z-index:1;pointer-events:none;left:-4%;right:-4%;top:-1.5%;bottom:-4.5%;
+ border-radius:50%;border:var(--bw) solid transparent;
+ background:conic-gradient(from 20deg,#6e4300,#fff3b0,#d9a21a,#7a4a00,#fff3b0,#d9a21a,#6e4300) border-box;
+ -webkit-mask:linear-gradient(#000 0 0) padding-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
+ mask:linear-gradient(#000 0 0) padding-box exclude,linear-gradient(#000 0 0);
+ filter:drop-shadow(0 6px 14px rgba(0,0,0,.7)) drop-shadow(0 0 16px rgba(255,190,60,.45))}
+#bezel::before,#bezel::after{content:"";position:absolute;border-radius:50%;
+ inset:calc(var(--bw) * -.78);
+ -webkit-mask:radial-gradient(closest-side,transparent calc(100% - var(--bw) * .55),#000 calc(100% - var(--bw) * .5),#000 calc(100% - var(--bw) * .2),transparent calc(100% - var(--bw) * .1)),repeating-conic-gradient(#000 0 3.2deg,transparent 3.2deg 9deg);
+ -webkit-mask-composite:source-in;mask-composite:intersect;
+ mask:radial-gradient(closest-side,transparent calc(100% - var(--bw) * .55),#000 calc(100% - var(--bw) * .5),#000 calc(100% - var(--bw) * .2),transparent calc(100% - var(--bw) * .1)),repeating-conic-gradient(#000 0 3.2deg,transparent 3.2deg 9deg);
+ mask-composite:intersect;background:radial-gradient(circle,#fff,#fff6c8);animation:bulbA 1s steps(1,end) infinite}
+#bezel::after{transform:rotate(4.5deg);animation-delay:-.5s}
+@keyframes bulbA{50%{opacity:.25}}
+#wheelBox.spinning #bezel::before,#wheelBox.spinning #bezel::after{animation-duration:.18s}
+/* table felt under the chips */
+footer{position:relative;padding:12px 10px 10px;border-radius:22px;
+ background:radial-gradient(120% 100% at 50% 0%,#0f6b3d,#093d24 70%,#04210f);
+ border:3px solid transparent;background-clip:padding-box;
+ box-shadow:0 0 0 3px #7a4a00,0 0 0 5px #ffe27a,0 14px 30px rgba(0,0,0,.65),inset 0 6px 18px rgba(0,0,0,.55)}
+footer::before{content:"";position:absolute;inset:6px;border-radius:16px;border:1px solid rgba(255,226,122,.45);pointer-events:none}
+#betLabel{color:#ffe9a8;font-family:var(--serif);text-shadow:0 1px 2px #000}
+.bet{filter:drop-shadow(0 6px 4px rgba(0,0,0,.55))}
+/* glossy reflection on mascot stage + status */
+#status{font-family:var(--serif);letter-spacing:.5px}
+#hub{font-family:var(--serif)}
+/* BIG casino dealer girl */
+#mascot{width:clamp(130px,38vw,190px);margin-right:6px}
+#girl{filter:drop-shadow(0 10px 14px rgba(0,0,0,.6)) drop-shadow(0 0 18px rgba(255,190,60,.35))}
+#wheelBox{width:max(200px,min(92vw,calc(100dvh - 480px),480px))}
+#mascot::before{background:radial-gradient(closest-side,rgba(255,110,190,.45),rgba(255,190,60,.22) 60%,transparent 78%)}
+#mascot::after{content:"♠ DEALER ♥";position:absolute;left:50%;bottom:-4px;transform:translateX(-50%);z-index:3;white-space:nowrap;
+ padding:3px 12px;border-radius:999px;font:900 10px var(--serif);letter-spacing:2px;color:#3b2000;
+ background:var(--goldMetal);box-shadow:0 3px 0 #5a3600,0 0 14px rgba(255,200,60,.6)}
+#status{font-size:15px}
+/* glamour dealer: black-gold satin gown, rich chestnut hair, amber eyes */
+#gDress stop:nth-child(1){stop-color:#ffa0bf}#gDress stop:nth-child(2){stop-color:#d6457a}
+#gHair stop:nth-child(1){stop-color:#d49a62}#gHair stop:nth-child(2){stop-color:#7a4527}
+#gIris stop:nth-child(1){stop-color:#bfe6ff}#gIris stop:nth-child(2){stop-color:#4a95e0}#gIris stop:nth-child(3){stop-color:#1c3f86}
+#gSkin stop:nth-child(1){stop-color:#fff0e4}#gSkin stop:nth-child(2){stop-color:#f6c3a2}
+#girl .blush{fill:#ff8fa3}
+#girl .shine{animation:hairShine 3.2s ease-in-out infinite alternate}
+@keyframes hairShine{to{opacity:.15;transform:translateX(10px)}}
+#girl .gem{animation:twinkle .9s ease-in-out infinite alternate}
+/* FULL WHEEL always visible: size from the stage box itself */
+#stage{container-type:size;min-height:0;overflow:visible}
+#wheelBox{width:min(84cqw,80cqh)!important}
+#mascot{width:clamp(96px,min(34vw,17dvh),160px)!important}
+/* UI polish */
+.top{padding:8px 10px;border-radius:20px;border:1px solid var(--line);
+ background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.02));box-shadow:0 8px 20px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.2)}
+.chip{font-family:var(--serif);font-size:14px}
+#betLabel{font-size:13px;letter-spacing:3px}
+/* real photo slot */
+#girlPhoto{display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:50% 100%;
+ filter:drop-shadow(0 10px 14px rgba(0,0,0,.6)) drop-shadow(0 0 18px rgba(255,190,60,.35));transform-origin:50% 100%;animation:breathe 3.2s ease-in-out infinite}
+#girlPhoto.framed{object-fit:cover;object-position:50% 12%;border-radius:20px;border:2px solid #ffd36b}
+#girlPhoto.spin{animation:excite .55s ease-in-out infinite}
+#girlPhoto.happy{animation:hop .5s ease-in-out 4}
+#girlPhoto.sad{animation:slump 1s ease forwards;filter:grayscale(.5) drop-shadow(0 8px 10px rgba(0,0,0,.6))}
+#girlPhoto.jackpot{animation:spin3d 1.1s ease-in-out 1}
+#photoBtn{position:absolute;top:-6px;right:-8px;z-index:5;width:32px;height:32px;border-radius:50%;font-size:15px;color:#3b2000;
+ background:var(--goldMetal);box-shadow:0 3px 0 #5a3600,0 0 12px rgba(255,200,60,.6)}
+/* mascot label */
+#mascot::after{content:"♥ LUCKY ♥"}
+#photoReset{display:none;position:absolute;top:-6px;right:30px;z-index:5;width:32px;height:32px;border-radius:50%;font-size:16px;color:#3b2000;
+ background:var(--goldMetal);box-shadow:0 3px 0 #5a3600,0 0 12px rgba(255,200,60,.6)}
+#girlPhoto[style*="block"] ~ #photoReset{display:block}
+/* ROYAL POLISH */
+#pointer{background:linear-gradient(#fff,#ff6b86 32%,#b3112f 70%,#6e0a1c)!important;filter:drop-shadow(0 3px 3px rgba(0,0,0,.6)) drop-shadow(0 0 10px rgba(255,60,110,.8))}
+#stage{position:relative}
+#stage::before{content:"";position:absolute;left:4%;right:4%;top:8%;bottom:-2%;border-radius:50%;pointer-events:none;
+ background:radial-gradient(closest-side,rgba(255,190,60,.28),rgba(255,46,147,.1) 55%,transparent 75%);animation:aura 4s ease-in-out infinite}
+#wheelBox.spinning #wheelRot{filter:blur(.7px) saturate(1.2)}
+#wheelShake::after{background:linear-gradient(135deg,rgba(255,255,255,.34),transparent 38%,transparent 62%,rgba(255,255,255,.12)),
+ linear-gradient(115deg,transparent 40%,rgba(255,255,255,.22) 50%,transparent 60%) 0 0/250% 100%;animation:glass 5s ease-in-out infinite}
+@keyframes glass{from{background-position:0 0,150% 0}to{background-position:0 0,-150% 0}}
+footer{background:repeating-radial-gradient(circle at 20% 30%,rgba(255,255,255,.03) 0 1px,transparent 1px 3px),radial-gradient(120% 100% at 50% 0%,#0f6b3d,#093d24 70%,#04210f);background-clip:padding-box}
+.bet.sel,.bet.all.sel{animation:selGlow 1.2s ease-in-out infinite alternate}
+@keyframes selGlow{to{filter:drop-shadow(0 0 12px rgba(255,210,90,.95))}}
+.best{font-family:var(--serif);letter-spacing:3px}
+#hud{filter:drop-shadow(0 4px 10px rgba(0,0,0,.5))}
+#crest{text-align:center;font:900 11px var(--serif);letter-spacing:6px;color:#ffe27a;text-shadow:0 0 10px rgba(255,190,60,.7);margin:-2px 0}
+</style>
+<script>
+/* low-end detection: weak CPU / little RAM / reduced-motion -> "lite" mode (fewer effects) */
+var LITE=(function(){try{var m=navigator.deviceMemory||8,c=navigator.hardwareConcurrency||8;
+  return m<=4||c<=4||matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){return false}})();
+if(LITE)document.documentElement.classList.add('lite');
+</script>
+<style id="girlfx">
+/* ===== talking girl ===== */
+#girl .mT{opacity:0;transform-box:fill-box;transform-origin:50% 0}
+#girl.talk .mN,#girl.talk .mS,#girl.talk .mH{opacity:0!important}
+#girl.talk .mT{opacity:1;animation:talkMouth .46s linear infinite}
+@keyframes talkMouth{0%{transform:scale(.9,.2)}18%{transform:scale(1.05,1)}36%{transform:scale(.8,.4)}
+  55%{transform:scale(1.12,.85)}74%{transform:scale(.85,.3)}100%{transform:scale(1,.7)}}
+#girlPhoto.talk:not(.happy):not(.sad):not(.jackpot):not(.spin){animation:photoTalk .32s ease-in-out infinite alternate}
+@keyframes photoTalk{to{transform:translateY(-3px) scale(1.02)}}
+#status span{display:inline}
+</style>
+<style id="perf">
+/* ===== PERFORMANCE PASS ===== */
+*{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}     /* backdrop blur is very costly on phones */
+#bg::before,#bg::after{filter:none!important;opacity:.3}                      /* gradients are already soft: no blur(60px) */
+#bg .beam{mix-blend-mode:normal!important;opacity:.1!important}
+#wheelShake{filter:none!important;box-shadow:0 10px 24px rgba(0,0,0,.55)}     /* no filter re-raster every spin frame */
+#wheelShake::after{animation:none!important}
+#wheelBox.spinning #wheelRot{filter:none!important}
+#bezel,#marquee{filter:none!important}
+.bet.sel,.bet.all.sel,.bet.all{animation:none!important}
+#girl,#girlPhoto{filter:drop-shadow(0 6px 8px rgba(0,0,0,.5))}
+#mascot::before{animation:none}
+/* tab hidden -> freeze every animation */
+html.paused *,html.paused *::before,html.paused *::after{animation-play-state:paused!important}
+/* lite mode (weak devices) */
+html.lite #bg::before,html.lite #bg::after,html.lite .spark,html.lite .suit,html.lite #stage::before{animation:none!important}
+html.lite #bg .beam,html.lite .suit,html.lite #marquee,html.lite #wheelBox::before,html.lite #wheelBox::after,html.lite body::before{display:none!important}
+html.lite #bezel::before,html.lite #bezel::after{animation:none!important}
+html.lite .bet.sel::after,html.lite #hub::after,html.lite .xpbar::after,html.lite .pill .coin{animation:none!important}
+html.lite #hub::after,html.lite .bet.sel::after,html.lite .xpbar::after{display:none}
+</style>
+<style id="mh-embed-responsive">
+/* Millionaire Hub embed: fill iframe, flex layout, BIG wheel on mobile */
+html,body{
+  height:100% !important;
+  max-height:100% !important;
+  overflow:hidden !important;
+  overscroll-behavior:none;
+}
+#app{
+  height:100% !important;
+  max-width:100% !important;
+  width:100% !important;
+  margin:0 auto !important;
+  padding:
+    max(6px, env(safe-area-inset-top, 0px))
+    max(8px, env(safe-area-inset-right, 0px))
+    max(8px, env(safe-area-inset-bottom, 0px))
+    max(8px, env(safe-area-inset-left, 0px)) !important;
+  gap:6px !important;
+  box-sizing:border-box;
+}
+#crest{flex:0 0 auto;margin:0 !important;font-size:clamp(9px,2.4vw,11px);letter-spacing:4px}
+#app > header{flex:0 0 auto;gap:8px}
+#hud{flex:0 0 auto}
+.top{flex:0 0 auto;gap:8px;padding:6px 8px !important}
+#stage{
+  flex:1 1 auto !important;
+  min-height:0 !important;
+  display:grid !important;
+  place-items:center !important;
+  container-type:size;
+  overflow:visible !important;
+}
+/* Prefer the largest square that fits the stage — fixes tiny wheel in short iframes */
+#wheelBox{
+  width:min(96cqw, 92cqh, 100%) !important;
+  max-width:min(560px, 100%) !important;
+  min-width:min(220px, 96%) !important;
+  aspect-ratio:1 !important;
+}
+#hub{
+  font-size:clamp(12px, 4.2cqw, 22px) !important;
+}
+#bets{
+  grid-template-columns:repeat(6,minmax(0,1fr)) !important;
+  gap:clamp(4px,1.5vw,8px) !important;
+}
+.bet{
+  max-width:none !important;
+  width:100% !important;
+  font-size:clamp(11px,3.4vw,16px) !important;
+}
+footer{flex:0 0 auto;gap:4px !important}
+#betLabel{font-size:clamp(10px,2.8vw,13px);margin:0}
+
+/* Short phones / embedded shell */
+@media (max-height: 760px){
+  #crest{display:none}
+  #hud{transform:scale(.92);transform-origin:left center;margin-bottom:-2px}
+  #mascot{width:clamp(58px,18vw,96px) !important}
+  .top{padding:4px 6px !important}
+  #status{min-height:32px;font-size:13px;padding:6px 10px}
+  #app{gap:4px !important}
+}
+@media (max-height: 640px){
+  #hud{display:none}
+  #mascot{width:clamp(48px,16vw,78px) !important}
+  .lbl{font-size:9px}
+  .chip{font-size:11px;padding:4px 0}
+  #wheelBox{width:min(98cqw, 94cqh, 100%) !important}
+}
+@media (max-width: 380px){
+  header .best{display:none}
+  #mute{width:36px;height:36px}
+  #balance{font-size:clamp(18px,6vw,26px)}
+}
+/* Touch targets */
+#hub,#wheelBox,.bet,#mute{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+
+/* Millionaire Hub flex color-coin bet row (same look as Color game chips) */
+#bets{
+  display:flex !important;
+  flex-wrap:nowrap !important;
+  align-items:center !important;
+  justify-content:space-between !important;
+  gap:clamp(4px,1.4vw,8px) !important;
+  width:100% !important;
+}
+.bet,.bet.sel,.bet.all,.bet.all.sel{
+  position:relative !important;
+  flex:1 1 0 !important;
+  aspect-ratio:1 !important;
+  max-width:3.6rem !important;
+  min-width:0 !important;
+  width:100% !important;
+  border-radius:999px !important;
+  border:2.5px solid #fff !important;
+  padding:0 !important;
+  display:grid !important;
+  place-items:center !important;
+  color:#fff !important;
+  font-family:Cinzel,Georgia,"Times New Roman",serif !important;
+  font-size:clamp(0.72rem,3.4vw,1rem) !important;
+  font-weight:900 !important;
+  letter-spacing:.01em !important;
+  text-transform:uppercase !important;
+  text-shadow:0 2px 0 rgba(0,0,0,.55),0 0 8px rgba(0,0,0,.35) !important;
+  box-shadow:
+    inset 0 2px 4px rgba(255,255,255,.35),
+    inset 0 -3px 6px rgba(0,0,0,.35),
+    0 5px 0 rgba(0,0,0,.32),
+    0 10px 14px rgba(0,0,0,.28) !important;
+  overflow:hidden !important;
+  filter:none !important;
+  transform:none !important;
+  background:radial-gradient(circle at 30% 25%,#93c5fd 0%,#3b82f6 42%,#1d4ed8 100%) !important;
+}
+.bet::before{
+  content:"" !important;
+  position:absolute !important;
+  inset:.2rem !important;
+  border-radius:999px !important;
+  border:2.5px dashed rgba(255,255,255,.95) !important;
+  background:none !important;
+  opacity:1 !important;
+}
+.bet[data-bet="5"]{background:radial-gradient(circle at 30% 25%,#93c5fd 0%,#3b82f6 42%,#1d4ed8 100%) !important}
+.bet[data-bet="10"]{background:radial-gradient(circle at 30% 25%,#fda4af 0%,#ef4444 42%,#b91c1c 100%) !important}
+.bet[data-bet="20"]{background:radial-gradient(circle at 30% 25%,#99f6e4 0%,#14b8a6 42%,#0f766e 100%) !important}
+.bet[data-bet="50"]{background:radial-gradient(circle at 30% 25%,#bbf7d0 0%,#22c55e 42%,#15803d 100%) !important}
+.bet[data-bet="100"]{background:radial-gradient(circle at 30% 25%,#d1d5db 0%,#4b5563 42%,#111827 100%) !important}
+.bet.all{background:radial-gradient(circle at 30% 25%,#e9d5ff 0%,#a855f7 42%,#6b21a8 100%) !important;font-size:clamp(0.62rem,2.8vw,.85rem) !important}
+.bet.sel,.bet.all.sel{
+  transform:translateY(-3px) scale(1.08) !important;
+  box-shadow:
+    inset 0 2px 4px rgba(255,255,255,.4),
+    inset 0 -3px 6px rgba(0,0,0,.3),
+    0 0 0 3px #facc15,
+    0 0 22px rgba(250,204,21,.95),
+    0 8px 0 rgba(0,0,0,.32),
+    0 14px 22px rgba(0,0,0,.35) !important;
+}
+.bet:active{transform:translateY(2px) !important}
+.bet:disabled{opacity:.35 !important;filter:grayscale(.35) !important}
+footer{
+  border-radius:1.1rem !important;
+  border:2px solid #eab308 !important;
+  padding:8px 8px 10px !important;
+  background:
+    radial-gradient(circle at 50% 0%,rgba(74,222,128,.18),transparent 55%),
+    linear-gradient(180deg,#14532d 0%,#052e16 100%) !important;
+  box-shadow:0 0 18px rgba(250,204,21,.25) !important;
+}
+#betLabel{
+  color:#fde68a !important;
+  font-family:Cinzel,Georgia,serif !important;
+  font-weight:900 !important;
+  letter-spacing:.14em !important;
+  text-shadow:0 0 10px rgba(250,204,21,.45) !important;
+}
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<div id="app">
+  <div id="marquee"><i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i></div>
+  <header>
+    <div class="pill"><span class="coin" id="coinIcon"></span><span id="balance">1000</span></div>
+    <div class="best">BEST<b id="best">1000</b></div>
+    <button id="mute" aria-label="Toggle sound">🔊</button>
+  </header>
+
+  <section id="hud">
+    <div class="lvl"><b id="lvl">1</b><span>LVL</span></div>
+    <div class="xpwrap">
+      <div class="xptxt"><span id="vipName">BRONZE VIP</span><span id="xpTxt">0 / 100</span></div>
+      <div class="xpbar"><i id="xpFill"></i></div>
+    </div>
+    <div class="streak"><span>STREAK</span><b id="streak">0</b></div>
+  </section>
+
+  <section class="top">
+    <div id="mascot">
+      <canvas id="mascotCanvas"></canvas>
+      <!-- Built-in animated cartoon girl (vector). States: idle / spin / happy / jackpot / sad -->
+      <svg id="girl" viewBox="0 -26 200 280" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <linearGradient id="gDress" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff5fa2"/><stop offset="1" stop-color="#b4126b"/></linearGradient>
+          <linearGradient id="gHair" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7a35bd"/><stop offset="1" stop-color="#2a1050"/></linearGradient>
+          <linearGradient id="gGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3b0"/><stop offset=".5" stop-color="#ffc400"/><stop offset="1" stop-color="#c98600"/></linearGradient>
+          <radialGradient id="gIris" cx=".5" cy=".35" r=".7"><stop offset="0" stop-color="#8be6ff"/><stop offset=".6" stop-color="#2b7be0"/><stop offset="1" stop-color="#17327a"/></radialGradient>
+          <radialGradient id="gSkin" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="#ffe9d8"/><stop offset="1" stop-color="#ffc9a8"/></radialGradient>
+        </defs>
+        <ellipse class="gshadow" cx="100" cy="246" rx="52" ry="6" fill="rgba(0,0,0,.45)"/>
+        <g class="bodyG">
+          <clipPath id="gEyeL"><path d="M67 100 Q80 83 93 100 Q80 115 67 100 Z"/></clipPath>
+          <clipPath id="gEyeR"><path d="M107 100 Q120 83 133 100 Q120 115 107 100 Z"/></clipPath>
+          <!-- long wavy back hair -->
+          <g class="hm"><path d="M52 90 C34 40 70 14 100 14 C130 14 166 40 148 90 C164 130 160 190 144 222 C136 232 126 226 124 214 L76 214 C74 226 64 232 56 222 C40 190 36 130 52 90 Z" fill="url(#gHair)"/></g>
+          <!-- neck -->
+          <path d="M91 128 L91 154 Q100 160 109 154 L109 128 Z" fill="#f6c3a2"/>
+          <!-- evening dress: fitted waist, soft flare -->
+          <path d="M72 158 C80 148 90 146 100 146 C110 146 120 148 128 158 C132 172 126 184 122 196 C128 206 140 222 146 244 Q100 254 54 244 C60 222 72 206 78 196 C74 184 68 172 72 158 Z" fill="url(#gDress)"/>
+          <path d="M85 148 L100 176 L115 148 Q100 158 85 148 Z" fill="#f8cdb0"/>
+          <path d="M84 178 C90 192 88 212 80 234" stroke="#fff" stroke-opacity=".28" stroke-width="5" stroke-linecap="round" fill="none"/>
+          <path d="M118 182 C122 196 124 214 130 236" stroke="#000" stroke-opacity=".18" stroke-width="6" stroke-linecap="round" fill="none"/>
+          <path d="M78 196 Q100 204 122 196 L121 202 Q100 210 79 202 Z" fill="url(#gGold)"/>
+          <path d="M89 151 Q100 170 111 151" fill="none" stroke="url(#gGold)" stroke-width="1.6"/>
+          <circle cx="100" cy="166" r="2.8" fill="#ff2e63" stroke="#fff3b0" stroke-width=".8"/>
+          <!-- arms -->
+          <g class="armL">
+            <path d="M74 160 Q58 188 52 212" stroke="#f8cdb0" stroke-width="9" stroke-linecap="round" fill="none"/>
+            <ellipse cx="51" cy="217" rx="5.5" ry="7.5" fill="#f8cdb0" transform="rotate(12 51 217)"/>
+            <circle cx="73" cy="163" r="9" fill="url(#gDress)"/>
+          </g>
+          <g class="armR">
+            <path d="M126 160 Q142 188 148 212" stroke="#f8cdb0" stroke-width="9" stroke-linecap="round" fill="none"/>
+            <ellipse cx="149" cy="217" rx="5.5" ry="7.5" fill="#f8cdb0" transform="rotate(-12 149 217)"/>
+            <circle cx="127" cy="163" r="9" fill="url(#gDress)"/>
+          </g>
+          <!-- head -->
+          <g class="hm">
+            <path d="M56 88 C56 50 78 42 100 42 C122 42 144 50 144 88 C144 118 124 142 100 142 C76 142 56 118 56 88 Z" fill="url(#gSkin)"/>
+            <path d="M60 100 Q66 124 86 137" stroke="#d9946f" stroke-opacity=".3" stroke-width="5" stroke-linecap="round" fill="none"/>
+            <path d="M140 100 Q134 124 114 137" stroke="#d9946f" stroke-opacity=".3" stroke-width="5" stroke-linecap="round" fill="none"/>
+            <ellipse class="blush" cx="68" cy="114" rx="9" ry="5" fill="#ff7aa5"/>
+            <ellipse class="blush" cx="132" cy="114" rx="9" ry="5" fill="#ff7aa5"/>
+            <!-- side-swept bangs + long wavy locks -->
+            <path d="M54 88 C50 44 76 26 102 26 C128 28 152 46 146 88 C142 66 128 54 112 52 C100 70 80 78 66 82 C60 84 56 86 54 88 Z" fill="url(#gHair)"/>
+            <path d="M72 42 Q94 30 118 36" fill="none" stroke="#e6b08a" stroke-width="4" stroke-linecap="round" opacity=".55"/>
+            <path class="lockL" d="M54 90 C36 120 44 150 34 176 C32 190 44 200 52 192 C60 168 52 146 64 124 C68 112 68 100 66 92 Z" fill="url(#gHair)"/>
+            <path class="lockR" d="M146 90 C164 120 156 150 166 176 C168 190 156 200 148 192 C140 168 148 146 136 124 C132 112 132 100 134 92 Z" fill="url(#gHair)"/>
+            <!-- earrings -->
+            <circle cx="56" cy="108" r="2.4" fill="url(#gGold)"/><path d="M56 110 L56 118" stroke="#d9a21a" stroke-width="1.4"/><circle cx="56" cy="121" r="3" fill="#ff2e63" stroke="#fff3b0" stroke-width=".8"/>
+            <circle cx="144" cy="108" r="2.4" fill="url(#gGold)"/><path d="M144 110 L144 118" stroke="#d9a21a" stroke-width="1.4"/><circle cx="144" cy="121" r="3" fill="#ff2e63" stroke="#fff3b0" stroke-width=".8"/>
+            <!-- brows -->
+            <path class="brow browL" d="M65 82 Q78 75 94 80" fill="none" stroke="#6b3a22" stroke-width="2.6" stroke-linecap="round"/>
+            <path class="brow browR" d="M106 80 Q122 75 135 82" fill="none" stroke="#6b3a22" stroke-width="2.6" stroke-linecap="round"/>
+            <!-- eyes: almond shape, shadow, wing liner, lashes -->
+            <g class="eye eyeL">
+              <path d="M67 100 Q80 83 93 100 Q80 115 67 100 Z" fill="#fff"/>
+              <g clip-path="url(#gEyeL)"><circle cx="80" cy="100" r="9" fill="url(#gIris)"/><circle cx="80" cy="100" r="3.9" fill="#1a0e08"/>
+                <circle cx="76.5" cy="96.5" r="2.6" fill="#fff"/><circle cx="83" cy="103" r="1.3" fill="#fff" opacity=".85"/></g>
+              <path d="M66 94 Q80 78 94 94 Q80 86 66 94 Z" fill="#f3a6b8" opacity=".3"/>
+              <path d="M66 100 Q80 82 94 100" fill="none" stroke="#3a2018" stroke-width="2.2" stroke-linecap="round"/>
+              
+              <path d="M70 91 L67 86 M76 88.5 L74 83 M83 88.5 L83 83 M89 91 L91 86" stroke="#3a2018" stroke-width="1.1" stroke-linecap="round"/>
+            </g>
+            <g class="eye eyeR">
+              <path d="M107 100 Q120 83 133 100 Q120 115 107 100 Z" fill="#fff"/>
+              <g clip-path="url(#gEyeR)"><circle cx="120" cy="100" r="9" fill="url(#gIris)"/><circle cx="120" cy="100" r="3.9" fill="#1a0e08"/>
+                <circle cx="116.5" cy="96.5" r="2.6" fill="#fff"/><circle cx="123" cy="103" r="1.3" fill="#fff" opacity=".85"/></g>
+              <path d="M106 94 Q120 78 134 94 Q120 86 106 94 Z" fill="#f3a6b8" opacity=".3"/>
+              <path d="M106 100 Q120 82 134 100" fill="none" stroke="#3a2018" stroke-width="2.2" stroke-linecap="round"/>
+              
+              <path d="M110 91 L109 86 M117 88.5 L117 83 M124 88.5 L126 83 M130 91 L133 86" stroke="#3a2018" stroke-width="1.1" stroke-linecap="round"/>
+            </g>
+            <g class="eyesH" fill="none" stroke="#1a0b12" stroke-width="4" stroke-linecap="round">
+              <path d="M69 103 Q80 89 91 103"/><path d="M109 103 Q120 89 131 103"/>
+            </g>
+            <!-- nose -->
+            <path d="M97 112 Q100 118 104 112" fill="none" stroke="#d9946f" stroke-width="2" stroke-linecap="round"/>
+            <!-- lips: neutral / happy / sad / talking -->
+            <g class="mN"><path d="M88 125 Q94 121 100 123.5 Q106 121 112 125 Q106 136 100 136 Q94 136 88 125 Z" fill="#e8507a"/>
+              <path d="M89 125 Q100 132 111 125" stroke="#a02050" stroke-width="1" fill="none"/>
+              <path d="M95 124 Q100 122.5 105 124" stroke="#ff8aa8" stroke-width="1.2" opacity=".7" fill="none"/></g>
+            <g class="mH"><path d="M85 120 Q100 125 115 120 Q112 143 100 144 Q88 143 85 120 Z" fill="#c93a62"/>
+              <path d="M88 121 Q100 126 112 121 L111 126 Q100 129 89 126 Z" fill="#fff"/><ellipse cx="100" cy="137" rx="6" ry="3.2" fill="#ff7a9c"/></g>
+            <path class="mS" d="M90 134 Q100 126 110 134" fill="none" stroke="#e8507a" stroke-width="4" stroke-linecap="round"/>
+            <g class="mT"><path d="M88 124 Q100 120 112 124 Q100 143 88 124 Z" fill="#b83a5a"/>
+              <path d="M90 124 Q100 121.5 110 124 L109 128 Q100 125.5 91 128 Z" fill="#fff"/><ellipse cx="100" cy="133" rx="5.5" ry="3" fill="#ff7a9c"/>
+              <path d="M88 124 Q100 119 112 124" stroke="#e8507a" stroke-width="3" fill="none" stroke-linecap="round"/></g>
+            <path class="tear" d="M71 112 Q67 122 71 126 Q75 122 71 112 Z" fill="#9fe1ff" stroke="#fff" stroke-width=".8"/>
+          </g>
+          <!-- sparkles (shown when happy) -->
+          <g class="sparks" fill="#ffe27a">
+            <g transform="translate(26,44)"><path class="sp" d="M0 -9 L2.5 -2.5 L9 0 L2.5 2.5 L0 9 L-2.5 2.5 L-9 0 L-2.5 -2.5Z"/></g>
+            <g transform="translate(176,52)"><path class="sp" d="M0 -9 L2.5 -2.5 L9 0 L2.5 2.5 L0 9 L-2.5 2.5 L-9 0 L-2.5 -2.5Z"/></g>
+            <g transform="translate(16,118)"><path class="sp" d="M0 -7 L2 -2 L7 0 L2 2 L0 7 L-2 2 L-7 0 L-2 -2Z"/></g>
+            <g transform="translate(186,124)"><path class="sp" d="M0 -7 L2 -2 L7 0 L2 2 L0 7 L-2 2 L-7 0 L-2 -2Z"/></g>
+            <g transform="translate(60,-8)"><path class="sp" d="M0 -8 L2 -2 L8 0 L2 2 L0 8 L-2 2 L-8 0 L-2 -2Z"/></g>
+            <g transform="translate(146,-6)"><path class="sp" d="M0 -8 L2 -2 L8 0 L2 2 L0 8 L-2 2 L-8 0 L-2 -2Z"/></g>
+          </g>
+        </g>
+      </svg>
+    </div>
+    <div class="info">
+      <div class="lbl">LAST 5 RESULTS</div>
+      <div id="history"></div>
+      <div id="status">Tap the wheel to spin!</div>
+    </div>
+  </section>
+
+  <main id="stage">
+    <div id="wheelBox" role="button" aria-label="Spin the wheel">
+      <div id="pointer"></div>
+      <div id="wheelShake"><div id="wheelRot"><canvas id="wheel"></canvas></div></div>
+      <button id="hub" tabindex="-1">SPIN</button>
+    </div>
+  </main>
+
+  <footer>
+    <div id="betLabel">CHOOSE YOUR BET</div>
+    <div id="bets"></div>
+  </footer>
+</div>
+
+<canvas id="confetti"></canvas>
+<div id="floats"></div>
+<div id="flash"></div>
+
+<canvas id="coins"></canvas>
+<div id="bigwin"><div class="rays"></div><div class="bw-title" id="bwTitle">BIG WIN</div>
+  <div class="bw-amt"><span class="coin"></span><b id="bwAmt">0</b></div></div>
+
+<div id="intro">
+  <div class="curtain cl"></div><div class="curtain cr"></div><div class="valance"></div>
+  <div class="intro-center">
+    <div class="neon">♠ ♦ ♥ ♣</div>
+    <h1 class="logo">XpinR</h1>
+    <div class="sub">MILLIONAIRE HUB</div>
+    <div class="welcome" id="introSub"></div>
+    <button id="enterBtn">TAP TO ENTER</button>
+  </div>
+</div>
+
+<div id="over">
+  <div class="card">
+    <h2>GAME OVER</h2>
+    <p>You're out of coins!<br>Best balance: <b id="overBest">0</b></p>
+    <button class="btn primary" id="restartBtn">Add Funds</button>
+    <button class="btn green" id="bonusBtn">Open Wallet</button>
+    <div class="note">Virtual coins from your Millionaire Hub wallet. Top up to keep spinning.</div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* =====================================================================
+   CONFIG — edit freely. Weights are relative (they don't need to sum to 100).
+   SLICES = the 12 wheel slices in clockwise order starting at the top.
+   Every outcome id used in SLICES must exist in OUTCOMES.
+   ===================================================================== */
+const BOOT = new URLSearchParams(location.search);
+const MH_API = (BOOT.get("api") || "http://127.0.0.1:8080/api").replace(/\/$/, "");
+const MH_TOKEN = BOOT.get("token") || localStorage.getItem("colorwin_token") || "";
+
+const CONFIG = {
+  START_COINS: Math.max(0, Number(BOOT.get("balance") || 0)),
+  BETS: [5, 10, 20, 50, 100],          // fixed bet buttons (ALL IN is added automatically)
+  BONUS_COINS: 200,                  // unused in Millionaire Hub (wallet top-up instead)
+  SPIN_MIN_MS: 3000, SPIN_MAX_MS: 5000,
+  MIN_TURNS: 3, MAX_TURNS: 5,        // full rotations before settling
+  MASCOT_GLB: "",  /* optional: "./girl.glb". Empty = built-in animated cartoon girl */        // <-- path to your Mesh2Motion GLB export
+  STORAGE_KEY: "mh.xpinr.ui.v1",
+  /* Defaults match admin spin_settings seed; overwritten by GET /spins/segments (strict). */
+  OUTCOMES: [
+    { id: "seg0", label: "x0",   sub: "LOSE", mult: 0,   weight: 1, color: "#e53935", text: "#fff" },
+    { id: "seg1", label: "x0",   sub: "LOSE", mult: 0,   weight: 1, color: "#c62828", text: "#fff" },
+    { id: "seg2", label: "x0",   sub: "LOSE", mult: 0,   weight: 1, color: "#d84315", text: "#fff" },
+    { id: "seg3", label: "x0",   sub: "LOSE", mult: 0,   weight: 1, color: "#ef6c00", text: "#fff" },
+    { id: "seg4", label: "x0",   sub: "LOSE", mult: 0,   weight: 1, color: "#f9a825", text: "#4a3b00" },
+    { id: "seg5", label: "x1.2", sub: "",     mult: 1.2, weight: 1, color: "#fb8c00", text: "#fff" },
+    { id: "seg6", label: "x1.4", sub: "",     mult: 1.4, weight: 1, color: "#fdd835", text: "#4a3b00" },
+    { id: "seg7", label: "x1.6", sub: "",     mult: 1.6, weight: 1, color: "#43a047", text: "#fff" },
+    { id: "seg8", label: "x1.8", sub: "",     mult: 1.8, weight: 1, color: "#1e88e5", text: "#fff" },
+    { id: "seg9", label: "x2",   sub: "",     mult: 2,   weight: 1, color: "#8e24aa", text: "#fff" }
+  ],
+  SLICES: ["seg0","seg1","seg2","seg3","seg4","seg5","seg6","seg7","seg8","seg9"],
+  PALETTE: [
+    { color: "#e53935", text: "#fff" },
+    { color: "#c62828", text: "#fff" },
+    { color: "#d84315", text: "#fff" },
+    { color: "#ef6c00", text: "#fff" },
+    { color: "#f9a825", text: "#4a3b00" },
+    { color: "#fb8c00", text: "#fff" },
+    { color: "#fdd835", text: "#4a3b00" },
+    { color: "#43a047", text: "#fff" },
+    { color: "#1e88e5", text: "#fff" },
+    { color: "#8e24aa", text: "#fff" }
+  ]
+};
+
+function notifyParent(payload) {
+  try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ source: "mh-xpinr", ...payload }, "*");
+    }
+  } catch (e) {}
+}
+
+async function apiPlaceSpin(amount) {
+  const res = await fetch(`${MH_API}/spins`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(MH_TOKEN ? { Authorization: `Bearer ${MH_TOKEN}` } : {}),
+    },
+    body: JSON.stringify({ amount }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || `Spin failed: HTTP ${res.status}`);
+  return data;
+}
+
+async function apiLoadSegments() {
+  const res = await fetch(`${MH_API}/spins/segments`, {
+    cache: "no-store",
+    headers: MH_TOKEN ? { Authorization: `Bearer ${MH_TOKEN}` } : {},
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || `Config failed: HTTP ${res.status}`);
+  return data;
+}
+
+function applyAdminConfig(data) {
+  if (!data) return;
+  GAME_ENABLED = data.enabled !== false;
+  const multipliers = Array.isArray(data.multipliers) ? data.multipliers.map(Number) : null;
+  if (multipliers && multipliers.length === 10) {
+    const outcomes = [];
+    const slices = [];
+    for (let i = 0; i < 10; i++) {
+      const mult = Number(multipliers[i]) || 0;
+      const id = "seg" + i;
+      const pal = CONFIG.PALETTE[i] || { color: "#666", text: "#fff" };
+      const label = mult <= 0 ? "x0" : ("x" + String(mult).replace(/\.0$/, ""));
+      outcomes.push({
+        id,
+        label,
+        sub: mult <= 0 ? "LOSE" : "",
+        mult,
+        weight: 1,
+        color: pal.color,
+        text: pal.text,
+      });
+      slices.push(id);
+    }
+    CONFIG.OUTCOMES = outcomes;
+    CONFIG.SLICES = slices;
+    OUT = Object.fromEntries(CONFIG.OUTCOMES.map((o) => [o.id, o]));
+    SLICE_DEG = 360 / CONFIG.SLICES.length;
+  }
+  if (data.minBet != null) {
+    MIN_BET = Math.max(5, Number(data.minBet) || 5);
+  }
+  if (data.maxBet != null) MAX_BET = Math.max(MIN_BET, Number(data.maxBet) || MAX_BET);
+  CONFIG.BETS = [5, 10, 20, 50, 100].filter((b) => b >= MIN_BET && b <= MAX_BET);
+  if (!CONFIG.BETS.length) CONFIG.BETS = [MIN_BET];
+  if (!GAME_ENABLED) setStatus("XpinR is paused by admin.", "#ff6b6b");
+}
+
+/* ---------- tiny helpers ---------- */
+const $ = (s) => document.querySelector(s);
+const rand = (a, b) => a + Math.random() * (b - a);
+const mod = (n, m) => ((n % m) + m) % m;
+const fmt = (n) => Math.round(n).toLocaleString("en-US");
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+let OUT = Object.fromEntries(CONFIG.OUTCOMES.map((o) => [o.id, o]));
+let SLICE_DEG = 360 / CONFIG.SLICES.length;
+let MIN_BET = Math.min(...CONFIG.BETS);
+let MAX_BET = 10000;
+let GAME_ENABLED = true;
+
+/* ---------- game state ---------- */
+const state = {
+  balance: CONFIG.START_COINS,   // true balance (bet is deducted when a spin starts)
+  best: CONFIG.START_COINS,
+  history: [],                   // outcome ids, newest first
+  bet: CONFIG.BETS[1],           // number or "ALL"
+  muted: false,
+  spinning: false,
+  over: false,
+  bonusUsed: false,              // once per session (intentionally NOT persisted)
+  rot: 0                         // current wheel rotation in degrees (clockwise)
+};
+const tw = { shown: CONFIG.START_COINS, raf: 0 };   // balance number currently displayed
+
+/* =====================================================================
+   SAVE / LOAD (localStorage wrapped in try/catch)
+   ===================================================================== */
+function saveGame() {
+  try {
+    localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify({
+      /* balance always comes from Millionaire Hub wallet — do not persist as source of truth */
+      best: state.best, history: state.history, bet: state.bet, muted: state.muted,
+      xp: state.xp, level: state.level, streak: state.streak
+    }));
+  } catch (e) { /* private mode / storage disabled: ignore */ }
+}
+function loadGame() {
+  try {
+    const d = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEY) || "null");
+    if (!d) return;
+    if (Number.isFinite(d.best)) state.best = Math.max(Math.floor(d.best), state.balance);
+    if (Array.isArray(d.history)) state.history = d.history.filter((id) => OUT[id]).slice(0, 5);
+    if (d.bet === "ALL" || CONFIG.BETS.includes(d.bet)) state.bet = d.bet;
+    state.muted = !!d.muted;
+    if (Number.isFinite(d.xp)) state.xp = Math.max(0, Math.floor(d.xp));
+    if (Number.isFinite(d.level)) state.level = Math.max(1, Math.floor(d.level));
+    if (Number.isFinite(d.streak)) state.streak = Math.max(0, Math.floor(d.streak));
+  } catch (e) { /* corrupted save: start fresh */ }
+  /* Wallet balance is injected by Millionaire Hub */
+  state.balance = Math.max(0, Number(CONFIG.START_COINS) || 0);
+  state.best = Math.max(state.best || 0, state.balance);
+  tw.shown = state.balance;
+}
+
+/* =====================================================================
+   AUDIO (WebAudio, no files)
+   ===================================================================== */
+const audio = {
+  ctx: null, master: null, lastTick: 0,
+  unlock() {
+    try {
+      if (!this.ctx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        this.ctx = new AC();
+        this.master = this.ctx.createGain();
+        this.master.gain.value = 0.5;
+        this.master.connect(this.ctx.destination);
+      }
+      if (this.ctx.state === "suspended") this.ctx.resume();
+    } catch (e) {}
+  },
+  tone(freq, dur, type = "sine", vol = 0.25, when = 0, slideTo = 0) {
+    if (!this.ctx || state.muted) return;
+    const t = this.ctx.currentTime + when;
+    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, t);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(30, slideTo), t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(this.master);
+    o.start(t); o.stop(t + dur + 0.05);
+  },
+  tick() {                                   // rate-limited so very fast spins don't turn into a buzz
+    const now = performance.now();
+    if (now - this.lastTick < 38) return;
+    this.lastTick = now;
+    this.tone(1000 + Math.random() * 150, 0.04, "square", 0.1);
+  },
+  start() { this.tone(220, 0.35, "sawtooth", 0.08, 0, 660); },
+  win()   { [523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.22, "triangle", 0.28, i * 0.09)); },
+  lose()  { this.tone(330, 0.55, "sawtooth", 0.2, 0, 90); this.tone(220, 0.55, "square", 0.08, 0.05, 70); },
+  partial(){ this.tone(440, 0.3, "triangle", 0.2, 0, 300); },
+  jackpot() {
+    [523, 659, 784, 1047, 1319, 1568, 2093].forEach((f, i) => this.tone(f, 0.3, "triangle", 0.3, i * 0.08));
+    for (let i = 0; i < 8; i++) this.tone(1800 + Math.random() * 1800, 0.12, "sine", 0.12, 0.5 + i * 0.07);
+    this.tone(130, 0.9, "sawtooth", 0.18, 0.1, 520);
+  }
+};
+
+/* =====================================================================
+   WHEEL DRAWING (static canvas; rotated via CSS transform = smooth 60fps)
+   ===================================================================== */
+function shade(hex, amt) {                  // amt -1..1 : darken / lighten
+  const n = parseInt(hex.slice(1), 16);
+  const f = (c) => Math.round(amt < 0 ? c * (1 + amt) : c + (255 - c) * amt);
+  return `rgb(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)})`;
+}
+function drawWheel() {
+  const cv = $("#wheel"), S = 760;
+  cv.width = cv.height = S;
+  const g = cv.getContext("2d"), c = S / 2, R = c - 6, inner = R * 0.9;
+  const n = CONFIG.SLICES.length, step = (Math.PI * 2) / n;
+
+  // outer rim
+  let grad = g.createLinearGradient(0, 0, S, S);
+  grad.addColorStop(0, "#fff6c8"); grad.addColorStop(0.2, "#e8b020"); grad.addColorStop(0.4, "#7a4a00");
+  grad.addColorStop(0.55, "#ffe27a"); grad.addColorStop(0.75, "#b87a00"); grad.addColorStop(1, "#fff0a8");   // real-gold bezel
+  g.fillStyle = grad; g.beginPath(); g.arc(c, c, R, 0, Math.PI * 2); g.fill();
+  g.lineWidth = 6; g.strokeStyle = "#ffd54a"; g.stroke();
+
+  // slices
+  for (let i = 0; i < n; i++) {
+    const o = OUT[CONFIG.SLICES[i]];
+    const a0 = -Math.PI / 2 + i * step, a1 = a0 + step;
+    const rg = g.createRadialGradient(c, c, inner * 0.15, c, c, inner);
+    rg.addColorStop(0, shade(o.color, 0.35)); rg.addColorStop(1, shade(o.color, -0.15));
+    g.fillStyle = rg;
+    g.beginPath(); g.moveTo(c, c); g.arc(c, c, inner, a0, a1); g.closePath(); g.fill();
+    g.lineWidth = 3; g.strokeStyle = "rgba(255,255,255,.85)"; g.stroke();
+
+    // label (reads outward along the slice)
+    g.save();
+    g.translate(c, c); g.rotate(a0 + step / 2);
+    g.textAlign = "center"; g.textBaseline = "middle";
+    g.fillStyle = o.text; g.shadowColor = "rgba(0,0,0,.35)"; g.shadowBlur = 4;
+    g.font = `900 ${o.sub ? 50 : 58}px "Trebuchet MS", system-ui, sans-serif`;
+    g.fillText(o.label, inner * 0.62, o.sub ? -12 : 0);
+    if (o.sub) { g.font = `900 24px "Trebuchet MS", system-ui, sans-serif`; g.fillText(o.sub, inner * 0.62, 28); }
+    g.restore();
+  }
+
+  // metallic gold ring between slices and rim
+  const gr2 = g.createLinearGradient(0, 0, S, S);
+  gr2.addColorStop(0, "#fff3b0"); gr2.addColorStop(0.5, "#d49a00"); gr2.addColorStop(1, "#fff3b0");
+  g.beginPath(); g.arc(c, c, inner, 0, Math.PI * 2); g.lineWidth = 9; g.strokeStyle = gr2; g.stroke();
+
+  // rim bulbs
+  for (let i = 0; i < n * 2; i++) {
+    const a = (i / (n * 2)) * Math.PI * 2, rr = (R + inner) / 2;
+    g.beginPath(); g.arc(c + Math.cos(a) * rr, c + Math.sin(a) * rr, 7, 0, Math.PI * 2);
+    g.fillStyle = "#2a1400"; g.shadowBlur = 0; g.fill();                       // dark socket
+    g.beginPath(); g.arc(c + Math.cos(a) * rr, c + Math.sin(a) * rr, 4.4, 0, Math.PI * 2);
+    g.fillStyle = i % 2 ? "#ffffff" : "#ff3d7f"; g.shadowColor = i % 2 ? "#fff3b0" : "#ff3d7f"; g.shadowBlur = 14; g.fill();
+  }
+  g.shadowBlur = 0;
+}
+function setWheelRotation(deg) { $("#wheelRot").style.transform = `rotate(${deg}deg)`; }
+function sliceUnderPointer(rot) { return Math.floor(mod(-rot, 360) / SLICE_DEG); }
+
+/* =====================================================================
+   OUTCOME SELECTION — decided BEFORE the animation
+   ===================================================================== */
+function pickOutcome() {
+  const total = CONFIG.OUTCOMES.reduce((s, o) => s + o.weight, 0);
+  let r = Math.random() * total;
+  for (const o of CONFIG.OUTCOMES) { if ((r -= o.weight) < 0) return o; }
+  return CONFIG.OUTCOMES[0];
+}
+function pickSlice(outcome) {              // random slice that shows this outcome
+  const idx = [];
+  CONFIG.SLICES.forEach((id, i) => { if (id === outcome.id) idx.push(i); });
+  return idx[Math.floor(Math.random() * idx.length)];
+}
+
+/* ---------- pointer flick ---------- */
+const flick = { v: 0, running: false };
+function flickPointer() {
+  flick.v = 1;
+  if (flick.running) return;
+  flick.running = true;
+  let last = performance.now();
+  (function loop(now) {
+    const dt = now - last; last = now;
+    flick.v = Math.max(0, flick.v - dt / 120);
+    $("#pointer").style.transform = `rotate(${-flick.v * 28}deg)`;
+    if (flick.v > 0) requestAnimationFrame(loop); else flick.running = false;
+  })(last);
+}
+
+/* =====================================================================
+   SPIN ANIMATION — lands exactly on the chosen slice
+   ===================================================================== */
+function spinWheel(sliceIndex) {
+  return new Promise((resolve) => {
+    const start = state.rot;
+    const T = rand(CONFIG.SPIN_MIN_MS, CONFIG.SPIN_MAX_MS);
+    const turns = CONFIG.MIN_TURNS + Math.floor(Math.random() * (CONFIG.MAX_TURNS - CONFIG.MIN_TURNS + 1));
+    // keep the stop inside the slice (not on the edge)
+    const centerDeg = (sliceIndex + 0.5) * SLICE_DEG + rand(-0.36, 0.36) * SLICE_DEG;
+    const delta = mod(mod(-centerDeg, 360) - mod(start, 360), 360);
+    const end = start + turns * 360 + delta;
+    const t0 = performance.now();
+    let lastIdx = sliceUnderPointer(start);
+
+    (function frame(now) {
+      const p = Math.min(1, (now - t0) / T);
+      const e = 1 - Math.pow(1 - p, 4);              // easeOutQuart: fast start, slow stop
+      state.rot = start + (end - start) * e;
+      setWheelRotation(state.rot);
+      const idx = sliceUnderPointer(state.rot);
+      if (idx !== lastIdx) { lastIdx = idx; audio.tick(p); flickPointer();
+        if (p > 0.82) {                                  // last slices: suspense zoom + vibration
+          $("#wheelBox").classList.add("tension");
+          try { navigator.vibrate && navigator.vibrate(12); } catch (e) {}
+        } }
+      if (p < 1) requestAnimationFrame(frame);
+      else { state.rot = mod(end, 360); setWheelRotation(state.rot); resolve(); }
+    })(t0);
+  });
+}
+
+/* =====================================================================
+   BET HELPERS
+   ===================================================================== */
+function currentBet() { return state.bet === "ALL" ? state.balance : state.bet; }
+function normalizeBet() {                  // make sure the selected bet is affordable
+  if (state.bet === "ALL" || state.bet <= state.balance) return;
+  const ok = CONFIG.BETS.filter((b) => b <= state.balance);
+  state.bet = ok.length ? ok[ok.length - 1] : "ALL";
+}
+function buildBetButtons() {
+  const box = $("#bets"); box.innerHTML = "";
+  const tones = { 5: "blue", 10: "red", 20: "teal", 50: "green", 100: "black", ALL: "purple" };
+  [...CONFIG.BETS, "ALL"].forEach((b) => {
+    const el = document.createElement("button");
+    const key = b === "ALL" ? "ALL" : b;
+    el.className = "bet" + (b === "ALL" ? " all" : "") + " tone-" + (tones[key] || "blue");
+    el.textContent = b === "ALL" ? "ALL" : b;
+    el.dataset.bet = b;
+    el.setAttribute("aria-label", (b === "ALL" ? "ALL" : b) + " chip");
+    el.addEventListener("click", () => {
+      if (state.spinning || state.over) return;
+      audio.unlock();
+      state.bet = b === "ALL" ? "ALL" : Number(b);
+      audio.chip(); chipFly(el);
+      updateUI(); saveGame();
+    });
+    box.appendChild(el);
+  });
+}
+
+/* =====================================================================
+   UI
+   ===================================================================== */
+function updateUI() {
+  normalizeBet();
+  const busy = state.spinning || state.over;
+  document.querySelectorAll(".bet").forEach((el) => {
+    const b = el.dataset.bet === "ALL" ? "ALL" : Number(el.dataset.bet);
+    el.classList.toggle("sel", b === state.bet);
+    el.disabled = busy || (b !== "ALL" && b > state.balance) || (b === "ALL" && state.balance < MIN_BET);
+  });
+  $("#hub").disabled = busy;
+  $("#hub").textContent = state.spinning ? "…" : "SPIN";
+  $("#wheelBox").classList.toggle("locked", busy);
+  $("#best").textContent = fmt(state.best);
+  updateHUD();
+  $("#betLabel").textContent = `BET: ${state.bet === "ALL" ? "ALL IN (" + fmt(state.balance) + ")" : fmt(state.bet)}`;
+  $("#mute").textContent = state.muted ? "🔇" : "🔊";
+  audio.syncMusic();
+  $("#bonusBtn").disabled = state.bonusUsed;
+  $("#bonusBtn").textContent = state.bonusUsed ? "Bonus already used" : `📺 Watch bonus +${CONFIG.BONUS_COINS}`;
+
+  // last 5 results strip
+  const h = $("#history"); h.innerHTML = "";
+  for (let i = 0; i < 5; i++) {
+    const o = OUT[state.history[i]], s = document.createElement("span");
+    s.className = "chip" + (o ? " f" : "");
+    s.textContent = o ? o.label : "–";
+    if (o) { s.style.background = o.color; s.style.color = o.text; }
+    h.appendChild(s);
+  }
+}
+/* The girl "speaks" every status line: text is typed out, her mouth moves and soft voice blips play. */
+const talk = { tok: 0, t: 0 };
+function setStatus(t, color) {
+  const s = $("#status"), tok = ++talk.tok, chars = Array.from(t);
+  clearTimeout(talk.t);
+  s.style.color = color || "";
+  const on = (v) => {
+    const g = $("#girl"), p = $("#girlPhoto");
+    if (g) g.classList.toggle("talk", v);
+    if (p) p.classList.toggle("talk", v);
+  };
+  const a = document.createElement("span"), b = document.createElement("span");
+  b.style.visibility = "hidden";                  // reserves the final size so the layout never jumps
+  s.replaceChildren(a, b);
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) { a.textContent = t; return; }
+  let i = 0;
+  on(true);
+  (function step() {
+    if (tok !== talk.tok) return;                 // a newer line replaced this one
+    i++;
+    a.textContent = chars.slice(0, i).join("");
+    b.textContent = chars.slice(i).join("");
+    if (i % 3 === 1 && chars[i - 1] !== " ") audio.blip();
+    if (i < chars.length) talk.t = setTimeout(step, 26 + Math.random() * 20);
+    else talk.t = setTimeout(() => { if (tok === talk.tok) on(false); }, 300);
+  })();
+}
+
+function tweenBalance(to, ms = 900) {      // count up / down
+  cancelAnimationFrame(tw.raf);
+  const from = tw.shown, t0 = performance.now(), el = $("#balance");
+  (function step(now) {
+    const p = Math.min(1, (now - t0) / ms), e = 1 - Math.pow(1 - p, 3);
+    tw.shown = Math.round(from + (to - from) * e);
+    el.textContent = fmt(tw.shown);
+    if (p < 1) tw.raf = requestAnimationFrame(step); else tw.shown = to;
+  })(t0);
+}
+function bumpBalance() {
+  const el = $("#balance"); el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump");
+}
+
+/* ---------- visual effects ---------- */
+function wheelCenter() { const r = $("#wheelBox").getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width }; }
+function floatText(text, color, big) {
+  const { x, y } = wheelCenter();
+  const el = document.createElement("div");
+  el.className = "float" + (big ? " big" : "");
+  el.textContent = text; el.style.color = color; el.style.left = x + "px"; el.style.top = y + "px";
+  $("#floats").appendChild(el);
+  setTimeout(() => el.remove(), 1600);
+}
+function flash(color, peak, ms) {
+  const f = $("#flash"); f.style.background = color;
+  f.animate([{ opacity: 0 }, { opacity: peak, offset: 0.2 }, { opacity: 0 }], { duration: ms, easing: "ease-out" });
+}
+function shakeWheel(strong) {
+  const w = $("#wheelShake"); w.classList.remove("shake", "shake-soft"); void w.offsetWidth;
+  w.classList.add(strong ? "shake" : "shake-soft");
+  setTimeout(() => w.classList.remove("shake", "shake-soft"), 650);
+  try { navigator.vibrate && navigator.vibrate(strong ? [60, 40, 90] : 40); } catch (e) {}
+}
+function coinFly(n) {
+  const from = wheelCenter(), t = $("#coinIcon").getBoundingClientRect();
+  const dx = t.left + t.width / 2 - from.x, dy = t.top + t.height / 2 - from.y;
+  for (let i = 0; i < n; i++) {
+    const el = document.createElement("div"); el.className = "flycoin";
+    el.style.left = from.x + "px"; el.style.top = from.y + "px"; document.body.appendChild(el);
+    const mx = dx * 0.4 + rand(-90, 90), my = dy * 0.35 - rand(30, 130);
+    const a = el.animate([
+      { transform: "translate(-50%,-50%) scale(.3)", opacity: 0 },
+      { transform: `translate(calc(-50% + ${mx}px),calc(-50% + ${my}px)) scale(1)`, opacity: 1, offset: 0.4 },
+      { transform: `translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px)) scale(.55)`, opacity: 0.95 }
+    ], { duration: rand(750, 1100), delay: i * 70, easing: "cubic-bezier(.45,0,.55,1)", fill: "backwards" });
+    a.onfinish = () => { el.remove(); bumpBalance(); audio.tone(1200 + Math.random() * 400, 0.05, "sine", 0.08); };
+  }
+}
+
+/* ---------- confetti ---------- */
+const confetti = {
+  cv: null, g: null, parts: [], running: false,
+  burst(n, power) {
+    if (LITE) n = Math.ceil(n * 0.5);
+    if (!this.cv) { this.cv = $("#confetti"); this.g = this.cv.getContext("2d"); }
+    this.cv.width = innerWidth; this.cv.height = innerHeight;
+    const { x, y } = wheelCenter(), colors = ["#ffd36b", "#ffc400", "#fff3b0", "#ffb300", "#ff3d7f", "#29d3ff", "#fff", "#ffc400"];
+    for (let i = 0; i < n; i++) {
+      const a = rand(0, Math.PI * 2), v = rand(4, 13) * power;
+      this.parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - rand(4, 9), w: rand(6, 12), h: rand(4, 8),
+        r: rand(0, 6), vr: rand(-0.3, 0.3), c: colors[(Math.random() * colors.length) | 0], life: rand(90, 160) });
+    }
+    if (!this.running) { this.running = true; requestAnimationFrame(this.loop.bind(this)); }
+  },
+  loop() {
+    const g = this.g; g.clearRect(0, 0, this.cv.width, this.cv.height);
+    this.parts = this.parts.filter((p) => p.life > 0 && p.y < this.cv.height + 40);
+    for (const p of this.parts) {
+      p.vy += 0.28; p.vx *= 0.99; p.x += p.vx; p.y += p.vy; p.r += p.vr; p.life--;
+      g.save(); g.translate(p.x, p.y); g.rotate(p.r); g.globalAlpha = Math.min(1, p.life / 30);
+      g.fillStyle = p.c; g.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); g.restore();
+    }
+    if (this.parts.length) requestAnimationFrame(this.loop.bind(this));
+    else { this.running = false; g.clearRect(0, 0, this.cv.width, this.cv.height); }
+  }
+};
+
+/* =====================================================================
+   MASCOT — GLB (Mesh2Motion) with emoji fallback
+   ===================================================================== */
+const mascot = {
+  three: null,                              // set when the GLB loads successfully
+  react(kind) {                             // 'win' | 'jackpot' | 'lose' | 'idle'
+    const e = $("#girl"); clearTimeout(this.timer);
+    e.classList.remove("happy", "sad", "jackpot", "spin"); void e.getBoundingClientRect();   // restart CSS animations
+    if (kind === "win" || kind === "jackpot") e.classList.add("happy");
+    if (kind === "jackpot") e.classList.add("jackpot");
+    if (kind === "spin") e.classList.add("spin");
+    if (kind === "lose") e.classList.add("sad");
+    if (kind === "win" || kind === "jackpot" || kind === "lose")      // go back to idle after the reaction
+      this.timer = setTimeout(() => e.classList.remove("happy", "sad", "jackpot"), kind === "lose" ? 2800 : kind === "jackpot" ? 3600 : 2400);
+    if (this.three) this.three.react(kind === "spin" ? "idle" : kind);
+  }
+};
+
+async function initMascot() {
+  try {
+    if (!CONFIG.MASCOT_GLB) return;               // built-in SVG cartoon girl is used
+    const THREE = await import("three");
+    const { GLTFLoader } = await import("three/addons/loaders/GLTFLoader.js");
+    const gltf = await new Promise((res, rej) => new GLTFLoader().load(CONFIG.MASCOT_GLB, res, undefined, rej));
+
+    const canvas = $("#mascotCanvas");
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(30, 1, 0.01, 200);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x44336a, 1.8));
+    const dl = new THREE.DirectionalLight(0xffffff, 2.4); dl.position.set(2, 4, 3); scene.add(dl);
+
+    // auto-fit any model size into the frame
+    const model = gltf.scene; scene.add(model);
+    const box = new THREE.Box3().setFromObject(model);
+    const size = box.getSize(new THREE.Vector3()), center = box.getCenter(new THREE.Vector3());
+    model.position.sub(center);
+    const h = Math.max(size.y, 0.001);
+    camera.position.set(0, 0, (h / 2) / Math.tan(THREE.MathUtils.degToRad(15)) * 1.2 + size.z / 2);
+    camera.lookAt(0, 0, 0);
+
+    const resize = () => {
+      const w = canvas.clientWidth || 100, hh = canvas.clientHeight || 100;
+      renderer.setSize(w, hh, false); camera.aspect = w / hh; camera.updateProjectionMatrix();
+    };
+    canvas.style.display = "block"; resize();
+    new ResizeObserver(resize).observe(canvas);
+
+    // ----- animations: pick the closest clip by name, fall back to whatever exists -----
+    const clips = gltf.animations || [];
+    const find = (patterns) => { for (const p of patterns) { const c = clips.find((k) => p.test(k.name)); if (c) return c; } return null; };
+    const idleClip  = find([/idle/i, /stand/i, /breath/i, /rest/i]) || clips[0] || null;
+    const winClip   = find([/happy/i, /cheer/i, /celebr/i, /victory/i, /dance/i, /jump/i, /wave/i, /run/i, /walk/i]) || clips.find((c) => c !== idleClip) || null;
+    const jackClip  = find([/jump/i, /dance/i, /victory/i, /cheer/i, /celebr/i, /happy/i]) || winClip;
+    const loseClip  = find([/sad/i, /death/i, /die/i, /dead/i, /defeat/i, /lose/i, /sit/i, /fall/i, /hurt/i, /hit/i]) || null;
+
+    const mixer = clips.length ? new THREE.AnimationMixer(model) : null;
+    let current = null;
+    const play = (clip, once) => {
+      if (!mixer || !clip) return;
+      const next = mixer.clipAction(clip);
+      next.reset(); next.clampWhenFinished = true;
+      next.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity);
+      if (current && current !== next) current.fadeOut(0.25);
+      next.fadeIn(0.25).play(); current = next;
+    };
+    if (mixer) mixer.addEventListener("finished", () => play(idleClip, false));
+    play(idleClip, false);
+
+    let bounce = 0;                           // tiny procedural hop if the model has no clips at all
+    mascot.three = {
+      react(kind) {
+        if (kind === "idle") return play(idleClip, false);
+        if (kind === "lose") { if (loseClip) play(loseClip, true); else bounce = -1; return; }
+        const c = kind === "jackpot" ? jackClip : winClip;
+        if (c) play(c, true); else bounce = 1;
+      }
+    };
+
+    $("#girl").style.display = "none";  // GLB is ready, hide the fallback
+    const clock = new THREE.Clock();
+    renderer.setAnimationLoop(() => {
+      const dt = clock.getDelta();
+      if (mixer) mixer.update(dt);
+      if (bounce) { model.position.y = center.y * -1 + Math.sin(clock.elapsedTime * 14) * 0.08 * h * (bounce > 0 ? 1 : -0.4); bounce *= 0.97; if (Math.abs(bounce) < 0.02) bounce = 0; }
+      renderer.render(scene, camera);
+    });
+  } catch (err) {
+    console.info("Mascot GLB unavailable, using emoji fallback:", err && err.message ? err.message : err);
+  }
+}
+
+/* =====================================================================
+   RESULT HANDLING
+   ===================================================================== */
+function applyResult(outcome, bet) {
+  const payout = Math.round(bet * outcome.mult);   // returned to the player
+  const net = payout - bet;                        // net gain (negative = loss)
+  state.balance += payout;                         // bet was already deducted at spin start
+  if (state.balance > state.best) state.best = state.balance;
+  state.history.unshift(outcome.id); state.history = state.history.slice(0, 5);
+  gainXP(bet, net);
+  if (net > 0 && outcome.mult >= 3) setTimeout(() => showBigWin(outcome, net), 450);   // BIG / MEGA / JACKPOT banner                                // XP, level and win streak
+  saveGame();
+
+  const total = outcome.mult === 0;                // full loss
+  const win = net > 0;
+
+  if (outcome.jackpot) {
+    audio.jackpot(); mascot.react("jackpot");
+    flash("#ffe27a", 0.85, 900); confetti.burst(280, 1.4); setTimeout(() => confetti.burst(160, 1.1), 400);
+    floatText(`JACKPOT! +${fmt(net)}`, "#ffd54a", true); coinFly(16);
+    setStatus(`💎 JACKPOT ${outcome.label}! +${fmt(net)} coins`, "#ffd54a");
+    setTimeout(() => tweenBalance(state.balance, 1300), 700);
+  } else if (win) {
+    audio.win(); mascot.react("win");
+    confetti.burst(90, 1); floatText(`+${fmt(net)} ${outcome.label}!`, "#7dff8a"); coinFly(Math.min(12, 5 + Math.floor(outcome.mult * 1.5)));
+    setStatus(`You won ${fmt(net)} coins (${outcome.label})!`, "#7dff8a");
+    setTimeout(() => tweenBalance(state.balance, 900), 650);
+  } else {
+    total ? audio.lose() : audio.partial(); mascot.react("lose");
+    shakeWheel(total);
+    if (total) flash("#ff1f1f", 0.45, 600); else flash("#ff9800", 0.22, 450);
+    floatText(`-${fmt(-net)}${total ? "" : " " + outcome.label}`, total ? "#ff6b6b" : "#ffb74d");
+    setStatus(total ? `Ouch! Lost ${fmt(bet)} coins` : `Half back — lost ${fmt(-net)} coins`, total ? "#ff6b6b" : "#ffb74d");
+    setTimeout(() => tweenBalance(state.balance, 800), 250);
+  }
+
+  // unlock after the result presentation (keeps double taps out)
+  setTimeout(() => {
+    state.spinning = false;
+    if (state.balance < MIN_BET) { state.over = true; showGameOver(); }
+    updateUI();
+  }, outcome.jackpot ? 1500 : 1100);
+}
+
+/* =====================================================================
+   MAIN SPIN FLOW
+   ===================================================================== */
+async function startSpin() {
+  if (state.spinning || state.over) return;        // synchronous lock → no double taps
+  if (!GAME_ENABLED) {
+    setStatus("XpinR is paused by admin.", "#ff6b6b");
+    return;
+  }
+  if (!MH_TOKEN) {
+    setStatus("Please login in Millionaire Hub to spin.", "#ff6b6b");
+    notifyParent({ type: "login" });
+    return;
+  }
+  const bet = currentBet();
+  if (!(bet >= MIN_BET) || bet > state.balance) return;
+  if (bet > MAX_BET) {
+    setStatus(`Max bet is ${fmt(MAX_BET)}`, "#ff6b6b");
+    return;
+  }
+  state.spinning = true;
+  audio.unlock();
+  setStatus(["Spinning… good luck! 🍀", "Here we go! Fingers crossed!", "Let's see what the wheel says!", "Come on, lucky number!"][Math.floor(Math.random() * 4)]);
+  mascot.react("spin");
+  $("#wheelBox").classList.add("spinning");
+  hideBanner(); audio.chip(); chipFly(document.querySelector(".bet.sel"));   // chips go onto the table
+  updateUI();
+  audio.start();
+  notifyParent({ type: "spin-start" });
+
+  let data;
+  try {
+    data = await apiPlaceSpin(bet);                // server decides segment (no client RNG)
+  } catch (err) {
+    $("#wheelBox").classList.remove("spinning", "tension");
+    state.spinning = false;
+    setStatus(err.message || "Spin failed", "#ff6b6b");
+    updateUI();
+    return;
+  }
+
+  // Optimistic display: stake already deducted on server
+  state.balance = Math.max(0, Number(data.updatedBalance) - Number(data.payout || 0));
+  updateUI();
+
+  const sliceIndex = Number(data.segmentIndex);
+  const mult = Number(data.multiplier);
+  const outcomeId = CONFIG.SLICES[sliceIndex] || ("seg" + sliceIndex);
+  const base = OUT[outcomeId] || CONFIG.OUTCOMES[sliceIndex] || CONFIG.OUTCOMES[0];
+  const outcome = Object.assign({}, base, {
+    mult,
+    label: data.label || (mult > 0 ? (mult + "x") : "x0"),
+    jackpot: mult >= 2,
+  });
+
+  await spinWheel(sliceIndex);                     // animate to server slice
+  $("#wheelBox").classList.remove("spinning", "tension");
+  ripple(outcome.color);
+  applyServerResult(outcome, bet, data);
+}
+
+function applyServerResult(outcome, bet, data) {
+  const payout = Number(data.payout || 0);
+  const net = Number(data.net != null ? data.net : (payout - bet));
+  state.balance = Number(data.updatedBalance);
+  if (state.balance > state.best) state.best = state.balance;
+  state.history.unshift(outcome.id); state.history = state.history.slice(0, 5);
+  gainXP(bet, net);
+  if (net > 0 && outcome.mult >= 2) setTimeout(() => showBigWin(outcome, net), 450);
+  saveGame();
+  notifyParent({ type: "balance", balance: state.balance, spin: data });
+
+  const total = payout <= 0;
+  const win = net > 0;
+
+  if (outcome.jackpot && win) {
+    audio.jackpot(); mascot.react("jackpot");
+    flash("#ffe27a", 0.85, 900); confetti.burst(280, 1.4); setTimeout(() => confetti.burst(160, 1.1), 400);
+    floatText(`BIG WIN! +${fmt(net)}`, "#ffd54a", true); coinFly(16);
+    setStatus(`💎 ${outcome.label}! +${fmt(net)} coins`, "#ffd54a");
+    setTimeout(() => tweenBalance(state.balance, 1300), 700);
+  } else if (win) {
+    audio.win(); mascot.react("win");
+    confetti.burst(90, 1); floatText(`+${fmt(net)} ${outcome.label}!`, "#7dff8a"); coinFly(Math.min(12, 5 + Math.floor(outcome.mult * 1.5)));
+    setStatus(`You won ${fmt(net)} coins (${outcome.label})!`, "#7dff8a");
+    setTimeout(() => tweenBalance(state.balance, 900), 650);
+  } else {
+    total ? audio.lose() : audio.partial(); mascot.react("lose");
+    shakeWheel(total);
+    if (total) flash("#ff1f1f", 0.45, 600); else flash("#ff9800", 0.22, 450);
+    floatText(`-${fmt(Math.abs(net))}`, total ? "#ff6b6b" : "#ffb74d");
+    setStatus(total ? `Ouch! Lost ${fmt(bet)} coins` : `Lost ${fmt(Math.abs(net))} coins`, total ? "#ff6b6b" : "#ffb74d");
+    setTimeout(() => tweenBalance(state.balance, 800), 250);
+  }
+
+  setTimeout(() => {
+    state.spinning = false;
+    if (state.balance < MIN_BET) { state.over = true; showGameOver(); }
+    updateUI();
+  }, outcome.jackpot ? 1500 : 1100);
+}
+
+/* ---------- game over / restart / bonus ---------- */
+function showGameOver() { $("#overBest").textContent = fmt(state.best); updateUI(); $("#over").classList.add("show"); }
+function restartGame() {
+  audio.unlock();
+  $("#over").classList.remove("show");
+  notifyParent({ type: "add-funds" });
+  setStatus("Top up coins in Millionaire Hub, then spin again.");
+  updateUI();
+}
+async function watchBonus() {
+  audio.unlock();
+  $("#over").classList.remove("show");
+  notifyParent({ type: "add-funds" });
+  setStatus("Open Add Funds in Millionaire Hub to get more coins.");
+  updateUI();
+}
+
+/* =====================================================================
+   INIT
+   ===================================================================== */
+/* =====================================================================
+   CASINO PACK — sounds, lounge music, coin rain, win banners, chips, intro
+   ===================================================================== */
+Object.assign(audio, {
+  noiseBuf() {                                   // 1s of white noise, reused by cheers / chips / hi-hats
+    if (!this._nb) {
+      const len = this.ctx.sampleRate, b = this.ctx.createBuffer(1, len, len), d = b.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      this._nb = b;
+    }
+    return this._nb;
+  },
+  noise(dur, vol, freq, q, when = 0, type = "bandpass") {
+    if (!this.ctx || state.muted) return;
+    const t = this.ctx.currentTime + when, s = this.ctx.createBufferSource(), f = this.ctx.createBiquadFilter(), g = this.ctx.createGain();
+    s.buffer = this.noiseBuf(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    s.connect(f); f.connect(g); g.connect(this.master); s.start(t); s.stop(t + dur + 0.05);
+  },
+  chip()  { this.noise(0.05, 0.5, 3200, 2); this.tone(1800, 0.05, "triangle", 0.08, 0, 900); },   // chip clack
+  clink(when = 0) { const f = 2200 + Math.random() * 2200; this.tone(f, 0.12, "sine", 0.07, when); this.tone(f * 2.4, 0.08, "sine", 0.03, when); },
+  coins(n = 10) { for (let i = 0; i < n; i++) this.clink(i * 0.06 + Math.random() * 0.03); },     // coin shower
+  bell() {
+    [880, 1320, 1760, 2200].forEach((f, i) => this.tone(f, 1.4, "sine", 0.24 / (i + 1)));
+    [0, 0.35, 0.7].forEach((w) => { this.tone(1046, 0.9, "sine", 0.18, w); this.tone(1568, 0.9, "sine", 0.08, w); });
+  },
+  siren() { for (let i = 0; i < 4; i++) { this.tone(600, 0.25, "sawtooth", 0.05, i * 0.5, 1100); this.tone(1100, 0.25, "sawtooth", 0.05, i * 0.5 + 0.25, 600); } },
+  cheer() { this.noise(1.6, 0.3, 1400, 0.6, 0.1); this.noise(1.2, 0.22, 2600, 0.8, 0.3); },        // crowd roar
+  blip() { this.tone(240 + Math.random() * 150, 0.06, "triangle", 0.05); },
+  countTick() { this.tone(1500 + Math.random() * 300, 0.025, "square", 0.05); },
+  groan() { [392, 370, 349, 311].forEach((f, i) => this.tone(f, 0.28, "sawtooth", 0.06, 0.35 + i * 0.26)); },   // sad trombone
+  tick(p = 0) {                                  // ticks get deeper as the wheel slows down
+    const now = performance.now();
+    if (now - this.lastTick < 38) return;
+    this.lastTick = now;
+    this.tone(1100 - p * 380 + Math.random() * 120, 0.05, "square", 0.1 + p * 0.06);
+    if (p > 0.82) this.tone(160, 0.08, "sine", 0.18);                // suspense thump
+  },
+
+  /* ----- generated lounge-jazz background music (no audio files) ----- */
+  /* Lounge "tik-tik" music disabled — Millionaire Hub uses shared gameSfx ambient instead */
+  startMusic() { this.musicOn = false; },
+  syncMusic() {},
+  mnote() {},
+  hat() {},
+  schedule() {}
+});
+{ // layer casino sounds on top of the original win / jackpot / lose sounds
+  const w0 = audio.win, j0 = audio.jackpot, l0 = audio.lose;
+  audio.win     = function () { w0.call(this); this.coins(8); };
+  audio.jackpot = function () { j0.call(this); this.bell(); this.siren(); this.cheer(); this.coins(30); };
+  audio.lose    = function () { l0.call(this); this.groan(); };
+}
+
+/* ---------- coin rain with bounce physics ---------- */
+const coinRain = {
+  cv: null, g: null, coins: [], running: false,
+  burst(n) {
+    if (LITE) n = Math.ceil(n * 0.5);
+    if (!this.cv) { this.cv = $("#coins"); this.g = this.cv.getContext("2d"); }
+    this.cv.width = innerWidth; this.cv.height = innerHeight;
+    for (let i = 0; i < n; i++) this.coins.push({ x: rand(0, innerWidth), y: rand(-innerHeight * 0.9, -20), vx: rand(-1.5, 1.5), vy: rand(2, 6),
+      r: rand(9, 16), a: rand(0, 6.28), va: rand(0.1, 0.3), b: 0, life: rand(200, 320) });
+    if (!this.running) { this.running = true; requestAnimationFrame(this.loop.bind(this)); }
+  },
+  loop() {
+    const g = this.g, H = this.cv.height;
+    g.clearRect(0, 0, this.cv.width, H);
+    this.coins = this.coins.filter((c) => c.life > 0);
+    for (const c of this.coins) {
+      c.vy += 0.35; c.x += c.vx; c.y += c.vy; c.a += c.va; c.life--;
+      if (c.y > H - c.r) {                          // floor bounce
+        c.y = H - c.r;
+        if (c.b < 3) { c.vy *= -0.55; c.vx *= 0.8; c.b++; } else { c.vy = 0; c.vx *= 0.9; c.va *= 0.9; }
+      }
+      g.save(); g.translate(c.x, c.y); g.globalAlpha = Math.min(1, c.life / 40);
+      g.scale(Math.max(0.15, Math.abs(Math.cos(c.a))), 1);
+      g.beginPath(); g.arc(0, 0, c.r, 0, 6.283); g.fillStyle = "#f5b81c"; g.fill(); g.lineWidth = 2; g.strokeStyle = "#a86f00"; g.stroke();
+      g.beginPath(); g.arc(0, 0, c.r * 0.6, 0, 6.283); g.fillStyle = "#ffe27a"; g.fill();
+      g.restore();
+    }
+    if (this.coins.length) requestAnimationFrame(this.loop.bind(this));
+    else { this.running = false; g.clearRect(0, 0, this.cv.width, H); }
+  }
+};
+
+/* ---------- BIG WIN / MEGA WIN / JACKPOT banner ---------- */
+const bw = { raf: 0, t: 0 };
+function hideBanner() { cancelAnimationFrame(bw.raf); clearTimeout(bw.t); $("#bigwin").className = ""; }
+function showBigWin(outcome, net) {
+  hideBanner();
+  const el = $("#bigwin"), amt = $("#bwAmt"), jp = !!outcome.jackpot, mega = outcome.mult >= 5;
+  $("#bwTitle").textContent = jp ? "JACKPOT" : mega ? "MEGA WIN" : "BIG WIN";
+  void el.offsetWidth; el.className = "show " + (jp ? "jp" : mega ? "mega" : "big");
+  coinRain.burst(jp ? 220 : mega ? 130 : 70);
+  if (!jp) { audio.coins(mega ? 20 : 12); if (mega) audio.cheer(); }    // jackpot sound already plays in applyResult
+  const dur = jp ? 2400 : 1800, t0 = performance.now();
+  let lastTick = 0;
+  (function step(now) {                               // slot-machine style count-up
+    const p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+    amt.textContent = "+" + fmt(net * e);
+    if (p < 1 && now - lastTick > 60) { audio.countTick(); lastTick = now; }
+    if (p < 1) bw.raf = requestAnimationFrame(step);
+    else { amt.textContent = "+" + fmt(net); bw.t = setTimeout(hideBanner, 1700); }
+  })(t0);
+}
+
+/* ---------- poker chips flying onto the table ---------- */
+function chipFly(btn) {
+  if (!btn) return;
+  const a = btn.getBoundingClientRect(), t = wheelCenter(), cx = a.left + a.width / 2, cy = a.top + a.height / 2, sz = a.width * 0.6;
+  const el = document.createElement("div");
+  el.className = "flychip";
+  el.style.cssText = `left:${cx}px;top:${cy}px;width:${sz}px;height:${sz}px;--chip:${getComputedStyle(btn).getPropertyValue("--chip") || "#2b6cff"}`;
+  document.body.appendChild(el);
+  const dx = t.x - cx, dy = t.y - cy;
+  el.animate([
+    { transform: "translate(-50%,-50%) scale(1)", opacity: 1 },
+    { transform: `translate(calc(-50% + ${dx * 0.5}px),calc(-50% + ${dy * 0.5 - 60}px)) scale(1.1) rotate(180deg)`, opacity: 1, offset: 0.5 },
+    { transform: `translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px)) scale(.7) rotate(360deg)`, opacity: 0 }
+  ], { duration: 650, easing: "cubic-bezier(.4,0,.3,1)" }).onfinish = () => el.remove();
+}
+
+/* ---------- curtain intro (tap to enter; also unlocks audio + starts music) ---------- */
+function setupIntro() {
+  const el = $("#intro");
+  if (!el) return;
+  const fresh = state.level === 1 && state.xp === 0 && state.balance === CONFIG.START_COINS;
+  $("#introSub").textContent = fresh ? `WELCOME, HIGH ROLLER · ${fmt(CONFIG.START_COINS)} FREE COINS`
+                                     : `WELCOME BACK · LEVEL ${state.level} · ${fmt(state.balance)} COINS`;
+  let opened = false;
+  el.addEventListener("click", () => {
+    if (opened) return;
+    opened = true;
+    audio.unlock(); audio.chip(); audio.win();
+    /* Ambient music comes from Millionaire Hub (same as Color game) */
+    notifyParent({ type: "ready" });
+    el.classList.add("open");
+    setTimeout(() => setStatus("Hi there! Pick your bet and tap the wheel. Good luck!"), 1800);
+    setTimeout(() => el.remove(), 2200);
+  });
+}
+
+/* ---------- HUD: level / XP / streak ---------- */
+Object.assign(state, { xp: 0, level: 1, streak: 0 });   // defaults (overridden by loadGame)
+function xpNeed(level) { return 100 + (level - 1) * 60; }
+function updateHUD() {
+  const need = xpNeed(state.level);
+  $("#lvl").textContent = state.level;
+  const tier = state.level >= 20 ? "diamond" : state.level >= 10 ? "gold" : state.level >= 5 ? "silver" : "bronze";
+  $("#hud").dataset.tier = tier; $("#vipName").textContent = tier.toUpperCase() + " VIP";
+  $("#xpTxt").textContent = `${state.xp} / ${need}`;
+  $("#xpFill").style.width = Math.min(100, (state.xp / need) * 100) + "%";
+  $("#streak").textContent = state.streak;
+  $(".streak").classList.toggle("hot", state.streak >= 3);
+}
+function gainXP(bet, net) {
+  state.streak = net > 0 ? state.streak + 1 : 0;
+  state.xp += 10 + (net > 0 ? 15 : 0) + (net >= bet * 9 ? 100 : 0) + Math.min(20, state.streak * 2);
+  let up = false;
+  while (state.xp >= xpNeed(state.level)) { state.xp -= xpNeed(state.level); state.level++; up = true; }
+  if (up) setTimeout(() => {                       // after the result animation
+    floatText("LEVEL UP! " + state.level, "#ffe27a", true);
+    confetti.burst(120, 1.2); flash("#ffe27a", 0.5, 700); audio.win();
+  }, 1300);
+  updateHUD();
+}
+
+/* ---------- luxe UI helpers ---------- */
+function makeSparks() {                    // floating gold dust in the background
+  const bg = $("#bg");
+  for (let i = 0, N = LITE ? 0 : 10; i < N; i++) {
+    const s = document.createElement("i"), sz = rand(3, 8);
+    s.className = "spark";
+    s.style.cssText = `left:${rand(0, 100)}%;width:${sz}px;height:${sz}px;animation-duration:${rand(7, 16)}s;animation-delay:${rand(0, 12)}s`;
+    bg.appendChild(s);
+  }
+}
+function ripple(color) {                   // expanding glow rings when the wheel stops
+  const b = $("#wheelBox");
+  for (let i = 0; i < 2; i++) {
+    const r = document.createElement("div");
+    r.className = "ripple"; r.style.setProperty("--rc", color); r.style.animationDelay = i * 0.18 + "s";
+    b.appendChild(r); setTimeout(() => r.remove(), 1500);
+  }
+}
+
+async function init() {
+  loadGame();
+  makeSparks();
+  setupIntro();
+  try {
+    const cfg = await apiLoadSegments();
+    applyAdminConfig(cfg);
+  } catch (e) {
+    console.warn("XpinR config load failed; using defaults", e);
+  }
+  drawWheel();
+  setWheelRotation(0);
+  buildBetButtons();
+  $("#balance").textContent = fmt(state.balance);
+  updateUI();
+  if (state.balance < MIN_BET) { state.over = true; showGameOver(); }
+
+  $("#wheelBox").addEventListener("click", startSpin);
+  $("#restartBtn").addEventListener("click", restartGame);
+  $("#bonusBtn").addEventListener("click", watchBonus);
+  $("#mute").addEventListener("click", () => { audio.unlock(); state.muted = !state.muted; updateUI(); saveGame(); });
+  window.addEventListener("pointerdown", () => audio.unlock(), { once: true });
+  document.addEventListener("visibilitychange", () => document.documentElement.classList.toggle("paused", document.hidden));
+  window.addEventListener("message", (event) => {
+    const data = event.data;
+    if (!data || data.source !== "mh-hub") return;
+    if (data.type === "set-balance" && Number.isFinite(Number(data.balance))) {
+      const next = Math.max(0, Math.floor(Number(data.balance)));
+      state.balance = next;
+      state.best = Math.max(state.best || 0, next);
+      if (!state.spinning) {
+        state.over = next < MIN_BET;
+        if (!state.over) $("#over").classList.remove("show");
+        tweenBalance(next, 400);
+        updateUI();
+      }
+    }
+  });
+
+  initMascot();                                    // async, never blocks the game
+
+  /* Keep wheel sharp & sized when the embed shell resizes (mobile browser chrome, etc.) */
+  try {
+    const stage = $("#stage");
+    if (stage && typeof ResizeObserver !== "undefined") {
+      let t = 0;
+      new ResizeObserver(() => {
+        window.clearTimeout(t);
+        t = window.setTimeout(() => {
+          drawWheel();
+          setWheelRotation(state.rot || 0);
+        }, 80);
+      }).observe(stage);
+    }
+  } catch (e) {}
+}
+init();
+</script>
+<script>
+(function(){
+  const bg=document.getElementById('bg'),box=document.getElementById('wheelBox');
+  if(bg){['b1','b2'].forEach(c=>{const d=document.createElement('div');d.className='beam '+c;bg.prepend(d)});
+    [['♠',6,18],['♥',72,40],['♦',10,66],['♣',68,78]].forEach(([s,l,t])=>{const e=document.createElement('div');
+      e.className='suit';e.textContent=s;e.style.cssText='left:'+l+'%;top:'+t+'%';bg.appendChild(e)})}
+  if(box){const b=document.createElement('div');b.id='bezel';box.appendChild(b)}
+  const hm=document.querySelectorAll('#girl .hm')[1];
+  if(hm)hm.insertAdjacentHTML('beforeend','<path class="shine" d="M66 58 C74 44 92 38 108 40 C92 46 80 54 72 66 Z" fill="#fff" opacity=".4"/>');
+  /* real photo: upload from your phone/PC (kept in this browser) */
+  const mas=document.getElementById('mascot'),girl=document.getElementById('girl');
+  if(mas&&girl){
+    const img=document.createElement('img');img.id='girlPhoto';img.alt='';mas.insertBefore(img,girl);
+    const inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.style.display='none';
+    const btn=document.createElement('button');btn.id='photoBtn';btn.textContent='📷';btn.setAttribute('aria-label','Apni photo lagao');
+    mas.append(inp,btn);btn.onclick=e=>{e.stopPropagation();inp.click()};
+    const show=src=>{img.onload=()=>{
+      try{const c=document.createElement('canvas');c.width=c.height=8;const g=c.getContext('2d');g.drawImage(img,0,0,8,8);
+        img.classList.toggle('framed',g.getImageData(0,0,1,1).data[3]>200)}catch(_){}
+      img.style.display='block';girl.style.display='none'};img.src=src};
+    inp.onchange=()=>{const f=inp.files[0];if(!f)return;const r=new FileReader();
+      r.onload=()=>{const im=new Image();im.onload=()=>{const s=Math.min(1,700/im.height),c=document.createElement('canvas');
+        c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+        const url=c.toDataURL('image/png');show(url);try{localStorage.setItem('cs_girl',url)}catch(_){}};im.src=r.result};r.readAsDataURL(f)};
+    try{const s=localStorage.getItem('cs_girl');if(s)show(s)}catch(_){}
+    new MutationObserver(()=>{img.classList.remove('spin','happy','sad','jackpot');
+      (girl.getAttribute('class')||'').split(/\s+/).forEach(k=>['spin','happy','sad','jackpot'].includes(k)&&img.classList.add(k))})
+      .observe(girl,{attributes:true,attributeFilter:['class']});
+    /* mood + haptics for every mascot type */
+    new MutationObserver(()=>{
+      const c=(girl.getAttribute('class')||'').split(/\s+/);
+            if(navigator.vibrate){if(c.includes('jackpot'))navigator.vibrate([80,40,80,40,200]);else if(c.includes('happy'))navigator.vibrate([60,40,100]);else if(c.includes('spin'))navigator.vibrate(25)}
+    }).observe(girl,{attributes:true,attributeFilter:['class']});
+    const rb=document.createElement('button');rb.id='photoReset';rb.textContent='↺';rb.setAttribute('aria-label','Girl wapas lao');
+    rb.onclick=e=>{e.stopPropagation();try{localStorage.removeItem('cs_girl')}catch(_){}img.style.display='none';img.removeAttribute('src');girl.style.display=''};
+    mas.appendChild(rb);
+    const hd=document.querySelector('#app header');if(hd){const cr=document.createElement('div');cr.id='crest';cr.textContent='♠ ROYAL CLUB ♦';hd.parentNode.insertBefore(cr,hd)}
+  }
+})();
+</script>
+
+</body>
+</html>

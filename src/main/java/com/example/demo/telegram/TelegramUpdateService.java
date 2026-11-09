@@ -119,7 +119,7 @@ public class TelegramUpdateService {
                 return BotTurn.say(chatId,
                         "Millionaire Hub account verified.\n"
                                 + "Welcome " + (user.getDisplayName() != null ? user.getDisplayName() : user.getUsername())
-                                + ".\nAb website pe Login karo.");
+                                + ".\nPlease log in on the website.");
             } catch (IllegalArgumentException ex) {
                 return BotTurn.say(chatId, ex.getMessage());
             }
@@ -131,7 +131,7 @@ public class TelegramUpdateService {
                 remember(chatId, user, null);
                 return BotTurn.say(chatId,
                         "Millionaire Hub password reset code: " + code
-                                + "\nYeh code website pe daalo. 10 minute valid hai.");
+                                + "\nEnter this code on the website. It is valid for 10 minutes.");
             } catch (IllegalArgumentException ex) {
                 return BotTurn.say(chatId, ex.getMessage());
             }
@@ -165,11 +165,11 @@ public class TelegramUpdateService {
         if (payload == null || payload.isBlank()) {
             return BotTurn.say(chatId,
                     "Millionaire Hub bot ready.\n"
-                            + "Password reset / verify ke liye website wala Open Telegram button use karo.\n"
-                            + "Yahan sirf /start mat bhejo — deep link se Start dabao.");
+                            + "Use the Open Telegram button on the website for password reset or verify.\n"
+                            + "Do not send only /start here — tap Start from the deep link.");
         }
         return BotTurn.say(chatId,
-                "Unknown start link.\nWebsite se naya Forgot Password / Verify link open karo.");
+                "Unknown start link.\nOpen a new Forgot Password / Verify link from the website.");
     }
 
     private BotTurn onUtr(long chatId, long fromId, String utr) {

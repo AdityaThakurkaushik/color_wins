@@ -33,7 +33,7 @@ public class RegistrationController {
         if (result.telegramDeepLink() == null || result.telegramDeepLink().isBlank()) {
             body.put("message", "Account created, but Telegram bot is not configured yet");
         } else {
-            body.put("message", "Telegram pe Open karke account verify karo");
+            body.put("message", "Open Telegram and verify your account");
             body.put("telegramDeepLink", result.telegramDeepLink());
             body.put("botUsername", result.botUsername() == null ? "" : result.botUsername());
         }
@@ -85,7 +85,7 @@ public class RegistrationController {
 
         Map<String, String> body = new LinkedHashMap<>();
         body.put("status", "SUCCESS");
-        body.put("message", "Agar account mila to Telegram pe reset link open karo");
+        body.put("message", "If the account exists, open the Telegram reset link");
         if (result.telegramDeepLink() != null && !result.telegramDeepLink().isBlank()) {
             body.put("telegramDeepLink", result.telegramDeepLink());
             body.put("botUsername", result.botUsername() == null ? "" : result.botUsername());

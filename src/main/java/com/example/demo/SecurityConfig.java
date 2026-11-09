@@ -107,6 +107,7 @@ public class SecurityConfig {
                                 AntPathRequestMatcher.antMatcher("/api/leaderboard"),
                                 AntPathRequestMatcher.antMatcher("/api/leaderboard/**"),
                                 AntPathRequestMatcher.antMatcher("/api/referral-settings"),
+                                AntPathRequestMatcher.antMatcher("/api/spins/segments"),
                                 AntPathRequestMatcher.antMatcher("/api/agent/login"),
                                 AntPathRequestMatcher.antMatcher("/api/referral-agent/login")
                         ).permitAll()

@@ -39,7 +39,7 @@ public class BetController {
     public record PlaceColorBetRequest(
             @NotBlank String periodNumber,
             @NotBlank String color,
-            @NotNull @Min(1) Long amount) {
+            @NotNull @Min(5) Long amount) {
     }
 
     @PostMapping
